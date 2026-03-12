@@ -1,54 +1,84 @@
+import { useEffect, useState } from 'react'
+import { useAccount } from '@/hooks/useAccount'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardHeader, KPICard } from '@/components/ui/Card'
 import { PnLBars } from '@/components/charts/PnLBars'
+import { analyticsApi } from '@/lib/api/analytics'
+import { fmt } from '@/lib/utils'
 import { TRADER_NAV } from '@/lib/nav'
-
-const SYMBOLS = [
-  { sym:'EUR/USD', trades:18, win:'72%', pnl:'+$4,210', pos:true },
-  { sym:'XAU/USD', trades:12, win:'67%', pnl:'+$2,840', pos:true },
-  { sym:'NAS100',  trades:9,  win:'56%', pnl:'+$960',   pos:true },
-  { sym:'GBP/USD', trades:7,  win:'71%', pnl:'+$1,240', pos:true },
-  { sym:'BTC/USD', trades:5,  win:'40%', pnl:'-$840',   pos:false },
-]
+import type { TraderStats } from '@/types/database'
 
 export function AnalyticsPage() {
+  const { primary, loading: accLoading } = useAccount()
+  const [stats, setStats] = useState<TraderStats | null>(null)
+  const [symbols, setSymbols] = useState<any[]>([])
+  const [pnlData, setPnlData] = useState<number[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!primary) return
+    Promise.all([
+      analyticsApi.getStats(primary.id),
+      analyticsApi.getSymbolBreakdown(primary.id),
+      analyticsApi.getEquityCurve(primary.id, 30),
+    ]).then(([s, sym, curve]) => {
+      setStats(s)
+      setSymbols(sym)
+      setPnlData(curve.map(c => c.daily_pnl))
+    }).catch(() => {}).finally(() => setLoading(false))
+  }, [primary?.id])
+
   return (
     <DashboardLayout title="Analytics" nav={TRADER_NAV} accentColor="gold">
-      <div className="grid grid-cols-5 gap-[11px]">
-        <KPICard label="Profit Factor" value="2.41" sub="Excellent"   subColor="text-[var(--gold)]"/>
-        <KPICard label="Sharpe Ratio"  value="1.84" sub="Above avg"   subColor="text-[var(--green)]"/>
-        <KPICard label="Avg Win"       value="$486" sub="Per win"     subColor="text-[var(--green)]"/>
-        <KPICard label="Avg Loss"      value="$201" sub="Per loss"    subColor="text-[var(--red)]"/>
-        <KPICard label="Win Streak"    value="5"    sub="Current"     subColor="text-[var(--green)]"/>
-      </div>
-      <div className="grid grid-cols-2 gap-[14px]">
-        <Card>
-          <CardHeader title="Symbol Breakdown"/>
-          <table className="w-full border-collapse text-[11px]">
-            <thead>
-              <tr className="border-b border-[var(--dim)]">
-                {['Symbol','Trades','Win%','P&L'].map(h=>(
-                  <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left bg-[rgba(212,168,67,.03)]">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {SYMBOLS.map((s,i)=>(
-                <tr key={i} className="border-b border-[rgba(212,168,67,.04)] hover:bg-[rgba(212,168,67,.03)]">
-                  <td className="px-[11px] py-[8px] font-semibold">{s.sym}</td>
-                  <td className="px-[11px] py-[8px] font-mono">{s.trades}</td>
-                  <td className={`px-[11px] py-[8px] font-mono ${parseInt(s.win)>=60?'text-[var(--green)]':parseInt(s.win)>=50?'text-[var(--gold)]':'text-[var(--red)]'}`}>{s.win}</td>
-                  <td className={`px-[11px] py-[8px] font-mono ${s.pos?'text-[var(--green)]':'text-[var(--red)]'}`}>{s.pnl}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-        <Card>
-          <CardHeader title="Daily P&L"/>
-          <PnLBars data={[420,-180,800,320,-230,1116,240,-80,612,440,-180,260,320,180]}/>
-        </Card>
-      </div>
+      {accLoading || loading ? (
+        <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/></div>
+      ) : !primary ? (
+        <Card><div className="py-12 text-center text-[var(--text3)]">No account found</div></Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-5 gap-[11px]">
+            <KPICard label="Total Trades"  value={String(stats?.total_trades ?? 0)}   sub="All time" />
+            <KPICard label="Win Rate"      value={`${stats?.win_rate_pct ?? 0}%`}      sub={`${stats?.winning_trades ?? 0} wins`} subColor="text-[var(--green)]" />
+            <KPICard label="Total P&L"     value={fmt(stats?.total_pnl ?? 0)}          sub="Net profit" subColor={(stats?.total_pnl ?? 0) >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'} />
+            <KPICard label="Best Trade"    value={fmt(stats?.best_trade ?? 0)}         sub="Single trade" subColor="text-[var(--green)]" />
+            <KPICard label="Profit Factor" value={stats?.profit_factor ? String(stats.profit_factor) : '—'} sub="Target: 1.5+" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-[14px]">
+            <Card>
+              <CardHeader title="Daily P&L" />
+              <PnLBars data={pnlData} />
+              {pnlData.length === 0 && <div className="py-8 text-center text-[11px] text-[var(--text3)]">No data yet</div>}
+            </Card>
+            <Card>
+              <CardHeader title="Performance by Symbol" />
+              {symbols.length === 0 ? (
+                <div className="py-8 text-center text-[11px] text-[var(--text3)]">No closed trades yet</div>
+              ) : (
+                <table className="w-full border-collapse text-[11px]">
+                  <thead>
+                    <tr className="border-b border-[var(--dim)]">
+                      {['Symbol','Trades','Win%','P&L'].map(h=>(
+                        <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {symbols.map(s=>(
+                      <tr key={s.symbol} className="border-b border-[rgba(212,168,67,.04)]">
+                        <td className="px-[11px] py-[8px] font-semibold">{s.symbol}</td>
+                        <td className="px-[11px] py-[8px] font-mono text-[var(--text2)]">{s.trades}</td>
+                        <td className={`px-[11px] py-[8px] font-mono ${s.win_pct>=60?'text-[var(--green)]':s.win_pct>=50?'text-[var(--gold)]':'text-[var(--red)]'}`}>{s.win_pct}%</td>
+                        <td className={`px-[11px] py-[8px] font-mono ${s.total_pnl>=0?'text-[var(--green)]':'text-[var(--red)]'}`}>{fmt(s.total_pnl)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
     </DashboardLayout>
   )
 }
