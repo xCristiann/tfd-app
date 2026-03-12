@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg:    #06060F;
+  --bg2:   #0B0B18;
+  --bg3:   #101020;
+  --gold:  #D4A843;
+  --gold2: #F0C860;
+  --gold3: #7A5820;
+  --green: #00D97E;
+  --red:   #FF3352;
+  --blue:  #3B9EFF;
+  --orange:#FF8C42;
+  --text:  rgba(230,226,248,.94);
+  --text2: rgba(230,226,248,.56);
+  --text3: rgba(230,226,248,.25);
+  --bdr:   rgba(212,168,67,.11);
+  --bdr2:  rgba(212,168,67,.26);
+  --dim:   rgba(212,168,67,.06);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--gold3); }
+
+/* Typography helpers */
+.serif   { font-family: 'Playfair Display', serif; }
+.mono    { font-family: 'DM Mono', monospace; }
+.up      { color: var(--green); }
+.dn      { color: var(--red); }
+.gld     { color: var(--gold); }
+.muted   { color: var(--text2); }
+.dimmed  { color: var(--text3); }
+
+/* Animate live dot */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(1.5); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
