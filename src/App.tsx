@@ -10,6 +10,7 @@ import { JournalPage }        from './app/dashboard/journal/page'
 import { HistoryPage }        from './app/dashboard/history/page'
 import { AnalyticsPage }      from './app/dashboard/analytics/page'
 import { ChallengesPage }     from './app/dashboard/challenges/page'
+import { CheckoutPage }       from './app/checkout/page'
 import { AccountsPage }       from './app/dashboard/accounts/page'
 import { DashboardSupportPage } from './app/dashboard/support/page'
 import { SettingsPage }       from './app/dashboard/settings/page'
@@ -60,6 +61,7 @@ export default function App() {
       <Route path="/dashboard/history"    element={<ProtectedRoute roles={['trader']}><HistoryPage /></ProtectedRoute>} />
       <Route path="/dashboard/analytics"  element={<ProtectedRoute roles={['trader']}><AnalyticsPage /></ProtectedRoute>} />
       <Route path="/dashboard/challenges" element={<ProtectedRoute roles={['trader']}><ChallengesPage /></ProtectedRoute>} />
+      <Route path="/checkout"            element={<ProtectedRoute roles={['trader']}><CheckoutPage /></ProtectedRoute>} />
       <Route path="/dashboard/accounts"   element={<ProtectedRoute roles={['trader']}><AccountsPage /></ProtectedRoute>} />
       <Route path="/dashboard/support"    element={<ProtectedRoute roles={['trader']}><DashboardSupportPage /></ProtectedRoute>} />
       <Route path="/dashboard/settings"   element={<ProtectedRoute roles={['trader']}><SettingsPage /></ProtectedRoute>} />
