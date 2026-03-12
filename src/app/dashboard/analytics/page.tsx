@@ -16,16 +16,16 @@ export function AnalyticsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!primary) return
-    Promise.all([
+    if (!primary) { setLoading(false); return }
+    Promise.allSettled([
       analyticsApi.getStats(primary.id),
       analyticsApi.getSymbolBreakdown(primary.id),
       analyticsApi.getEquityCurve(primary.id, 30),
     ]).then(([s, sym, curve]) => {
-      setStats(s)
-      setSymbols(sym)
-      setPnlData(curve.map(c => c.daily_pnl))
-    }).catch(() => {}).finally(() => setLoading(false))
+      if (s.status === 'fulfilled') setStats(s.value)
+      if (sym.status === 'fulfilled') setSymbols(sym.value)
+      if (curve.status === 'fulfilled') setPnlData(curve.value.map((c: any) => c.daily_pnl))
+    }).finally(() => setLoading(false))
   }, [primary?.id])
 
   return (

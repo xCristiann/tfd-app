@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useToast } from '@/hooks/useToast'
+import { useAuth } from '@/hooks/useAuth'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -12,29 +13,49 @@ const STATUS_VARIANT: Record<string,any> = { open:'open', pending:'warning', res
 
 export function DashboardSupportPage() {
   const { toasts, toast, dismiss } = useToast()
+  const { profile } = useAuth()
   const [tickets, setTickets] = useState<any[]>([])
   const [subject, setSubject] = useState('')
-  const [dept, setDept] = useState('technical')
+  const [dept, setDept] = useState('general')
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    supabase.from('support_tickets').select('*').order('created_at', { ascending: false })
+    if (!profile) return
+    supabase.from('support_tickets').select('*')
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: false })
       .then(({ data }) => setTickets(data ?? []))
-  }, [])
+  }, [profile?.id])
 
   async function submit() {
     if (!subject || !msg) { toast('warning','⚠️','Missing Info','Fill in subject and message.'); return }
+    if (!profile) return
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data, error } = await supabase.from('support_tickets').insert({
-      subject, department: dept, first_message: msg, status: 'open', priority: 'normal',
-      user_id: user?.id
-    }).select().single()
-    setLoading(false)
-    if (error) { toast('error','❌','Error', error.message); return }
-    setTickets(t => [data, ...t])
+
+    // Step 1: create ticket
+    const { data: ticket, error: ticketErr } = await supabase
+      .from('support_tickets').insert({
+        user_id: profile.id,
+        subject,
+        department: dept,
+        priority: 'medium',
+        status: 'open',
+      }).select().single()
+
+    if (ticketErr) { toast('error','❌','Error', ticketErr.message); setLoading(false); return }
+
+    // Step 2: insert first message into ticket_messages
+    await supabase.from('ticket_messages').insert({
+      ticket_id: ticket.id,
+      sender_id: profile.id,
+      body: msg,
+      is_internal: false,
+    })
+
+    setTickets(t => [ticket, ...t])
     setSubject(''); setMsg('')
+    setLoading(false)
     toast('success','✅','Ticket Created','We will reply within 4 hours.')
   }
 
@@ -58,7 +79,7 @@ export function DashboardSupportPage() {
                   <select value={dept} onChange={e=>setDept(e.target.value)} style={{background:'transparent'}} className={inp + " cursor-pointer"}>
                     <option value="technical">Technical Support</option>
                     <option value="billing">Billing / Payouts</option>
-                    <option value="accounts">Account Issues</option>
+                    <option value="account">Account Issues</option>
                     <option value="rules">Challenge Rules</option>
                     <option value="general">General</option>
                   </select>
@@ -77,7 +98,7 @@ export function DashboardSupportPage() {
             {tickets.length === 0 ? (
               <div className="py-8 text-center text-[11px] text-[var(--text3)]">No tickets yet</div>
             ) : (
-              <table className="w-full border-collapse text-[11px] mb-3">
+              <table className="w-full border-collapse text-[11px]">
                 <thead>
                   <tr className="border-b border-[var(--dim)]">
                     {['Ticket #','Subject','Status','Date'].map(h=>(
@@ -90,7 +111,7 @@ export function DashboardSupportPage() {
                     <tr key={t.id} className="border-b border-[rgba(212,168,67,.04)] hover:bg-[rgba(212,168,67,.03)]">
                       <td className="px-[11px] py-[8px] font-mono text-[var(--gold)]">{t.ticket_number ?? t.id.slice(0,8)}</td>
                       <td className="px-[11px] py-[8px] max-w-[140px] truncate">{t.subject}</td>
-                      <td className="px-[11px] py-[8px]"><Badge variant={STATUS_VARIANT[t.status] ?? 'open'}>{t.status}</Badge></td>
+                      <td className="px-[11px] py-[8px]"><Badge variant={STATUS_VARIANT[t.status]??'open'}>{t.status}</Badge></td>
                       <td className="px-[11px] py-[8px] text-[10px] text-[var(--text3)]">{new Date(t.created_at).toLocaleDateString()}</td>
                     </tr>
                   ))}
