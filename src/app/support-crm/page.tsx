@@ -18,7 +18,11 @@ const MESSAGES = [
   { from:'James Mitchell', role:'trader',  time:'10:02', text:"Thanks. Is there anything I need to do on my end?" },
 ]
 
-const CANNED = ['Thank you for contacting TFD support. I'm looking into this now.','Your payout is being processed and should arrive within 24 business hours.','Could you please provide your account number so I can investigate further?']
+const CANNED = [
+  "Thank you for contacting TFD support. I'm looking into this now.",
+  "Your payout is being processed and should arrive within 24 business hours.",
+  "Could you please provide your account number so I can investigate further?",
+]
 
 export function SupportCRMPage() {
   const { toasts, toast, dismiss } = useToast()

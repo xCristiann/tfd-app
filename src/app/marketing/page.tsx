@@ -29,12 +29,12 @@ const TESTIMONIALS = [
   { q:'"Passed Phase 1 in 11 days. Platform is clean, payout same day. TFD is the real deal."', av:'SK', name:'Sofia Kowalski', detail:'$200K Funded · Withdrawn $35,020' },
   { q:'"Signup to funded in under two weeks. Proprietary platform is faster and cleaner than MT5."', av:'MT', name:'Marcus Thompson', detail:'$100K Funded · Withdrawn $24,174' },
   { q:'"First payout was $19,200. Submitted Sunday, crypto in wallet Monday afternoon."', av:'DM', name:'Daniel Moreira', detail:'$200K Funded · Withdrawn $19,200' },
-  { q:'"Best prop firm I\'ve tried. Rules are clear, risk dashboard is transparent, team actually replies."', av:'YC', name:'Yuki Chen', detail:'$25K Funded · Withdrawn $8,400' },
+  { q:'"Best prop firm I\u2019ve tried. Rules are clear, risk dashboard is transparent, team actually replies."', av:'YC', name:'Yuki Chen', detail:'$25K Funded · Withdrawn $8,400' },
 ]
 
 const FAQS = [
   ['What is a funded trading account?','A funded account lets you trade using The Funded Diaries\' capital. You keep up to 90% of profits with zero personal risk beyond your challenge fee.'],
-  ['How long does the challenge take?','Most traders pass Phase 1 in 7–14 days. There\'s no maximum time limit — take as long as you need.'],
+  ["How long does the challenge take?","Most traders pass Phase 1 in 7–14 days. There's no maximum time limit — take as long as you need."],
   ['When do I get paid?','Payouts are processed within 24 hours of approval. Crypto (USDT/BTC) typically arrives same day.'],
   ['What instruments can I trade?','Forex, Gold, Indices (NAS100, SPX500, DE40), Crypto (BTC, ETH) — all on our proprietary platform.'],
   ['Is news trading allowed?','Yes. We allow news trading with no time restrictions, unlike most prop firms.'],
