@@ -167,7 +167,9 @@ function CandleChart({ symbol, tf, livePrice }: { symbol: string; tf: string; li
 export function PlatformPage() {
   const navigate = useNavigate()
   const { toasts, toast, dismiss } = useToast()
-  const { primary } = useAccount()
+  const { accounts, primary: defaultPrimary } = useAccount()
+  const [selectedAccountId, setSelectedAccountId] = useState<string|null>(null)
+  const primary = accounts.find(a => a.id === selectedAccountId) ?? defaultPrimary
 
   const [sym, setSym] = useState('EUR/USD')
   const [tf, setTf] = useState('H1')
@@ -283,6 +285,24 @@ export function PlatformPage() {
           ))}
         </div>
         <div style={{ padding:'8px 12px', borderTop:'1px solid var(--bdr)' }}>
+          {accounts.length > 1 && (
+            <div style={{ marginBottom:8 }}>
+              <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>Account</div>
+              <select
+                value={selectedAccountId ?? primary?.id ?? ''}
+                onChange={e => setSelectedAccountId(e.target.value)}
+                style={{ width:'100%', padding:'5px 6px', background:'var(--bg3)', border:'1px solid var(--dim)', color:'var(--text)', fontSize:9, fontFamily:'monospace', outline:'none', cursor:'pointer' }}>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.account_number}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {accounts.length === 1 && (
+            <div style={{ marginBottom:8, padding:'5px 6px', background:'var(--bg3)', border:'1px solid var(--dim)', fontSize:9, fontFamily:'monospace', color:'var(--gold)' }}>
+              {primary?.account_number ?? 'No account'}
+            </div>
+          )}
           <button onClick={()=>navigate('/dashboard')}
             style={{ width:'100%', fontSize:9, letterSpacing:1, textTransform:'uppercase', color:'var(--text3)', background:'none', border:'none', cursor:'pointer', textAlign:'center' }}>
             ← Dashboard
