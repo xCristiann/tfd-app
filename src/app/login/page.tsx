@@ -27,17 +27,16 @@ export function LoginPage() {
   const [testIdx, setTestIdx] = useState(0)
   const navigate = useNavigate()
 
-  setInterval(() => setTestIdx((i) => (i + 1) % TESTIMONIALS.length), 5000)
   const test = TESTIMONIALS[testIdx]
 
   async function doLogin() {
     setError(''); setLoading(true)
     try {
-      await auth.signIn(email, pw)
-      // Navigate to dashboard — ProtectedRoute will redirect based on role once profile loads
+      const result = await auth.signIn(email, pw)
+      if (!result?.user) throw new Error('Login failed')
       navigate('/dashboard')
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Invalid credentials')
+      setError(e instanceof Error ? e.message : 'Email sau parolă greșită')
       setLoading(false)
     }
   }
@@ -48,9 +47,11 @@ export function LoginPage() {
     try {
       await auth.signUp(email, pw, { first_name: fn, last_name: ln, country })
       setRegDone(true)
+      setLoading(false)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Registration failed')
-    } finally { setLoading(false) }
+      setLoading(false)
+    }
   }
 
   async function doForgot() {

@@ -29,11 +29,20 @@ import { CannedResponsesPage }  from './app/support-crm/canned/page'
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { session, profile, loading } = useAuth()
-  if (loading) return <div className="flex h-screen items-center justify-center text-[var(--text3)]">Loading…</div>
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-[var(--bg)]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/>
+        <div className="text-[11px] text-[var(--text3)]">Loading…</div>
+      </div>
+    </div>
+  )
   if (!session) return <Navigate to="/login" replace />
-  // Only redirect if profile is loaded AND role doesn't match
-  // If profile is null (still loading from DB), allow through to avoid infinite loop
-  if (roles && profile && !roles.includes(profile.role)) return <Navigate to="/dashboard" replace />
+  // Only check role if profile has loaded — never block if profile is null
+  if (roles && profile?.role && !roles.includes(profile.role)) {
+    const fallback = profile.role === 'admin' ? '/admin' : profile.role === 'support' ? '/support-crm' : '/dashboard'
+    return <Navigate to={fallback} replace />
+  }
   return <>{children}</>
 }
 

@@ -11,49 +11,50 @@ interface AuthCtx {
 
 const AuthContext = createContext<AuthCtx>({ session: null, profile: null, loading: true })
 
-async function fetchProfile(userId: string): Promise<User | null> {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    if (error) return null
-    return data
-  } catch {
-    return null
-  }
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Initial session check - with 3s timeout so it never hangs forever
-    const timer = setTimeout(() => setLoading(false), 3000)
+    let mounted = true
 
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      clearTimeout(timer)
-      setSession(s)
-      if (s?.user) setProfile(await fetchProfile(s.user.id))
-      setLoading(false)
-    })
+    const done = () => { if (mounted) setLoading(false) }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
+    // Hard timeout — after 2s, stop loading NO MATTER WHAT
+    const timeout = setTimeout(done, 2000)
+
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (!mounted) return
       setSession(s)
-      if (s?.user) {
-        // Small delay to let DB trigger create the user row first
-        await new Promise(r => setTimeout(r, 500))
-        setProfile(await fetchProfile(s.user.id))
-      } else {
-        setProfile(null)
+      if (!s) { clearTimeout(timeout); done(); return }
+
+      // Try to get profile but don't block on it
+      supabase.from('users').select('*').eq('id', s.user.id).single()
+        .then(({ data }) => { if (mounted) setProfile(data) })
+        .catch(() => {})
+        .finally(() => { clearTimeout(timeout); done() })
+    }).catch(() => { clearTimeout(timeout); done() })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (!mounted) return
+      setSession(s)
+      if (!s) { setProfile(null); done(); return }
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // Don't block — navigate first, load profile in background
+        done()
+        supabase.from('users').select('*').eq('id', s.user.id).single()
+          .then(({ data }) => { if (mounted) setProfile(data) })
+          .catch(() => {})
       }
-      setLoading(false)
     })
 
-    return () => { clearTimeout(timer); subscription.unsubscribe() }
+    return () => {
+      mounted = false
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   return (
