@@ -123,7 +123,7 @@ export function ChallengesPage() {
                     </div>
                   ))}
                   <Button className="w-full mt-3"
-                    onClick={()=>toast('info','🎯','Coming Soon','Stripe checkout coming soon!')}>
+                    onClick={()=>navigate('/checkout?product='+p.id)}>
                     Buy for ${p.price_usd} →
                   </Button>
                 </Card>
