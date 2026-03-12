@@ -22,15 +22,19 @@ import { AdminRiskPage }      from './app/admin/risk/page'
 import { AdminSupportPage }   from './app/admin/support/page'
 import { AdminChallengePage } from './app/admin/challenges/page'
 import { AdminAffiliatePage } from './app/admin/affiliates/page'
+import { AdminAccountsPage }  from './app/admin/accounts/page'
 import { AdminSettingsPage }  from './app/admin/settings/page'
 import { AdminRevenuePage }   from './app/admin/revenue/page'
+import { AffiliatePage as AffiliatesPage } from './app/dashboard/affiliate/page'
 import { SupportCRMPage }     from './app/support-crm/page'
 import { SupportAnalyticsPage } from './app/support-crm/analytics/page'
 import { CannedResponsesPage }  from './app/support-crm/canned/page'
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { session, profile, loading } = useAuth()
-  if (loading) return (
+
+  // Still loading auth or profile — always show spinner, never redirect
+  if (loading || (session && !profile)) return (
     <div className="flex h-screen items-center justify-center bg-[var(--bg)]">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/>
@@ -39,7 +43,7 @@ function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?
     </div>
   )
   if (!session) return <Navigate to="/login" replace />
-  // Only check role if profile has loaded — never block if profile is null
+  // Profile loaded — check role
   if (roles && profile?.role && !roles.includes(profile.role)) {
     const fallback = profile.role === 'admin' ? '/admin' : profile.role === 'support' ? '/support-crm' : '/dashboard'
     return <Navigate to={fallback} replace />
@@ -77,7 +81,9 @@ export default function App() {
       <Route path="/admin/support"        element={<ProtectedRoute roles={['admin','support']}><AdminSupportPage /></ProtectedRoute>} />
       <Route path="/admin/challenges"     element={<ProtectedRoute roles={['admin']}><AdminChallengePage /></ProtectedRoute>} />
       <Route path="/admin/affiliates"     element={<ProtectedRoute roles={['admin']}><AdminAffiliatePage /></ProtectedRoute>} />
+      <Route path="/admin/accounts"       element={<ProtectedRoute roles={['admin']}><AdminAccountsPage /></ProtectedRoute>} />
       <Route path="/admin/revenue"        element={<ProtectedRoute roles={['admin']}><AdminRevenuePage /></ProtectedRoute>} />
+      <Route path="/dashboard/affiliates" element={<ProtectedRoute roles={['trader']}><AffiliatesPage /></ProtectedRoute>} />
       <Route path="/admin/settings"       element={<ProtectedRoute roles={['admin']}><AdminSettingsPage /></ProtectedRoute>} />
 
       {/* Support CRM */}
