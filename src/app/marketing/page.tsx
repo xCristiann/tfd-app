@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
 const TESTIMONIALS = [
@@ -55,6 +56,8 @@ const CAT_ORDER = ['all','1step','2step','instant','pay_after']
 
 export function MarketingPage() {
   const navigate = useNavigate()
+  const { session, profile } = useAuth()
+  const isLoggedIn = !!session
   const [faqOpen, setFaqOpen] = useState<number|null>(null)
   const [testIdx, setTestIdx] = useState(0)
   const [mobileMenu, setMobileMenu] = useState(false)
@@ -108,8 +111,16 @@ export function MarketingPage() {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={()=>navigate('/login')} className="hidden md:block px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-transparent border border-[var(--bdr2)] text-[var(--text2)] hover:text-[var(--gold)] hover:border-[var(--gold)] cursor-pointer transition-all">Log In</button>
-            <button onClick={()=>navigate('/login')} className="px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all">Get Started</button>
+            {isLoggedIn ? (
+              <button onClick={()=>navigate('/dashboard')} className="px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all">
+                Dashboard →
+              </button>
+            ) : (
+              <>
+                <button onClick={()=>navigate('/login')} className="hidden md:block px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-transparent border border-[var(--bdr2)] text-[var(--text2)] hover:text-[var(--gold)] hover:border-[var(--gold)] cursor-pointer transition-all">Log In</button>
+                <button onClick={()=>navigate('/login')} className="px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all">Get Started</button>
+              </>
+            )}
           </div>
         </div>
       </nav>
