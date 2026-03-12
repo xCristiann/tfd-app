@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { auth } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 import type { User } from '@/types/database'
 
 interface AuthCtx {
@@ -11,33 +11,49 @@ interface AuthCtx {
 
 const AuthContext = createContext<AuthCtx>({ session: null, profile: null, loading: true })
 
+async function fetchProfile(userId: string): Promise<User | null> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    if (error) return null
+    return data
+  } catch {
+    return null
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Initial session check
-    auth.getSession().then(async (s) => {
+    // Initial session check - with 3s timeout so it never hangs forever
+    const timer = setTimeout(() => setLoading(false), 3000)
+
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      clearTimeout(timer)
       setSession(s)
-      if (s) {
-        try { setProfile(await auth.getProfile()) } catch { setProfile(null) }
+      if (s?.user) setProfile(await fetchProfile(s.user.id))
+      setLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
+      setSession(s)
+      if (s?.user) {
+        // Small delay to let DB trigger create the user row first
+        await new Promise(r => setTimeout(r, 500))
+        setProfile(await fetchProfile(s.user.id))
+      } else {
+        setProfile(null)
       }
       setLoading(false)
     })
 
-    // Listen for auth changes (login/logout)
-    const { data: { subscription } } = auth.onAuthStateChange(async (_event, s) => {
-      setSession(s)
-      if (s) {
-        try { setProfile(await auth.getProfile()) } catch { setProfile(null) }
-      } else {
-        setProfile(null)
-      }
-      setLoading(false)  // ← fix: always stop loading after auth change
-    })
-
-    return () => subscription.unsubscribe()
+    return () => { clearTimeout(timer); subscription.unsubscribe() }
   }, [])
 
   return (

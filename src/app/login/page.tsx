@@ -33,16 +33,9 @@ export function LoginPage() {
   async function doLogin() {
     setError(''); setLoading(true)
     try {
-      const { user } = await auth.signIn(email, pw)
-      if (!user) throw new Error('Login failed')
-      // Get profile with fallback - don't block navigation if profile fails
-      let role = 'trader'
-      try {
-        const p = await auth.getProfile()
-        role = p?.role ?? 'trader'
-      } catch { /* use default role */ }
-      const dest = role === 'admin' ? '/admin' : role === 'support' ? '/support-crm' : '/dashboard'
-      navigate(dest)
+      await auth.signIn(email, pw)
+      // Navigate to dashboard — ProtectedRoute will redirect based on role once profile loads
+      navigate('/dashboard')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Invalid credentials')
       setLoading(false)

@@ -31,6 +31,8 @@ function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?
   const { session, profile, loading } = useAuth()
   if (loading) return <div className="flex h-screen items-center justify-center text-[var(--text3)]">Loading…</div>
   if (!session) return <Navigate to="/login" replace />
+  // Only redirect if profile is loaded AND role doesn't match
+  // If profile is null (still loading from DB), allow through to avoid infinite loop
   if (roles && profile && !roles.includes(profile.role)) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
