@@ -3,9 +3,12 @@ import type { Account } from '@/types/database'
 
 export const accountsApi = {
   async getMine(): Promise<Account[]> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
     const { data, error } = await supabase
       .from('accounts')
       .select('*, challenge_products(*)')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
     if (error) throw error
     return data ?? []
