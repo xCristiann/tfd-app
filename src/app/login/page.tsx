@@ -33,13 +33,20 @@ export function LoginPage() {
   async function doLogin() {
     setError(''); setLoading(true)
     try {
-      await auth.signIn(email, pw)
-      const p = await auth.getProfile()
-      const dest = p?.role === 'admin' ? '/admin' : p?.role === 'support' ? '/support-crm' : '/dashboard'
+      const { user } = await auth.signIn(email, pw)
+      if (!user) throw new Error('Login failed')
+      // Get profile with fallback - don't block navigation if profile fails
+      let role = 'trader'
+      try {
+        const p = await auth.getProfile()
+        role = p?.role ?? 'trader'
+      } catch { /* use default role */ }
+      const dest = role === 'admin' ? '/admin' : role === 'support' ? '/support-crm' : '/dashboard'
       navigate(dest)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Invalid credentials')
-    } finally { setLoading(false) }
+      setLoading(false)
+    }
   }
 
   async function doRegister() {

@@ -17,15 +17,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Initial session check
     auth.getSession().then(async (s) => {
       setSession(s)
-      if (s) setProfile(await auth.getProfile())
+      if (s) {
+        try { setProfile(await auth.getProfile()) } catch { setProfile(null) }
+      }
       setLoading(false)
     })
 
+    // Listen for auth changes (login/logout)
     const { data: { subscription } } = auth.onAuthStateChange(async (_event, s) => {
       setSession(s)
-      setProfile(s ? await auth.getProfile() : null)
+      if (s) {
+        try { setProfile(await auth.getProfile()) } catch { setProfile(null) }
+      } else {
+        setProfile(null)
+      }
+      setLoading(false)  // ← fix: always stop loading after auth change
     })
 
     return () => subscription.unsubscribe()
