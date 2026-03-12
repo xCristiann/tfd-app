@@ -82,31 +82,32 @@ export function DashboardPage() {
           </Card>
         ) : (
           <>
-            {/* ── Multi-account selector (only shown when >1 account) ── */}
-            {accounts.length > 1 && (
-              <div className="flex items-center gap-3 p-3 bg-[var(--bg2)] border border-[var(--bdr)] mb-1">
-                <span className="text-[8px] tracking-[2px] uppercase text-[var(--text3)] font-semibold whitespace-nowrap">Select Account</span>
-                <div className="flex gap-2 flex-wrap">
-                  {accounts.map(a => {
-                    const ap = (a as any)?.challenge_products
-                    const isActive = a.id === account?.id
-                    return (
-                      <button key={a.id} onClick={() => setSelectedId(a.id)}
-                        className={`px-3 py-[5px] text-[10px] font-mono font-semibold cursor-pointer border transition-all ${
-                          isActive
-                            ? 'bg-[rgba(212,168,67,.12)] border-[var(--bdr2)] text-[var(--gold)]'
-                            : 'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)] hover:text-[var(--text2)]'
-                        }`}>
-                        {a.account_number}
-                        <span className={`ml-2 text-[8px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>
-                          {phaseLabel(a.phase)}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
+            {/* ── Account selector — always shown ── */}
+            <div className="flex items-center gap-3 p-3 bg-[var(--bg2)] border border-[var(--bdr)] mb-1">
+              <span className="text-[8px] tracking-[2px] uppercase text-[var(--text3)] font-semibold whitespace-nowrap">Select Account</span>
+              <div className="flex gap-2 flex-wrap">
+                {accounts.map(a => {
+                  const isActive = a.id === account?.id
+                  return (
+                    <button key={a.id} onClick={() => setSelectedId(a.id)}
+                      className={`px-3 py-[5px] text-[10px] font-mono font-semibold cursor-pointer border transition-all ${
+                        isActive
+                          ? 'bg-[rgba(212,168,67,.12)] border-[var(--bdr2)] text-[var(--gold)]'
+                          : 'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)] hover:text-[var(--text2)]'
+                      }`}>
+                      {a.account_number}
+                      <span className={`ml-2 text-[8px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>
+                        {phaseLabel(a.phase)}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
-            )}
+              <button onClick={() => navigate('/dashboard/challenges')}
+                className="ml-auto text-[8px] tracking-[1px] uppercase text-[var(--text3)] hover:text-[var(--gold)] cursor-pointer bg-transparent border-none transition-colors whitespace-nowrap">
+                + New Challenge
+              </button>
+            </div>
 
             {/* KPI Row */}
             <div className="grid grid-cols-5 gap-[11px]">
