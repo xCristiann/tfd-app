@@ -48,6 +48,15 @@ export function CheckoutPage() {
   const [cardCvc, setCardCvc] = useState('')
   const [cardName, setCardName] = useState('')
 
+  // Affiliate ref code (from URL or localStorage)
+  const refCode = searchParams.get('ref') ?? localStorage.getItem('tfd_ref_code') ?? null
+
+  useEffect(() => {
+    // Persist ref code from URL
+    const urlRef = searchParams.get('ref')
+    if (urlRef) localStorage.setItem('tfd_ref_code', urlRef)
+  }, [])
+
   useEffect(() => {
     if (!productId) { navigate('/dashboard/challenges'); return }
     supabase.from('challenge_products').select('*').eq('id', productId).single()
@@ -109,6 +118,19 @@ export function CheckoutPage() {
       last_name: lastName,
       country,
     }).eq('id', profile.id)
+
+    // Record affiliate referral if ref code present
+    if (refCode && product) {
+      await supabase.rpc('record_affiliate_referral', {
+        p_code: refCode,
+        p_referred_user_id: profile.id,
+        p_referred_email: email,
+        p_product_id: product.id,
+        p_product_name: product.name,
+        p_order_amount: product.price_usd,
+      }).catch(() => {}) // silent fail — don't block purchase
+      localStorage.removeItem('tfd_ref_code')
+    }
 
     setCreatedAccount({
       accountNumber,
