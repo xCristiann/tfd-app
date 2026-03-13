@@ -290,7 +290,7 @@ export function PlatformPage() {
       .then(({ data }) => setClosedTrades(data ?? []))
   }, [primary?.id])
 
-  const execPrice = dir === 'buy' ? livePrice + inst.spread : livePrice
+
 
   async function placeOrder() {
     if (!primary) { toast('error','❌','No Account','No active trading account found.'); return }
