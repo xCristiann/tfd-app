@@ -23,10 +23,11 @@ const INSTRUMENTS = [
   { sym:'USD/JPY', poly:'C:USDJPY', yahoo:null,       market:'forex',  spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
   { sym:'GBP/JPY', poly:'C:GBPJPY', yahoo:null,       market:'forex',  spread:0.030,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
   { sym:'EUR/JPY', poly:'C:EURJPY', yahoo:null,       market:'forex',  spread:0.025,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'NAS100',  poly:null,        yahoo:'%5ENDX',   market:'us',     spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
-  { sym:'US500',   poly:null,        yahoo:'%5EGSPC',  market:'us',     spread:0.50,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*50       },
-  { sym:'GER40',   poly:null,        yahoo:'%5EGDAXI', market:'eu',     spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*25       },
-  { sym:'UK100',   poly:null,        yahoo:'%5EFTSE',  market:'uk',     spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
+  // Indices: use Polygon index tickers (I:NDX etc) - falls back to ETF if needed
+  { sym:'NAS100',  poly:'I:NDX',     etf:'QQQ',  etfMult:40,  market:'us',  spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*10  },
+  { sym:'US500',   poly:'I:SPX',     etf:'SPY',  etfMult:10,  market:'us',  spread:0.50, dec:2, pip:0.10, lotUSD:(p:number)=>p*50  },
+  { sym:'GER40',   poly:'I:DAX',     etf:'EWG',  etfMult:300, market:'eu',  spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*25  },
+  { sym:'UK100',   poly:'I:FTSE',    etf:'EWU',  etfMult:140, market:'uk',  spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*10  },
 ]
 
 const SEED: Record<string,number> = {
@@ -54,55 +55,78 @@ const TF_SEC: Record<string,number> = {
 type Candle = {time:number;open:number;high:number;low:number;close:number}
 
 /* ══════════════════════════════════════════════════════════════════
-   MARKET HOURS — is the market currently open?
-   All times in UTC.
+   MARKET HOURS (all UTC, DST-aware)
    ══════════════════════════════════════════════════════════════════
-   FOREX:  Open Sun 22:00 UTC → Fri 22:00 UTC (24/5, no weekend)
-   US:     Mon–Fri 13:30–20:00 UTC (NYSE/NASDAQ)
-   EU:     Mon–Fri 07:00–15:30 UTC (XETRA / DAX)
-   UK:     Mon–Fri 08:00–16:30 UTC (LSE)
+   FOREX / XAU  : Sun 22:00 → Fri 22:00 UTC (24/5)
+                  Source: forex.com, cityindex.com
+   US (NYSE/NASDAQ): Mon–Fri 13:30–20:00 UTC
+                  (9:30am–4:00pm EST / 9:30am–4:00pm EDT during DST)
+   XETRA/DAX    : Mon–Fri 07:00–15:30 UTC
+                  (9:00am–5:30pm CET / 8:00am–4:30pm UTC summer)
+                  Simplified: 07:00–15:30 UTC year-round
+   LSE/FTSE     : Mon–Fri 08:00–16:30 UTC
+                  (8:00am–4:30pm GMT / 7:00am–3:30pm UTC summer)
+                  Simplified: 08:00–16:30 UTC year-round
    ══════════════════════════════════════════════════════════════════ */
 function getMarketStatus(market: string): {open:boolean; label:string; nextOpen:string} {
-  const now   = new Date()
-  const day   = now.getUTCDay()   // 0=Sun, 1=Mon … 6=Sat
-  const hour  = now.getUTCHours()
-  const min   = now.getUTCMinutes()
-  const hm    = hour * 60 + min   // minutes since midnight UTC
+  const now  = new Date()
+  const day  = now.getUTCDay()    // 0=Sun 1=Mon … 5=Fri 6=Sat
+  const hour = now.getUTCHours()
+  const min  = now.getUTCMinutes()
+  const hm   = hour * 60 + min
 
+  const isWeekend = day === 0 || day === 6
+
+  // Helper: next weekday open time string
+  const nextWeekday = (openHH:number, openMM:number) => {
+    const d = new Date(now)
+    // advance until Monday if weekend
+    if(day === 6) d.setUTCDate(d.getUTCDate()+2)
+    else if(day === 0) d.setUTCDate(d.getUTCDate()+1)
+    else if(hm >= openHH*60+openMM) d.setUTCDate(d.getUTCDate()+1) // already past open today
+    d.setUTCHours(openHH, openMM, 0, 0)
+    return d.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC',timeZoneName:'short'})
+  }
+
+  /* ── FOREX & METALS (XAU) ─────────────────────────────────────── */
   if(market === 'forex'){
-    // Open Sun 22:00 → Fri 22:00 UTC
-    const isWeekend = (day === 6) || (day === 0 && hm < 22*60) || (day === 5 && hm >= 22*60)
-    if(!isWeekend) return {open:true, label:'Forex Open 24/5', nextOpen:''}
-    // Calculate next open (Sunday 22:00 UTC)
-    const daysUntilSun = day === 6 ? 1 : 0
+    // Closed: Sat all day + Sun before 22:00 UTC + Fri after 22:00 UTC
+    const isClosed = day === 6
+      || (day === 0 && hm < 22*60)
+      || (day === 5 && hm >= 22*60)
+    if(!isClosed) return {open:true, label:'Forex Open', nextOpen:''}
     const next = new Date(now)
-    next.setUTCDate(now.getUTCDate() + daysUntilSun)
-    next.setUTCHours(22,0,0,0)
-    return {open:false, label:'Forex Closed — Weekend', nextOpen:next.toLocaleString()}
+    if(day === 6){ next.setUTCDate(next.getUTCDate()+1); next.setUTCHours(22,0,0,0) }
+    else if(day === 0){ next.setUTCHours(22,0,0,0) }
+    else { next.setUTCDate(next.getUTCDate()+2); next.setUTCHours(22,0,0,0) }
+    return {open:false, label:'Forex Closed — Weekend', nextOpen:next.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC',timeZoneName:'short'})}
   }
 
+  /* ── US MARKETS (NYSE / NASDAQ) ───────────────────────────────── */
   if(market === 'us'){
-    // Mon–Fri 13:30–20:00 UTC
-    if(day === 0 || day === 6) return {open:false, label:'US Market Closed — Weekend', nextOpen:'Mon 13:30 UTC'}
-    if(hm >= 13*60+30 && hm < 20*60) return {open:true, label:'US Market Open', nextOpen:''}
-    const next = hm < 13*60+30 ? 'Today 13:30 UTC' : 'Tomorrow 13:30 UTC'
-    return {open:false, label:'US Market Closed', nextOpen:next}
+    // 13:30–20:00 UTC Mon–Fri (9:30am–4:00pm ET)
+    if(isWeekend) return {open:false, label:'US Market Closed — Weekend', nextOpen:nextWeekday(13,30)}
+    if(hm >= 13*60+30 && hm < 20*60) return {open:true, label:'US Market Open (NYSE/NASDAQ)', nextOpen:''}
+    if(hm < 13*60+30) return {open:false, label:'US Pre-Market', nextOpen:nextWeekday(13,30)}
+    return {open:false, label:'US Market Closed (After Hours)', nextOpen:nextWeekday(13,30)}
   }
 
+  /* ── XETRA / DAX (Germany) ────────────────────────────────────── */
   if(market === 'eu'){
-    // Mon–Fri 07:00–15:30 UTC
-    if(day === 0 || day === 6) return {open:false, label:'EU Market Closed — Weekend', nextOpen:'Mon 07:00 UTC'}
-    if(hm >= 7*60 && hm < 15*60+30) return {open:true, label:'EU Market Open', nextOpen:''}
-    const next = hm < 7*60 ? 'Today 07:00 UTC' : 'Tomorrow 07:00 UTC'
-    return {open:false, label:'EU Market Closed', nextOpen:next}
+    // 07:00–15:30 UTC Mon–Fri (9:00am–5:30pm CET)
+    if(isWeekend) return {open:false, label:'XETRA Closed — Weekend', nextOpen:nextWeekday(7,0)}
+    if(hm >= 7*60 && hm < 15*60+30) return {open:true, label:'XETRA Open (DAX)', nextOpen:''}
+    if(hm < 7*60) return {open:false, label:'XETRA Pre-Market', nextOpen:nextWeekday(7,0)}
+    return {open:false, label:'XETRA Closed (After Hours)', nextOpen:nextWeekday(7,0)}
   }
 
+  /* ── LSE / FTSE (UK) ──────────────────────────────────────────── */
   if(market === 'uk'){
-    // Mon–Fri 08:00–16:30 UTC
-    if(day === 0 || day === 6) return {open:false, label:'UK Market Closed — Weekend', nextOpen:'Mon 08:00 UTC'}
-    if(hm >= 8*60 && hm < 16*60+30) return {open:true, label:'UK Market Open', nextOpen:''}
-    const next = hm < 8*60 ? 'Today 08:00 UTC' : 'Tomorrow 08:00 UTC'
-    return {open:false, label:'UK Market Closed', nextOpen:next}
+    // 08:00–16:30 UTC Mon–Fri
+    if(isWeekend) return {open:false, label:'LSE Closed — Weekend', nextOpen:nextWeekday(8,0)}
+    if(hm >= 8*60 && hm < 16*60+30) return {open:true, label:'LSE Open (FTSE 100)', nextOpen:''}
+    if(hm < 8*60) return {open:false, label:'LSE Pre-Market', nextOpen:nextWeekday(8,0)}
+    return {open:false, label:'LSE Closed (After Hours)', nextOpen:nextWeekday(8,0)}
   }
 
   return {open:true, label:'Open', nextOpen:''}
@@ -123,80 +147,52 @@ function loadLWC():Promise<void>{
   })
 }
 
-/* ── Polygon candles (forex + metals) ───────────────────────────── */
-async function fetchPolyCandles(polyTicker:string, tf:string):Promise<Candle[]>{
+/* ── Polygon candles — forex, metals, AND indices ───────────────── */
+async function fetchPolyCandles(polyTicker:string, tf:string, etfFallback?:string, etfMult?:number):Promise<Candle[]>{
   const {mult,span,daysBack}=TF_POLY[tf]??TF_POLY.H1
   const to   = new Date()
   const from = new Date(Date.now()-daysBack*86400*1000)
   const fmtD = (d:Date)=>d.toISOString().split('T')[0]
-  const url  = `https://api.polygon.io/v2/aggs/ticker/${polyTicker}/range/${mult}/${span}/${fmtD(from)}/${fmtD(to)}?adjusted=true&sort=asc&limit=50000&apiKey=${POLY_KEY}`
-  try{
+
+  const tryTicker=async(ticker:string, multiplier=1):Promise<Candle[]>=>{
+    const url=`https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${mult}/${span}/${fmtD(from)}/${fmtD(to)}?adjusted=true&sort=asc&limit=50000&apiKey=${POLY_KEY}`
     const r=await fetch(url)
     if(!r.ok) throw new Error(`HTTP ${r.status}`)
     const d=await r.json()
-    if(!d.results?.length) return []
+    if(!d.results?.length) throw new Error('no results')
     return (d.results as any[]).map((b:any)=>({
-      time:Math.floor(b.t/1000), open:b.o, high:b.h, low:b.l, close:b.c,
+      time:Math.floor(b.t/1000),
+      open:b.o*multiplier, high:b.h*multiplier, low:b.l*multiplier, close:b.c*multiplier,
     }))
-  }catch(e){ console.warn('[Polygon]',polyTicker,tf,e); return [] }
-}
-
-/* ── Yahoo Finance candles (indices) via allorigins proxy ───────── */
-async function fetchYahooCandles(yahooSym:string, tf:string):Promise<Candle[]>{
-  const {interval,range}=YAHOO_TF[tf]??YAHOO_TF.H1
-  const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=${interval}&range=${range}&includePrePost=false`
-
-  // Try 3 methods: direct, allorigins proxy, corsproxy.io
-  const attempts=[
-    ()=>fetch(yahooUrl,{headers:{'Accept':'application/json'}}),
-    ()=>fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`),
-    ()=>fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`),
-  ]
-
-  for(const attempt of attempts){
-    try{
-      const r=await attempt()
-      if(!r.ok) continue
-      let json:any=await r.json()
-      if(typeof json?.contents==='string') json=JSON.parse(json.contents)
-      const res=json?.chart?.result?.[0]
-      if(!res?.timestamp) continue
-      const ts=res.timestamp as number[]
-      const q=res.indicators?.quote?.[0]
-      if(!q||!ts.length) continue
-      let candles:Candle[]=ts
-        .map((t:number,i:number)=>({
-          time:t,
-          open:parseFloat(q.open?.[i])||0,
-          high:parseFloat(q.high?.[i])||0,
-          low:parseFloat(q.low?.[i])||0,
-          close:parseFloat(q.close?.[i])||0,
-        }))
-        .filter(c=>c.open>0&&c.high>0&&c.low>0&&c.close>0)
-      if(candles.length<2) continue
-      // H4: aggregate 4×H1
-      if(tf==='H4'){
-        const agg:Candle[]=[]
-        for(let i=0;i+3<candles.length;i+=4)
-          agg.push({time:candles[i].time,open:candles[i].open,
-            high:Math.max(candles[i].high,candles[i+1].high,candles[i+2].high,candles[i+3].high),
-            low:Math.min(candles[i].low,candles[i+1].low,candles[i+2].low,candles[i+3].low),
-            close:candles[i+3].close})
-        candles=agg
-      }
-      const seen=new Set<number>()
-      return candles.filter(c=>{if(seen.has(c.time))return false;seen.add(c.time);return true}).sort((a,b)=>a.time-b.time)
-    }catch{ continue }
   }
-  console.warn('[Yahoo]',yahooSym,tf,'all sources failed')
+
+  // Try primary ticker first
+  try{
+    const candles=await tryTicker(polyTicker)
+    if(candles.length>0) return candles
+  }catch(e){
+    console.warn('[Polygon] Primary failed:',polyTicker,e)
+  }
+
+  // Fallback to ETF if provided (for indices on free tier)
+  if(etfFallback && etfMult){
+    try{
+      const candles=await tryTicker(etfFallback, etfMult)
+      if(candles.length>0){
+        console.log('[Polygon] Using ETF fallback:',etfFallback,'×',etfMult)
+        return candles
+      }
+    }catch(e){
+      console.warn('[Polygon] ETF fallback failed:',etfFallback,e)
+    }
+  }
   return []
 }
 
 /* ── Main candle fetcher ─────────────────────────────────────────── */
 async function fetchCandles(sym:string, tf:string):Promise<Candle[]>{
-  const inst=INSTRUMENTS.find(i=>i.sym===sym)!
-  if(inst.poly) return fetchPolyCandles(inst.poly, tf)
-  return fetchYahooCandles(inst.yahoo!, tf)
+  const inst=INSTRUMENTS.find(i=>i.sym===sym)! as any
+  return fetchPolyCandles(inst.poly, tf, inst.etf, inst.etfMult)
 }
 
 /* ── Chart component ─────────────────────────────────────────────── */
@@ -322,19 +318,17 @@ function usePriceFeed(){
         }
       }catch{}
 
-      // Yahoo Finance for indices live price
+      // Polygon snapshot for indices live price (using ETF fallback)
       await Promise.allSettled(
-        INSTRUMENTS.filter(i=>i.yahoo).map(async inst=>{
+        (INSTRUMENTS as any[]).filter(i=>i.etf).map(async (inst:any)=>{
           try{
-            const r=await fetch(
-              `https://query2.finance.yahoo.com/v8/finance/chart/${inst.yahoo}?interval=1m&range=1d`,
-              {headers:{'Accept':'application/json'}}
+            // Try index snapshot first
+            const r1=await fetch(
+              `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${inst.etf}?apiKey=${POLY_KEY}`
             )
-            const d=await r.json()
-            const closes=d?.chart?.result?.[0]?.indicators?.quote?.[0]?.close as (number|null)[]
-            if(!closes) return
-            for(let i=closes.length-1;i>=0;i--)
-              if(closes[i]!=null&&closes[i]!>0){push(inst.sym,closes[i]!);break}
+            const d1=await r1.json()
+            const etfPrice=d1?.ticker?.day?.c||d1?.ticker?.lastTrade?.p||0
+            if(etfPrice>0 && inst.etfMult) push(inst.sym, etfPrice*inst.etfMult)
           }catch{}
         })
       )
