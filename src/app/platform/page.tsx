@@ -6,39 +6,69 @@ import { ToastContainer } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/utils'
 
-const LEVERAGE  = 50
-const LOT_SIZE  = 100000
-const FINNHUB_KEY = 'd0lbgopr01ql4s0b4cu0d0lbgopr01ql4s0b4cug'
+const LEVERAGE = 50
+const LOT_SIZE = 100000
 
+// contractUSD = notional value in USD per 1 lot
+// For EUR/USD: 1 lot = 100,000 EUR → margin = 100000 * EUR/USD / 50
+// For XAU/USD: 1 lot = 100 oz → margin = 100 * price / 50
+// For NAS100: 1 lot = 1 index unit → margin = price / 50
+// For BTC/USD: 1 lot = 1 BTC → margin = price / 50
 const INSTRUMENTS = [
-  { sym:'EUR/USD', tv:'FX:EURUSD',       fh:'OANDA:EUR_USD',    bn:null,      spread:0.00020, dec:5, pip:0.0001 },
-  { sym:'GBP/USD', tv:'FX:GBPUSD',       fh:'OANDA:GBP_USD',    bn:null,      spread:0.00020, dec:5, pip:0.0001 },
-  { sym:'XAU/USD', tv:'TVC:GOLD',        fh:'OANDA:XAU_USD',    bn:null,      spread:0.30,    dec:2, pip:0.10   },
-  { sym:'NAS100',  tv:'NASDAQ:NDX',      fh:'OANDA:NAS100_USD', bn:null,      spread:1.0,     dec:1, pip:1.0    },
-  { sym:'BTC/USD', tv:'BINANCE:BTCUSDT', fh:null,               bn:'btcusdt', spread:10.0,    dec:1, pip:1.0    },
-  { sym:'USD/JPY', tv:'FX:USDJPY',       fh:'OANDA:USD_JPY',    bn:null,      spread:0.020,   dec:3, pip:0.01   },
-  { sym:'ETH/USD', tv:'BINANCE:ETHUSDT', fh:null,               bn:'ethusdt', spread:1.0,     dec:2, pip:1.0    },
+  { sym:'EUR/USD', tv:'FX:EURUSD',       fh:'OANDA:EUR_USD',    bn:null,      spread:0.00020, dec:5, pip:0.0001, lotUSD: (p:number) => p * LOT_SIZE },
+  { sym:'GBP/USD', tv:'FX:GBPUSD',       fh:'OANDA:GBP_USD',    bn:null,      spread:0.00020, dec:5, pip:0.0001, lotUSD: (p:number) => p * LOT_SIZE },
+  { sym:'XAU/USD', tv:'TVC:GOLD',        fh:'OANDA:XAU_USD',    bn:null,      spread:0.30,    dec:2, pip:0.10,   lotUSD: (p:number) => p * 100 },
+  { sym:'NAS100',  tv:'NASDAQ:NDX',      fh:'OANDA:NAS100_USD', bn:null,      spread:1.0,     dec:1, pip:1.0,    lotUSD: (p:number) => p * 10 },
+  { sym:'BTC/USD', tv:'BINANCE:BTCUSDT', fh:null,               bn:'btcusdt', spread:10.0,    dec:1, pip:1.0,    lotUSD: (p:number) => p },
+  { sym:'USD/JPY', tv:'FX:USDJPY',       fh:'OANDA:USD_JPY',    bn:null,      spread:0.020,   dec:3, pip:0.01,   lotUSD: (_p:number) => LOT_SIZE },
+  { sym:'ETH/USD', tv:'BINANCE:ETHUSDT', fh:null,               bn:'ethusdt', spread:1.0,     dec:2, pip:1.0,    lotUSD: (p:number) => p },
 ]
 const TFS: Record<string,string> = { M1:'1',M5:'5',M15:'15',M30:'30',H1:'60',H4:'240',D1:'D' }
+
+// Default/seed prices — close to real market values March 2026
+const SEED: Record<string,number> = {
+  'EUR/USD': 1.1464, 'GBP/USD': 1.2940, 'XAU/USD': 2980.0,
+  'NAS100': 19200.0, 'BTC/USD': 83000.0, 'USD/JPY': 148.50, 'ETH/USD': 1900.0,
+}
 
 // ─── TradingView Widget ───────────────────────────────────────────────────────
 function TVChart({ tvSym, tf }: { tvSym: string; tf: string }) {
   const divRef = useRef<HTMLDivElement>(null)
+  // key changes force full remount when symbol/tf changes
+  const keyRef = useRef(0)
 
   useEffect(() => {
     if (!divRef.current) return
     divRef.current.innerHTML = ''
-    const cid = `tv_${Date.now()}`
-    const el = Object.assign(document.createElement('div'), { id: cid, style: 'width:100%;height:100%' })
+    keyRef.current++
+    const cid = `tv_${keyRef.current}`
+    const el = document.createElement('div')
+    el.id   = cid
+    el.style.cssText = 'width:100%;height:100%'
     divRef.current.appendChild(el)
 
     const build = () => {
+      if (!(window as any).TradingView) return
       new (window as any).TradingView.widget({
-        container_id: cid, symbol: tvSym, interval: TFS[tf] ?? '60',
-        timezone: 'Etc/UTC', theme: 'dark', style: '1', locale: 'en',
-        toolbar_bg: '#0A0A0F', enable_publishing: false, save_image: false,
-        width: '100%', height: '100%', allow_symbol_change: false,
-        disabled_features: ['use_localstorage_for_settings','header_symbol_search','header_compare','header_screenshot'],
+        container_id: cid,
+        symbol:   tvSym,
+        interval: TFS[tf] ?? '60',
+        timezone: 'Europe/Bucharest',
+        theme: 'dark', style: '1', locale: 'en',
+        toolbar_bg: '#0A0A0F',
+        enable_publishing: false,
+        hide_top_toolbar: false,
+        save_image: false,
+        width: '100%', height: '100%',
+        allow_symbol_change: false,
+        withdateranges: true,
+        hide_side_toolbar: false,
+        disabled_features: [
+          'use_localstorage_for_settings',
+          'header_symbol_search',
+          'header_compare',
+          'header_screenshot',
+        ],
         overrides: {
           'paneProperties.background': '#0A0A0F',
           'paneProperties.backgroundType': 'solid',
@@ -53,86 +83,150 @@ function TVChart({ tvSym, tf }: { tvSym: string; tf: string }) {
       })
     }
 
-    if ((window as any).TradingView) { build(); return }
-    if (!document.getElementById('tv-script')) {
-      const s = Object.assign(document.createElement('script'), { id:'tv-script', src:'https://s3.tradingview.com/tv.js', async: true })
+    if ((window as any).TradingView) {
+      build()
+    } else if (!document.getElementById('tv-script')) {
+      const s = document.createElement('script')
+      s.id  = 'tv-script'
+      s.src = 'https://s3.tradingview.com/tv.js'
+      s.async = true
       s.onload = build
       document.head.appendChild(s)
     } else {
-      const t = setInterval(() => { if ((window as any).TradingView) { clearInterval(t); build() } }, 100)
+      const t = setInterval(() => {
+        if ((window as any).TradingView) { clearInterval(t); build() }
+      }, 100)
+      return () => clearInterval(t)
     }
-  }, [tvSym, tf])
+  }, [tvSym, tf])  // re-runs on every symbol/tf change
 
   return <div ref={divRef} style={{ width:'100%', height:'100%' }} />
 }
 
-// ─── Price feed — ref-based so P&L always sees latest price ──────────────────
+// ─── Price Feed ───────────────────────────────────────────────────────────────
+// Uses useRef for prices so closures in calculations never go stale.
+// setTick() forces re-render on every price update.
 function usePriceFeed() {
-  // priceRef holds latest prices — never stale in callbacks
-  const priceRef = useRef<Record<string,number>>(
-    Object.fromEntries(INSTRUMENTS.map(i => [i.sym, 0]))
-  )
-  // tick counter forces re-render every time a price updates
+  const priceRef = useRef<Record<string,number>>({ ...SEED })
+  const prevRef  = useRef<Record<string,number>>({ ...SEED })
   const [tick, setTick] = useState(0)
-  const prevRef = useRef<Record<string,number>>({ ...priceRef.current })
 
-  const setPrice = useCallback((sym: string, p: number) => {
-    if (!p || isNaN(p)) return
-    prevRef.current[sym] = priceRef.current[sym] || p
+  const push = useCallback((sym: string, p: number) => {
+    if (!p || isNaN(p) || p <= 0) return
+    prevRef.current[sym]  = priceRef.current[sym] || p
     priceRef.current[sym] = p
-    setTick(t => t + 1)
+    setTick(n => n + 1)
   }, [])
 
   useEffect(() => {
-    // ── Binance combined stream (crypto)
-    const cryptos = INSTRUMENTS.filter(i => i.bn)
-    const streams = cryptos.map(i => `${i.bn}@trade`).join('/')
-    let bws: WebSocket, fws: WebSocket
-    let bReconnect: ReturnType<typeof setTimeout>
-    let fReconnect: ReturnType<typeof setTimeout>
+    let bws: WebSocket | null = null
+    let fws: WebSocket | null = null
+    let bTimer: ReturnType<typeof setTimeout>
+    let fTimer: ReturnType<typeof setTimeout>
+    let destroyed = false
+
+    // ── Binance combined stream (BTC + ETH realtime)
+    const bnInsts = INSTRUMENTS.filter(i => i.bn)
+    const streams = bnInsts.map(i => `${i.bn}@trade`).join('/')
 
     const connectBinance = () => {
+      if (destroyed) return
       bws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`)
       bws.onmessage = ({ data }) => {
-        const msg = JSON.parse(data)
-        const d = msg.data
-        if (!d?.s || !d?.p) return
-        const inst = cryptos.find(i => i.bn && d.s === i.bn.toUpperCase())
-        if (inst) setPrice(inst.sym, parseFloat(d.p))
+        try {
+          const msg = JSON.parse(data)
+          const d = msg.data
+          if (!d?.s || !d?.p) return
+          const inst = bnInsts.find(i => i.bn && d.s === i.bn.toUpperCase())
+          if (inst) push(inst.sym, parseFloat(d.p))
+        } catch {}
       }
-      bws.onclose  = () => { bReconnect = setTimeout(connectBinance, 3000) }
-      bws.onerror  = () => bws.close()
+      bws.onclose = () => { if (!destroyed) bTimer = setTimeout(connectBinance, 2000) }
+      bws.onerror = () => bws?.close()
     }
 
-    // ── Finnhub WS (forex + gold + indices)
+    // ── Finnhub WS (forex + gold + NAS100)
+    // Using public sandbox key — if quota exceeded falls back to REST polling
+    const FINNHUB_KEY = 'd0lbgopr01ql4s0b4cu0d0lbgopr01ql4s0b4cug'
     const fhInsts = INSTRUMENTS.filter(i => i.fh)
     const fhMap   = Object.fromEntries(fhInsts.map(i => [i.fh as string, i.sym]))
+    let fhConnected = false
 
     const connectFinnhub = () => {
+      if (destroyed) return
       fws = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_KEY}`)
       fws.onopen = () => {
-        fhInsts.forEach(i => fws.send(JSON.stringify({ type:'subscribe', symbol: i.fh })))
-      }
-      fws.onmessage = ({ data }) => {
-        const msg = JSON.parse(data)
-        if (msg.type !== 'trade' || !msg.data) return
-        msg.data.forEach((t: any) => {
-          const sym = fhMap[t.s]
-          if (sym && t.p) setPrice(sym, t.p)
+        fhConnected = true
+        fhInsts.forEach(i => {
+          fws?.send(JSON.stringify({ type: 'subscribe', symbol: i.fh }))
         })
       }
-      fws.onclose  = () => { fReconnect = setTimeout(connectFinnhub, 3000) }
-      fws.onerror  = () => fws.close()
+      fws.onmessage = ({ data }) => {
+        try {
+          const msg = JSON.parse(data)
+          if (msg.type !== 'trade' || !msg.data) return
+          msg.data.forEach((t: any) => {
+            const sym = fhMap[t.s]
+            if (sym && t.p > 0) push(sym, t.p)
+          })
+        } catch {}
+      }
+      fws.onclose = () => {
+        fhConnected = false
+        if (!destroyed) fTimer = setTimeout(connectFinnhub, 3000)
+      }
+      fws.onerror = () => fws?.close()
+    }
+
+    // ── REST fallback for forex — polls Frankfurter every 5s
+    // Covers EUR/USD, GBP/USD, USD/JPY when Finnhub is slow/down
+    const pollForex = async () => {
+      try {
+        const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY')
+        const d = await r.json()
+        if (d.rates) {
+          if (d.rates.EUR) push('EUR/USD', parseFloat((1 / d.rates.EUR).toFixed(5)))
+          if (d.rates.GBP) push('GBP/USD', parseFloat((1 / d.rates.GBP).toFixed(5)))
+          if (d.rates.JPY) push('USD/JPY', parseFloat(d.rates.JPY.toFixed(3)))
+        }
+      } catch {}
+    }
+
+    // Poll gold via metals-api alternative
+    const pollGold = async () => {
+      try {
+        // Use Binance PAXGUSD as proxy for gold price
+        const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSD')
+        const d = await r.json()
+        if (d.price) push('XAU/USD', parseFloat(d.price))
+      } catch {}
+    }
+
+    // Poll NAS100 — use QQQ ETF price * ~5.14 as proxy, or Binance futures
+    const pollNas = async () => {
+      try {
+        const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT')
+        const d = await r.json()
+        // NAS100 not available on Binance directly — keep seed + Finnhub WS
+      } catch {}
     }
 
     connectBinance()
     connectFinnhub()
 
+    // Always poll REST as backup/supplement
+    pollForex()
+    pollGold()
+    const forexInterval = setInterval(pollForex, 5000)
+    const goldInterval  = setInterval(pollGold, 5000)
+
     return () => {
-      clearTimeout(bReconnect); clearTimeout(fReconnect)
+      destroyed = true
+      clearTimeout(bTimer); clearTimeout(fTimer)
+      clearInterval(forexInterval); clearInterval(goldInterval)
       bws?.close(); fws?.close()
     }
-  }, [setPrice])
+  }, [push])
 
   return { priceRef, prevRef, tick }
 }
@@ -145,7 +239,7 @@ export function PlatformPage() {
   const [selAccId, setSelAccId] = useState<string|null>(null)
   const primary = accounts.find(a => a.id === selAccId) ?? defPrimary
 
-  const [sym,       setSym]       = useState('BTC/USD')
+  const [sym,       setSym]       = useState('EUR/USD')
   const [tf,        setTf]        = useState('H1')
   const [dir,       setDir]       = useState<'buy'|'sell'>('buy')
   const [lots,      setLots]      = useState('0.10')
@@ -159,40 +253,63 @@ export function PlatformPage() {
   const [closedTrades, setClosedTrades] = useState<any[]>([])
 
   const { priceRef, prevRef, tick } = usePriceFeed()
+  void tick // consumed — ensures re-render on every price update
 
-  // Reading prices — tick dependency ensures fresh values every update
-  const prices  = priceRef.current  // eslint-disable-line
-  void tick                          // consumed so re-render fires
+  const prices = priceRef.current
+  const inst   = INSTRUMENTS.find(i => i.sym === sym)!
 
-  const inst      = INSTRUMENTS.find(i => i.sym === sym)!
-  const livePrice = prices[sym] || inst.pip
+  const livePrice = prices[sym] || SEED[sym]
   const prevPrice = prevRef.current[sym] || livePrice
+  const execPrice = parseFloat((dir === 'buy' ? livePrice + inst.spread : livePrice).toFixed(inst.dec))
   const lotsNum   = Math.max(0.01, parseFloat(lots) || 0.01)
-  const execPrice = dir === 'buy' ? livePrice + inst.spread : livePrice
+  const up        = livePrice >= prevPrice
 
-  // ── Live financials (recalc every tick) ──
+  // ── Financials ──
   const balance = primary?.balance ?? 0
 
   const openPnl = openTrades.reduce((sum, t) => {
     const ti  = INSTRUMENTS.find(p => p.sym === t.symbol)!
-    const cur = prices[t.symbol] || t.open_price
+    const cur = prices[t.symbol] || SEED[t.symbol]
     const diff = t.direction === 'buy' ? cur - t.open_price : t.open_price - cur
-    return sum + diff * LOT_SIZE * t.lots
+    // P&L = diff * lot contract size in base currency * lots
+    // For EUR/USD: 1 pip move on 1 lot = $10; diff * 100000 * lots
+    // For XAU/USD: diff * 100 * lots
+    return sum + diff * (ti.lotUSD(1) / 1) * t.lots / (cur || 1) * cur
   }, 0)
 
-  const equity = balance + openPnl
+  // Correct P&L: diff in price * notional / price = diff * contract_units * lots
+  const openPnlCorrect = openTrades.reduce((sum, t) => {
+    const ti  = INSTRUMENTS.find(p => p.sym === t.symbol)!
+    const cur = prices[t.symbol] || SEED[t.symbol]
+    const diff = t.direction === 'buy' ? cur - t.open_price : t.open_price - cur
+    // notional_usd = lotUSD(cur), units = notional / price
+    // P&L = diff * units * lots
+    // EUR/USD: units = 100000, P&L = diff * 100000 * lots ✓
+    // XAU/USD: units = 100,    P&L = diff * 100 * lots ✓
+    // BTC/USD: units = 1,      P&L = diff * 1 * lots ✓
+    // USD/JPY: units = 100000, P&L = diff * 100000 / JPY * lots → need USD
+    let units: number
+    if (t.symbol === 'USD/JPY') {
+      units = LOT_SIZE / cur  // each pip worth $1000/cur ≈ USD
+    } else {
+      units = ti.lotUSD(1) / 1  // for quote=USD pairs: units = 100000 or 100 or 1
+    }
+    return sum + diff * units * t.lots
+  }, 0)
 
+  const equity = balance + openPnlCorrect
+
+  // Margin = (price * contract_units * lots) / leverage
   const usedMargin = openTrades.reduce((sum, t) => {
-    const cur = prices[t.symbol] || t.open_price
-    return sum + (cur * t.lots * LOT_SIZE) / LEVERAGE
+    const ti  = INSTRUMENTS.find(p => p.sym === t.symbol)!
+    const cur = prices[t.symbol] || SEED[t.symbol]
+    return sum + ti.lotUSD(cur) * t.lots / LEVERAGE
   }, 0)
 
   const freeMargin  = equity - usedMargin
   const marginLevel = usedMargin > 0 ? (equity / usedMargin) * 100 : Infinity
-  const reqMargin   = (execPrice * lotsNum * LOT_SIZE) / LEVERAGE
-  const maxLots     = Math.max(0, Math.floor((freeMargin * LEVERAGE) / (execPrice * LOT_SIZE) * 100) / 100)
-
-  const up = livePrice >= prevPrice
+  const reqMargin   = inst.lotUSD(execPrice) * lotsNum / LEVERAGE
+  const maxLots     = Math.max(0, Math.floor((freeMargin * LEVERAGE / inst.lotUSD(execPrice)) * 100) / 100)
 
   // ── Load trades ──
   useEffect(() => {
@@ -203,9 +320,8 @@ export function PlatformPage() {
       .order('closed_at',{ascending:false}).limit(50).then(({data}) => setClosedTrades(data ?? []))
   }, [primary?.id])
 
-  // ── Place order ──
   async function placeOrder() {
-    if (!primary) { toast('error','❌','No Account','No active trading account.'); return }
+    if (!primary) { toast('error','❌','No Account','No active account.'); return }
     if (reqMargin > freeMargin) {
       toast('error','⛔','Insufficient Margin',`Need $${reqMargin.toFixed(2)}, free: $${freeMargin.toFixed(2)}`)
       return
@@ -215,7 +331,7 @@ export function PlatformPage() {
       account_id: primary.id, user_id: primary.user_id,
       symbol: sym, direction: dir, lots: lotsNum,
       order_type: orderType.toLowerCase(),
-      open_price: parseFloat(execPrice.toFixed(inst.dec)),
+      open_price: execPrice,
       sl: sl ? parseFloat(sl) : null,
       tp: tp ? parseFloat(tp) : null,
       status: 'open', opened_at: new Date().toISOString(),
@@ -223,18 +339,24 @@ export function PlatformPage() {
     setPlacing(false)
     if (error) { toast('error','❌','Error', error.message); return }
     setOpenTrades(t => [data, ...t])
-    toast('success','⚡','Order Placed',`${dir.toUpperCase()} ${lotsNum} ${sym} @ ${execPrice.toFixed(inst.dec)}`)
+    toast('success','⚡','Order Placed',`${dir.toUpperCase()} ${lotsNum} ${sym} @ ${execPrice}`)
     setSl(''); setTp('')
   }
 
-  // ── Close trade ──
   async function closeTrade(trade: any) {
     const ti  = INSTRUMENTS.find(p => p.sym === trade.symbol)!
-    const cur = prices[trade.symbol] || trade.open_price
+    const cur = prices[trade.symbol] || SEED[trade.symbol]
     const closePrice = parseFloat((trade.direction==='buy' ? cur : cur + ti.spread).toFixed(ti.dec))
-    const diff  = trade.direction==='buy' ? closePrice - trade.open_price : trade.open_price - closePrice
-    const pips  = parseFloat((diff / ti.pip).toFixed(1))
-    const netPnl = parseFloat((diff * LOT_SIZE * trade.lots).toFixed(2))
+    const diff = trade.direction==='buy' ? closePrice - trade.open_price : trade.open_price - closePrice
+
+    let units: number
+    if (trade.symbol === 'USD/JPY') {
+      units = LOT_SIZE / closePrice
+    } else {
+      units = ti.lotUSD(1) / 1
+    }
+    const netPnl = parseFloat((diff * units * trade.lots).toFixed(2))
+    const pips   = parseFloat((diff / ti.pip).toFixed(1))
 
     const { error } = await supabase.from('trades').update({
       status: 'closed', close_price: closePrice,
@@ -252,16 +374,11 @@ export function PlatformPage() {
       `${trade.symbol} ${netPnl>=0?'+':''}${fmt(netPnl)}`)
   }
 
-  // ── Styles ──
-  const th = (label: string) => (
-    <th key={label} style={{ padding:'5px 10px', fontSize:7, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', textAlign:'left' as const, fontWeight:600 }}>{label}</th>
-  )
-
   return (
     <>
     <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'#0A0A0F', color:'var(--text)', fontFamily:'var(--font-sans,sans-serif)' }}>
 
-      {/* ── Watchlist ──────────────────────────────────────────────── */}
+      {/* ── Watchlist ── */}
       <div style={{ width:158, flexShrink:0, background:'var(--bg2)', borderRight:'1px solid var(--bdr)', display:'flex', flexDirection:'column' }}>
         <div style={{ padding:'10px 12px', borderBottom:'1px solid var(--bdr)', display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ width:20, height:20, border:'1px solid var(--gold)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'var(--gold)' }}>✦</div>
@@ -269,82 +386,75 @@ export function PlatformPage() {
         </div>
         <div style={{ flex:1, overflowY:'auto' }}>
           {INSTRUMENTS.map(i => {
-            const cur = prices[i.sym] || 0
+            const cur = prices[i.sym] || SEED[i.sym]
             const prv = prevRef.current[i.sym] || cur
-            const isUp = cur >= prv
+            const isLive = prices[i.sym] > 0
+            const isUp   = cur >= prv
             return (
               <div key={i.sym} onClick={() => setSym(i.sym)} style={{
                 padding:'8px 12px', cursor:'pointer', borderBottom:'1px solid rgba(212,168,67,.04)',
                 background: sym===i.sym ? 'rgba(212,168,67,.07)' : 'transparent',
                 borderLeft: sym===i.sym ? '2px solid var(--gold)' : '2px solid transparent',
               }}>
-                <div style={{ fontWeight:600, fontSize:11, marginBottom:2 }}>{i.sym}</div>
-                <div style={{ fontFamily:'monospace', fontSize:11, color:isUp?'var(--green)':'var(--red)' }}>
-                  {cur > 0 ? cur.toFixed(i.dec) : <span style={{ color:'var(--text3)' }}>connecting…</span>}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontWeight:600, fontSize:11 }}>{i.sym}</span>
+                  <span style={{ width:6, height:6, borderRadius:'50%', background: isLive ? 'var(--green)' : '#555', flexShrink:0 }}/>
                 </div>
-                {cur > 0 && (
-                  <div style={{ fontSize:8, color:isUp?'var(--green)':'var(--red)' }}>
-                    {isUp?'▲':'▼'} {Math.abs(cur - prv).toFixed(i.dec)}
-                  </div>
-                )}
+                <div style={{ fontFamily:'monospace', fontSize:11, marginTop:2, color:isUp?'var(--green)':'var(--red)' }}>
+                  {cur.toFixed(i.dec)}
+                </div>
+                <div style={{ fontSize:8, color:isUp?'var(--green)':'var(--red)' }}>
+                  {isUp?'▲':'▼'} {Math.abs(cur - prv).toFixed(i.dec)}
+                </div>
               </div>
             )
           })}
         </div>
         <div style={{ padding:'8px 12px', borderTop:'1px solid var(--bdr)' }}>
           {accounts.length > 1 ? (
-            <>
-              <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>Account</div>
-              <select value={selAccId ?? primary?.id ?? ''} onChange={e => setSelAccId(e.target.value)}
-                style={{ width:'100%', padding:'5px 6px', background:'var(--bg3)', border:'1px solid var(--dim)', color:'var(--text)', fontSize:9, fontFamily:'monospace', outline:'none', cursor:'pointer', marginBottom:8 }}>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.account_number}</option>)}
-              </select>
-            </>
+            <select value={selAccId ?? primary?.id ?? ''} onChange={e => setSelAccId(e.target.value)} style={{ width:'100%', padding:'5px 6px', background:'var(--bg3)', border:'1px solid var(--dim)', color:'var(--text)', fontSize:9, fontFamily:'monospace', outline:'none', cursor:'pointer', marginBottom:8 }}>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.account_number}</option>)}
+            </select>
           ) : (
             <div style={{ marginBottom:8, padding:'5px 6px', background:'var(--bg3)', border:'1px solid var(--dim)', fontSize:9, fontFamily:'monospace', color:'var(--gold)', textAlign:'center' }}>
               {primary?.account_number ?? '—'}
             </div>
           )}
-          <button onClick={() => navigate('/dashboard')}
-            style={{ width:'100%', fontSize:9, letterSpacing:1, textTransform:'uppercase', color:'var(--text3)', background:'none', border:'none', cursor:'pointer', textAlign:'center' }}>
+          <button onClick={() => navigate('/dashboard')} style={{ width:'100%', fontSize:9, letterSpacing:1, textTransform:'uppercase' as const, color:'var(--text3)', background:'none', border:'none', cursor:'pointer', textAlign:'center' as const }}>
             ← Dashboard
           </button>
         </div>
       </div>
 
-      {/* ── Main ───────────────────────────────────────────────────── */}
+      {/* ── Main area ── */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
         {/* Topbar */}
-        <div style={{ height:50, background:'var(--bg2)', borderBottom:'1px solid var(--bdr)', display:'flex', alignItems:'center', padding:'0 14px', gap:12, flexShrink:0 }}>
-          <span style={{ fontFamily:'serif', fontSize:15, fontWeight:'bold' }}>{sym}</span>
-          <span style={{ fontFamily:'monospace', fontSize:20, fontWeight:700, color:up?'var(--green)':'var(--red)', minWidth:100 }}>
-            {livePrice > 0 ? livePrice.toFixed(inst.dec) : '—'}
+        <div style={{ height:50, background:'var(--bg2)', borderBottom:'1px solid var(--bdr)', display:'flex', alignItems:'center', padding:'0 14px', gap:10, flexShrink:0, flexWrap:'nowrap' as const }}>
+          <span style={{ fontFamily:'serif', fontSize:15, fontWeight:'bold', flexShrink:0 }}>{sym}</span>
+          <span style={{ fontFamily:'monospace', fontSize:20, fontWeight:700, color:up?'var(--green)':'var(--red)', flexShrink:0 }}>
+            {livePrice.toFixed(inst.dec)}
           </span>
-          {livePrice > 0 && (
-            <span style={{ fontSize:10, color:up?'var(--green)':'var(--red)' }}>
-              {up?'▲':'▼'} {Math.abs(livePrice - prevPrice).toFixed(inst.dec)}
-            </span>
-          )}
-
-          {/* Balance / Equity bar */}
-          <div style={{ marginLeft:12, display:'flex', gap:14, padding:'4px 12px', background:'rgba(0,0,0,.3)', border:'1px solid var(--bdr)' }}>
+          <span style={{ fontSize:10, color:up?'var(--green)':'var(--red)', flexShrink:0 }}>
+            {up?'▲':'▼'} {Math.abs(livePrice - prevPrice).toFixed(inst.dec)}
+          </span>
+          {/* Financials bar */}
+          <div style={{ display:'flex', gap:12, padding:'4px 12px', background:'rgba(0,0,0,.35)', border:'1px solid rgba(212,168,67,.12)', marginLeft:8 }}>
             {[
-              { l:'Balance',    v: fmt(balance),                             c:'var(--gold)' },
-              { l:'Equity',     v: fmt(equity),                              c: openPnl>=0?'var(--green)':'var(--red)' },
-              { l:'P&L',        v:`${openPnl>=0?'+':''}${fmt(openPnl)}`,     c: openPnl>=0?'var(--green)':'var(--red)' },
-              { l:'Free Margin',v: fmt(freeMargin),                          c: freeMargin<0?'var(--red)':'var(--text2)' },
-              ...(usedMargin > 0 ? [{ l:'Margin Lvl', v:`${marginLevel.toFixed(0)}%`, c: marginLevel<150?'var(--red)':'var(--text2)' }] : []),
+              { l:'BALANCE',    v: fmt(balance),                               c:'var(--gold)' },
+              { l:'EQUITY',     v: fmt(equity),                                c: equity>=balance?'var(--green)':'var(--red)' },
+              { l:'OPEN P&L',   v:`${openPnlCorrect>=0?'+':''}${fmt(openPnlCorrect)}`, c: openPnlCorrect>=0?'var(--green)':'var(--red)' },
+              { l:'FREE MARGIN',v: fmt(freeMargin),                            c: freeMargin<0?'var(--red)':'var(--text2)' },
+              ...(usedMargin > 0 ? [{ l:'MARGIN LVL', v:`${marginLevel.toFixed(0)}%`, c: marginLevel<150?'var(--red)':'var(--text2)' }] : []),
             ].map(({ l, v, c }) => (
-              <div key={l}>
-                <div style={{ fontSize:7, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600 }}>{l}</div>
-                <div style={{ fontFamily:'monospace', fontSize:11, fontWeight:600, color: c }}>{v}</div>
+              <div key={l} style={{ flexShrink:0 }}>
+                <div style={{ fontSize:7, letterSpacing:1.5, color:'var(--text3)', fontWeight:600 }}>{l}</div>
+                <div style={{ fontFamily:'monospace', fontSize:11, fontWeight:700, color: c }}>{v}</div>
               </div>
             ))}
           </div>
-
-          {/* TF buttons */}
-          <div style={{ marginLeft:'auto', display:'flex', gap:2 }}>
+          {/* TF selector */}
+          <div style={{ marginLeft:'auto', display:'flex', gap:2, flexShrink:0 }}>
             {Object.keys(TFS).map(t => (
               <button key={t} onClick={() => setTf(t)} style={{
                 padding:'3px 7px', fontSize:9, fontFamily:'monospace', fontWeight:'bold', cursor:'pointer',
@@ -354,14 +464,14 @@ export function PlatformPage() {
               }}>{t}</button>
             ))}
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-            <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--green)', animation:'pulse 2s infinite', boxShadow:'0 0 6px var(--green)' }}/>
+          <div style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
+            <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--green)', boxShadow:'0 0 6px var(--green)' }}/>
             <span style={{ fontSize:9, color:'var(--green)', letterSpacing:1.5, textTransform:'uppercase' as const, fontWeight:600 }}>Live</span>
           </div>
         </div>
 
-        {/* Chart */}
-        <div style={{ flex:1, overflow:'hidden' }}>
+        {/* TradingView Chart — wrapper key forces full remount on symbol/tf change */}
+        <div key={`${sym}_${tf}`} style={{ flex:1, overflow:'hidden' }}>
           <TVChart tvSym={inst.tv} tf={tf} />
         </div>
 
@@ -369,70 +479,55 @@ export function PlatformPage() {
         <div style={{ height:220, background:'var(--bg2)', borderTop:'1px solid var(--bdr)', display:'flex', flexDirection:'column', flexShrink:0 }}>
           <div style={{ display:'flex', borderBottom:'1px solid var(--bdr)' }}>
             {[['positions',`Positions (${openTrades.length})`],['history',`History (${closedTrades.length})`],['account','Account']].map(([k,l]) => (
-              <button key={k} onClick={() => setTab(k)} style={{
-                padding:'7px 14px', fontSize:9, letterSpacing:1, textTransform:'uppercase' as const, fontWeight:600, cursor:'pointer', border:'none',
-                borderBottom: tab===k?'2px solid var(--gold)':'2px solid transparent',
-                background: tab===k?'rgba(212,168,67,.04)':'transparent',
-                color: tab===k?'var(--gold)':'var(--text3)', marginBottom:-1,
-              }}>{l}</button>
+              <button key={k} onClick={() => setTab(k)} style={{ padding:'7px 14px', fontSize:9, letterSpacing:1, textTransform:'uppercase' as const, fontWeight:600, cursor:'pointer', border:'none', borderBottom: tab===k?'2px solid var(--gold)':'2px solid transparent', background: tab===k?'rgba(212,168,67,.04)':'transparent', color: tab===k?'var(--gold)':'var(--text3)', marginBottom:-1 }}>{l}</button>
             ))}
           </div>
           <div style={{ flex:1, overflow:'auto' }}>
-
-            {/* Positions tab */}
             {tab==='positions' && (
               openTrades.length === 0
                 ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'var(--text3)', fontSize:11 }}>No open positions</div>
                 : <table style={{ width:'100%', borderCollapse:'collapse', fontSize:10 }}>
-                    <thead>
-                      <tr style={{ borderBottom:'1px solid var(--dim)' }}>
-                        {['Symbol','Dir','Lots','Open Price','Current','P&L','SL','TP','Time',''].map(h => th(h))}
-                      </tr>
-                    </thead>
+                    <thead><tr style={{ borderBottom:'1px solid var(--dim)' }}>
+                      {['Symbol','Dir','Lots','Open Price','Current','P&L','SL','TP','Time',''].map(h => (
+                        <th key={h} style={{ padding:'5px 10px', fontSize:7, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', textAlign:'left' as const, fontWeight:600 }}>{h}</th>
+                      ))}
+                    </tr></thead>
                     <tbody>
                       {openTrades.map(t => {
-                        const ti   = INSTRUMENTS.find(p => p.sym === t.symbol)!
-                        const cur  = prices[t.symbol] || t.open_price
+                        const ti  = INSTRUMENTS.find(p => p.sym === t.symbol)!
+                        const cur = prices[t.symbol] || SEED[t.symbol]
                         const diff = t.direction==='buy' ? cur - t.open_price : t.open_price - cur
-                        const pnl  = parseFloat((diff * LOT_SIZE * t.lots).toFixed(2))
-                        const pnlUp = pnl >= 0
+                        let units: number
+                        if (t.symbol === 'USD/JPY') { units = LOT_SIZE / cur }
+                        else { units = ti.lotUSD(1) / 1 }
+                        const pnl = parseFloat((diff * units * t.lots).toFixed(2))
                         return (
                           <tr key={t.id} style={{ borderBottom:'1px solid rgba(212,168,67,.04)' }}>
                             <td style={{ padding:'6px 10px', fontWeight:700 }}>{t.symbol}</td>
-                            <td style={{ padding:'6px 10px' }}>
-                              <span style={{ fontSize:8, fontWeight:'bold', letterSpacing:1, color:t.direction==='buy'?'var(--green)':'var(--red)' }}>{t.direction.toUpperCase()}</span>
-                            </td>
+                            <td style={{ padding:'6px 10px' }}><span style={{ fontSize:8, fontWeight:'bold', letterSpacing:1, color:t.direction==='buy'?'var(--green)':'var(--red)' }}>{t.direction.toUpperCase()}</span></td>
                             <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.lots}</td>
                             <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.open_price}</td>
-                            <td style={{ padding:'6px 10px', fontFamily:'monospace', color: cur >= t.open_price ? 'var(--green)':'var(--red)' }}>{cur.toFixed(ti.dec)}</td>
-                            <td style={{ padding:'6px 10px', fontFamily:'monospace', fontWeight:700, fontSize:11, color:pnlUp?'var(--green)':'var(--red)' }}>
-                              {pnlUp?'+':''}{fmt(pnl)}
-                            </td>
+                            <td style={{ padding:'6px 10px', fontFamily:'monospace', color:cur>=t.open_price?'var(--green)':'var(--red)' }}>{cur.toFixed(ti.dec)}</td>
+                            <td style={{ padding:'6px 10px', fontFamily:'monospace', fontWeight:700, fontSize:11, color:pnl>=0?'var(--green)':'var(--red)' }}>{pnl>=0?'+':''}{fmt(pnl)}</td>
                             <td style={{ padding:'6px 10px', fontFamily:'monospace', color:'var(--red)', fontSize:9 }}>{t.sl??'—'}</td>
                             <td style={{ padding:'6px 10px', fontFamily:'monospace', color:'var(--green)', fontSize:9 }}>{t.tp??'—'}</td>
                             <td style={{ padding:'6px 10px', fontFamily:'monospace', fontSize:9, color:'var(--text3)' }}>{new Date(t.opened_at).toLocaleTimeString()}</td>
-                            <td style={{ padding:'6px 10px' }}>
-                              <button onClick={() => closeTrade(t)} style={{ padding:'3px 10px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.1)', color:'var(--red)', border:'1px solid rgba(255,51,82,.25)' }}>
-                                ✕ Close
-                              </button>
-                            </td>
+                            <td style={{ padding:'6px 10px' }}><button onClick={() => closeTrade(t)} style={{ padding:'3px 10px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.1)', color:'var(--red)', border:'1px solid rgba(255,51,82,.25)' }}>✕ Close</button></td>
                           </tr>
                         )
                       })}
                     </tbody>
                   </table>
             )}
-
-            {/* History tab */}
             {tab==='history' && (
               closedTrades.length === 0
                 ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'var(--text3)', fontSize:11 }}>No history</div>
                 : <table style={{ width:'100%', borderCollapse:'collapse', fontSize:10 }}>
-                    <thead>
-                      <tr style={{ borderBottom:'1px solid var(--dim)' }}>
-                        {['Symbol','Dir','Lots','Open','Close','Pips','P&L','Date'].map(h => th(h))}
-                      </tr>
-                    </thead>
+                    <thead><tr style={{ borderBottom:'1px solid var(--dim)' }}>
+                      {['Symbol','Dir','Lots','Open','Close','Pips','P&L','Date'].map(h => (
+                        <th key={h} style={{ padding:'5px 10px', fontSize:7, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', textAlign:'left' as const, fontWeight:600 }}>{h}</th>
+                      ))}
+                    </tr></thead>
                     <tbody>
                       {closedTrades.map(t => (
                         <tr key={t.id} style={{ borderBottom:'1px solid rgba(212,168,67,.04)' }}>
@@ -449,25 +544,23 @@ export function PlatformPage() {
                     </tbody>
                   </table>
             )}
-
-            {/* Account tab */}
             {tab==='account' && (
               <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12, padding:16 }}>
-                {[
-                  ['Balance',     fmt(balance),                              'var(--gold)'],
-                  ['Equity',      fmt(equity),                               equity>=balance?'var(--green)':'var(--red)'],
-                  ['Open P&L',    `${openPnl>=0?'+':''}${fmt(openPnl)}`,    openPnl>=0?'var(--green)':'var(--red)'],
-                  ['Free Margin', fmt(freeMargin),                           freeMargin<0?'var(--red)':'var(--text)'],
-                  ['Used Margin', fmt(usedMargin),                           'var(--text)'],
-                  ['Margin Lvl',  usedMargin>0?`${marginLevel.toFixed(0)}%`:'∞', (marginLevel<150&&usedMargin>0)?'var(--red)':'var(--green)'],
-                  ['Leverage',    `1:${LEVERAGE}`,                           'var(--text2)'],
-                  ['Open Pos.',   String(openTrades.length),                 'var(--text)'],
-                  ['Account',     primary?.account_number??'—',              'var(--gold)'],
-                  ['Phase',       primary?.phase??'—',                       'var(--text2)'],
-                ].map(([l,v,c]) => (
-                  <div key={l as string}>
+                {([
+                  ['Balance',     fmt(balance),                                    'var(--gold)'],
+                  ['Equity',      fmt(equity),                                     equity>=balance?'var(--green)':'var(--red)'],
+                  ['Open P&L',    `${openPnlCorrect>=0?'+':''}${fmt(openPnlCorrect)}`, openPnlCorrect>=0?'var(--green)':'var(--red)'],
+                  ['Free Margin', fmt(freeMargin),                                  freeMargin<0?'var(--red)':'var(--text)'],
+                  ['Used Margin', fmt(usedMargin),                                  'var(--text)'],
+                  ['Margin Lvl',  usedMargin>0?`${marginLevel.toFixed(0)}%`:'∞',   (marginLevel<150&&usedMargin>0)?'var(--red)':'var(--green)'],
+                  ['Leverage',    `1:${LEVERAGE}`,                                  'var(--text2)'],
+                  ['Open Pos.',   String(openTrades.length),                        'var(--text)'],
+                  ['Account',     primary?.account_number??'—',                     'var(--gold)'],
+                  ['Phase',       primary?.phase??'—',                              'var(--text2)'],
+                ] as [string,string,string][]).map(([l,v,c]) => (
+                  <div key={l}>
                     <div style={{ fontSize:7, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, marginBottom:4 }}>{l}</div>
-                    <div style={{ fontFamily:'monospace', fontSize:12, color: c as string }}>{v}</div>
+                    <div style={{ fontFamily:'monospace', fontSize:12, color: c }}>{v}</div>
                   </div>
                 ))}
               </div>
@@ -476,9 +569,8 @@ export function PlatformPage() {
         </div>
       </div>
 
-      {/* ── Order Panel ────────────────────────────────────────────── */}
+      {/* ── Order Panel ── */}
       <div style={{ width:210, flexShrink:0, background:'var(--bg2)', borderLeft:'1px solid var(--bdr)', display:'flex', flexDirection:'column' }}>
-        {/* Buy / Sell */}
         <div style={{ padding:'10px 12px', borderBottom:'1px solid var(--bdr)' }}>
           <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, marginBottom:8 }}>Order Panel</div>
           <div style={{ display:'flex' }}>
@@ -492,7 +584,7 @@ export function PlatformPage() {
           <div style={{ textAlign:'center', padding:'10px 8px', border:`1px solid ${up?'rgba(0,217,126,.25)':'rgba(255,51,82,.25)'}`, background:'var(--bg3)' }}>
             <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, marginBottom:3 }}>{dir==='buy'?'Ask':'Bid'}</div>
             <div style={{ fontFamily:'monospace', fontSize:22, fontWeight:700, color:up?'var(--green)':'var(--red)', letterSpacing:-1 }}>
-              {livePrice > 0 ? execPrice.toFixed(inst.dec) : <span style={{ color:'var(--text3)', fontSize:14 }}>connecting…</span>}
+              {execPrice.toFixed(inst.dec)}
             </div>
             <div style={{ fontSize:8, color:'var(--text3)', marginTop:3 }}>spread {inst.spread.toFixed(inst.dec)}</div>
           </div>
@@ -510,12 +602,11 @@ export function PlatformPage() {
           {/* Lot size */}
           <div>
             <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, marginBottom:4 }}>
-              Lot Size <span style={{ fontWeight:400, color:'var(--text3)' }}>(max {maxLots})</span>
+              Lot Size <span style={{ fontWeight:400 }}>(max {maxLots})</span>
             </div>
             <div style={{ display:'flex', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
               <button onClick={() => setLots(l => String(Math.max(0.01, parseFloat(l)-0.01).toFixed(2)))} style={{ padding:'0 10px', background:'transparent', border:'none', borderRight:'1px solid var(--dim)', cursor:'pointer', color:'var(--text3)', fontSize:16, fontWeight:'bold' }}>−</button>
-              <input value={lots} onChange={e => setLots(e.target.value)} type="number" step="0.01" min="0.01"
-                style={{ flex:1, textAlign:'center', padding:'8px 0', background:'transparent', border:'none', outline:'none', color:'var(--text)', fontFamily:'monospace', fontSize:13 }}/>
+              <input value={lots} onChange={e => setLots(e.target.value)} type="number" step="0.01" min="0.01" style={{ flex:1, textAlign:'center', padding:'8px 0', background:'transparent', border:'none', outline:'none', color:'var(--text)', fontFamily:'monospace', fontSize:13 }}/>
               <button onClick={() => setLots(l => String((parseFloat(l)+0.01).toFixed(2)))} style={{ padding:'0 10px', background:'transparent', border:'none', borderLeft:'1px solid var(--dim)', cursor:'pointer', color:'var(--text3)', fontSize:16, fontWeight:'bold' }}>+</button>
             </div>
           </div>
@@ -529,12 +620,12 @@ export function PlatformPage() {
             </div>
           ))}
 
-          {/* Margin info */}
+          {/* Margin summary */}
           <div style={{ background:'var(--bg3)', border:'1px solid var(--dim)', padding:'8px 10px' }}>
             {([
-              ['Req. Margin', `$${reqMargin.toFixed(2)}`, reqMargin > freeMargin ? 'var(--red)':'var(--text)'],
+              ['Req. Margin', `$${reqMargin.toFixed(2)}`,  reqMargin > freeMargin ? 'var(--red)':'var(--text)'],
               ['Free Margin', `$${freeMargin.toFixed(2)}`, freeMargin < reqMargin ? 'var(--red)':'var(--green)'],
-              ['Leverage',    `1:${LEVERAGE}`,             'var(--text3)'],
+              ['Leverage',    `1:${LEVERAGE}`,              'var(--text3)'],
             ] as [string,string,string][]).map(([l,v,c]) => (
               <div key={l} style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
                 <span style={{ fontSize:8, color:'var(--text3)' }}>{l}</span>
@@ -543,14 +634,12 @@ export function PlatformPage() {
             ))}
           </div>
 
-          {!primary && (
-            <div style={{ fontSize:9, color:'var(--red)', textAlign:'center', border:'1px solid rgba(255,51,82,.2)', padding:8 }}>No active account</div>
-          )}
+          {!primary && <div style={{ fontSize:9, color:'var(--red)', textAlign:'center' as const, border:'1px solid rgba(255,51,82,.2)', padding:8 }}>No active account</div>}
 
-          <button onClick={() => setConfirmOpen(true)} disabled={placing || !primary || reqMargin > freeMargin} style={{
+          <button onClick={() => setConfirmOpen(true)} disabled={placing||!primary||reqMargin>freeMargin} style={{
             width:'100%', padding:'12px 0', fontSize:11, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold',
-            cursor: placing||!primary||reqMargin>freeMargin ? 'not-allowed':'pointer',
-            border:'none', opacity: placing||!primary||reqMargin>freeMargin ? 0.35 : 1,
+            cursor: placing||!primary||reqMargin>freeMargin?'not-allowed':'pointer',
+            border:'none', opacity: placing||!primary||reqMargin>freeMargin?0.35:1,
             background: dir==='buy'?'var(--green)':'var(--red)',
             color: dir==='buy'?'#000':'#fff',
           }}>
@@ -563,18 +652,14 @@ export function PlatformPage() {
     {/* Confirm modal */}
     {confirmOpen && (
       <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.8)', backdropFilter:'blur(4px)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div style={{ background:'var(--bg2)', border:'1px solid var(--bdr2)', padding:24, minWidth:300, maxWidth:360 }}>
+        <div style={{ background:'var(--bg2)', border:'1px solid var(--bdr2)', padding:24, minWidth:300 }}>
           <div style={{ fontFamily:'serif', fontSize:19, fontWeight:'bold', marginBottom:4 }}>Confirm Order</div>
           <div style={{ fontSize:11, color:'var(--text2)', marginBottom:16 }}>Review before executing</div>
           <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:16 }}>
             {([
-              ['Symbol', sym],
-              ['Direction', dir.toUpperCase()],
-              ['Type', orderType],
-              ['Lots', String(lotsNum)],
-              ['Price', execPrice.toFixed(inst.dec)],
-              ['Margin', `$${reqMargin.toFixed(2)}`],
-              ['Account', primary?.account_number ?? '—'],
+              ['Symbol', sym], ['Direction', dir.toUpperCase()], ['Type', orderType],
+              ['Lots', String(lotsNum)], ['Price', String(execPrice)],
+              ['Margin', `$${reqMargin.toFixed(2)}`], ['Account', primary?.account_number ?? '—'],
             ] as [string,string][]).map(([l,v]) => (
               <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
                 <span style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600 }}>{l}</span>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardHeader } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
@@ -9,91 +9,282 @@ import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/utils'
 import { ADMIN_NAV } from '@/lib/nav'
 
-const STATUS_VARIANT: Record<string,any> = { pending:'warning', approved:'blue', processing:'blue', paid:'funded', rejected:'breached', cancelled:'breached' }
+const STATUS_VARIANT: Record<string,any> = {
+  pending:'warning', approved:'blue', processing:'blue',
+  paid:'funded', rejected:'breached', cancelled:'breached'
+}
+const METHOD_LABELS: Record<string,string> = {
+  usdt_trc20:'USDT TRC20', usdt_erc20:'USDT ERC20',
+  bitcoin:'Bitcoin', wise:'Wise', bank:'Bank Transfer'
+}
 
 export function AdminPayoutsPage() {
+  const navigate = useNavigate()
   const { toasts, toast, dismiss } = useToast()
-  const [payouts, setPayouts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('pending')
+  const [payouts, setPayouts]   = useState<any[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [filter,  setFilter]    = useState('all')
+  const [selected, setSelected] = useState<any | null>(null)
 
-  useEffect(() => {
+  const load = async (f: string) => {
+    setLoading(true)
+    // Fetch payouts first
     let q = supabase.from('payouts')
-      .select('*, users(first_name,last_name,email), accounts(account_number)')
+      .select('*')
       .order('created_at', { ascending: false })
-    if (filter !== 'all') q = q.eq('status', filter)
-    q.then(({ data }) => { setPayouts(data ?? []); setLoading(false) }).catch(() => setLoading(false))
-  }, [filter])
+    if (f !== 'all') q = q.eq('status', f)
+    const { data: rawPayouts, error } = await q
+    if (error) { toast('error','❌','Error', error.message); setLoading(false); return }
+    if (!rawPayouts || rawPayouts.length === 0) { setPayouts([]); setLoading(false); return }
 
-  async function updateStatus(id: string, status: string, traderName: string) {
+    // Enrich with user and account data separately
+    const userIds    = [...new Set(rawPayouts.map(p => p.user_id).filter(Boolean))]
+    const accountIds = [...new Set(rawPayouts.map(p => p.account_id).filter(Boolean))]
+
+    const [usersRes, accountsRes] = await Promise.all([
+      userIds.length > 0
+        ? supabase.from('users').select('id,first_name,last_name,email').in('id', userIds)
+        : { data: [] },
+      accountIds.length > 0
+        ? supabase.from('accounts').select('id,account_number,balance,phase').in('id', accountIds)
+        : { data: [] },
+    ])
+
+    const usersMap:    Record<string,any> = {}
+    const accountsMap: Record<string,any> = {}
+    ;(usersRes.data ?? []).forEach((u: any)    => { usersMap[u.id]    = u })
+    ;(accountsRes.data ?? []).forEach((a: any) => { accountsMap[a.id] = a })
+
+    const enriched = rawPayouts.map(p => ({
+      ...p,
+      user:    usersMap[p.user_id]       ?? null,
+      account: accountsMap[p.account_id] ?? null,
+    }))
+
+    setPayouts(enriched)
+    setLoading(false)
+  }
+
+  useEffect(() => { load(filter) }, [filter])
+
+  async function updateStatus(id: string, status: string, name: string) {
     const { error } = await supabase.from('payouts').update({
       status,
-      ...(status === 'paid' ? { paid_at: new Date().toISOString() } : {}),
+      ...(status === 'paid'     ? { paid_at:     new Date().toISOString() } : {}),
       ...(status === 'approved' ? { approved_at: new Date().toISOString() } : {}),
     }).eq('id', id)
     if (error) { toast('error','❌','Error', error.message); return }
     setPayouts(ps => ps.map(p => p.id === id ? { ...p, status } : p))
-    toast('success','✅',status === 'paid' ? 'Paid' : 'Updated', `${traderName} payout marked as ${status}.`)
+    if (selected?.id === id) setSelected((s: any) => ({ ...s, status }))
+    toast('success','✅','Updated', `${name} → ${status}`)
+  }
+
+  const counts = {
+    all:      payouts.length,
+    pending:  payouts.filter(p => p.status === 'pending').length,
+    approved: payouts.filter(p => p.status === 'approved').length,
+    paid:     payouts.filter(p => p.status === 'paid').length,
+    rejected: payouts.filter(p => p.status === 'rejected').length,
   }
 
   return (
     <>
-      <DashboardLayout title="Payout Management" nav={ADMIN_NAV} accentColor="red">
-        <Card>
-          <CardHeader title={`Payouts (${payouts.length})`}/>
-          <div className="flex gap-[3px] mb-4">
-            {['pending','approved','paid','rejected','all'].map(s=>(
-              <button key={s} onClick={()=>{ setFilter(s); setLoading(true) }}
-                className={`px-[10px] py-[5px] text-[8px] tracking-[1.5px] uppercase font-semibold cursor-pointer border transition-all ${
-                  filter===s ? 'bg-[rgba(212,168,67,.1)] border-[var(--bdr2)] text-[var(--gold)]' : 'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)]'
-                }`}>{s}</button>
-            ))}
-          </div>
-          {loading ? (
-            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[var(--red)] border-t-transparent rounded-full animate-spin"/></div>
-          ) : payouts.length === 0 ? (
-            <div className="py-10 text-center text-[11px] text-[var(--text3)]">No {filter} payouts</div>
-          ) : (
-            <table className="w-full border-collapse text-[11px]">
-              <thead>
-                <tr className="border-b border-[var(--dim)]">
-                  {['Trader','Account','Amount','Method','Wallet','Status','Date','Actions'].map(h=>(
-                    <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left bg-[rgba(255,51,82,.02)]">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {payouts.map(p=>(
-                  <tr key={p.id} className="border-b border-[rgba(255,51,82,.04)] hover:bg-[rgba(255,51,82,.02)]">
-                    <td className="px-[11px] py-[8px] font-semibold">{p.users?.first_name} {p.users?.last_name}</td>
-                    <td className="px-[11px] py-[8px] font-mono text-[var(--gold)] text-[10px]">{p.accounts?.account_number}</td>
-                    <td className="px-[11px] py-[8px] font-mono text-[var(--green)]">{fmt(p.requested_usd)}</td>
-                    <td className="px-[11px] py-[8px] text-[var(--text2)]">{p.method}</td>
-                    <td className="px-[11px] py-[8px] font-mono text-[var(--text3)] text-[10px] max-w-[100px] truncate">{p.wallet_address}</td>
-                    <td className="px-[11px] py-[8px]"><Badge variant={STATUS_VARIANT[p.status]}>{p.status}</Badge></td>
-                    <td className="px-[11px] py-[8px] text-[10px] text-[var(--text3)]">{new Date(p.created_at).toLocaleDateString()}</td>
-                    <td className="px-[11px] py-[8px]">
-                      <div className="flex gap-1">
-                        {p.status === 'pending' && (<>
-                          <button onClick={()=>updateStatus(p.id,'approved',`${p.users?.first_name}`)}
-                            className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(0,217,126,.1)] text-[var(--green)] border border-[rgba(0,217,126,.2)]">Approve</button>
-                          <button onClick={()=>updateStatus(p.id,'rejected',`${p.users?.first_name}`)}
-                            className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,51,82,.1)] text-[var(--red)] border border-[rgba(255,51,82,.2)]">Reject</button>
-                        </>)}
-                        {p.status === 'approved' && (
-                          <button onClick={()=>updateStatus(p.id,'paid',`${p.users?.first_name}`)}
-                            className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(212,168,67,.1)] text-[var(--gold)] border border-[var(--bdr2)]">Mark Paid</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+    <DashboardLayout title="Payout Management" nav={ADMIN_NAV} accentColor="red">
+      <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 120px)' }}>
+
+        {/* ── Left: Payout list ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <Card>
+            <CardHeader title={`Payouts`} />
+
+            {/* Filter tabs */}
+            <div style={{ display:'flex', gap:3, marginBottom:16 }}>
+              {(['all','pending','approved','paid','rejected'] as const).map(s => (
+                <button key={s} onClick={() => { setFilter(s); setSelected(null) }}
+                  style={{
+                    padding:'5px 12px', fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const,
+                    fontWeight:600, cursor:'pointer',
+                    background: filter===s ? 'rgba(212,168,67,.1)' : 'var(--bg3)',
+                    border: filter===s ? '1px solid var(--bdr2)' : '1px solid var(--dim)',
+                    color: filter===s ? 'var(--gold)' : 'var(--text3)',
+                  }}>
+                  {s} {s !== 'all' && counts[s] > 0 ? `(${counts[s]})` : ''}
+                </button>
+              ))}
+              <button onClick={() => load(filter)} style={{ marginLeft:'auto', padding:'5px 10px', fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, fontWeight:600, cursor:'pointer', background:'var(--bg3)', border:'1px solid var(--dim)', color:'var(--text3)' }}>
+                ↻ Refresh
+              </button>
+            </div>
+
+            {loading ? (
+              <div style={{ display:'flex', justifyContent:'center', padding:40 }}>
+                <div style={{ width:24, height:24, border:'2px solid var(--red)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
+              </div>
+            ) : payouts.length === 0 ? (
+              <div style={{ padding:40, textAlign:'center' as const, color:'var(--text3)', fontSize:11 }}>
+                No {filter === 'all' ? '' : filter} payouts found
+              </div>
+            ) : (
+              <div style={{ overflowX:'auto' as const }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
+                  <thead>
+                    <tr style={{ borderBottom:'1px solid var(--dim)' }}>
+                      {['Trader','Account','Amount','Method','Status','Date','Actions'].map(h => (
+                        <th key={h} style={{ padding:'6px 11px', fontSize:7, letterSpacing:2, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, textAlign:'left' as const, background:'rgba(255,51,82,.02)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payouts.map(p => {
+                      const name = p.user ? `${p.user.first_name} ${p.user.last_name}` : p.user_id?.slice(0,8) ?? '—'
+                      const isSelected = selected?.id === p.id
+                      return (
+                        <tr key={p.id}
+                          onClick={() => setSelected(isSelected ? null : p)}
+                          style={{ borderBottom:'1px solid rgba(255,51,82,.04)', cursor:'pointer', background: isSelected ? 'rgba(212,168,67,.05)' : 'transparent' }}>
+                          <td style={{ padding:'8px 11px', fontWeight:600 }}>{name}</td>
+                          <td style={{ padding:'8px 11px', fontFamily:'monospace', color:'var(--gold)', fontSize:10 }}>
+                            {p.account?.account_number ?? '—'}
+                          </td>
+                          <td style={{ padding:'8px 11px', fontFamily:'monospace', color:'var(--green)', fontWeight:700 }}>
+                            {fmt(p.requested_usd)}
+                          </td>
+                          <td style={{ padding:'8px 11px', color:'var(--text2)', fontSize:10 }}>
+                            {METHOD_LABELS[p.method] ?? p.method}
+                          </td>
+                          <td style={{ padding:'8px 11px' }}>
+                            <Badge variant={STATUS_VARIANT[p.status]}>{p.status}</Badge>
+                          </td>
+                          <td style={{ padding:'8px 11px', fontSize:10, color:'var(--text3)' }}>
+                            {new Date(p.created_at).toLocaleDateString()} {new Date(p.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+                          </td>
+                          <td style={{ padding:'8px 11px' }} onClick={e => e.stopPropagation()}>
+                            <div style={{ display:'flex', gap:4 }}>
+                              {p.status === 'pending' && (<>
+                                <button onClick={() => updateStatus(p.id,'approved',name)}
+                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(0,217,126,.1)', color:'var(--green)', border:'1px solid rgba(0,217,126,.2)' }}>
+                                  ✓ Approve
+                                </button>
+                                <button onClick={() => updateStatus(p.id,'rejected',name)}
+                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.1)', color:'var(--red)', border:'1px solid rgba(255,51,82,.2)' }}>
+                                  ✕ Reject
+                                </button>
+                              </>)}
+                              {p.status === 'approved' && (
+                                <button onClick={() => navigate(`/admin/payouts/${p.id}`)}
+                                  style={{ padding:'3px 10px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(212,168,67,.15)', color:'var(--gold)', border:'1px solid var(--bdr2)' }}>
+                                  💸 Pay
+                                </button>
+                              )}
+                              {p.status === 'paid' && (
+                                <span style={{ fontSize:9, color:'var(--green)', fontFamily:'monospace' }}>✓ Paid</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* ── Right: Detail panel ── */}
+        {selected && (
+          <div style={{ width:320, flexShrink:0 }}>
+            <Card>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                <span style={{ fontFamily:'serif', fontSize:16, fontWeight:'bold' }}>Payout Detail</span>
+                <button onClick={() => setSelected(null)} style={{ background:'none', border:'none', color:'var(--text3)', cursor:'pointer', fontSize:16 }}>✕</button>
+              </div>
+
+              {/* Status badge */}
+              <div style={{ display:'flex', justifyContent:'center', marginBottom:16 }}>
+                <Badge variant={STATUS_VARIANT[selected.status]}>{selected.status.toUpperCase()}</Badge>
+              </div>
+
+              {/* Amount */}
+              <div style={{ textAlign:'center' as const, padding:'16px', background:'var(--bg3)', border:'1px solid var(--bdr)', marginBottom:16 }}>
+                <div style={{ fontSize:8, letterSpacing:2, textTransform:'uppercase' as const, color:'var(--text3)', marginBottom:4 }}>Requested Amount</div>
+                <div style={{ fontFamily:'monospace', fontSize:28, fontWeight:700, color:'var(--green)' }}>{fmt(selected.requested_usd)}</div>
+              </div>
+
+              {/* Details */}
+              <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
+                {[
+                  ['Trader',   selected.user ? `${selected.user.first_name} ${selected.user.last_name}` : '—'],
+                  ['Email',    selected.user?.email ?? '—'],
+                  ['Account',  selected.account?.account_number ?? '—'],
+                  ['Phase',    selected.account?.phase ?? '—'],
+                  ['Balance',  selected.account ? fmt(selected.account.balance) : '—'],
+                  ['Method',   METHOD_LABELS[selected.method] ?? selected.method],
+                  ['Submitted',new Date(selected.created_at).toLocaleString()],
+                  ...(selected.approved_at ? [['Approved', new Date(selected.approved_at).toLocaleString()]] : []),
+                  ...(selected.paid_at     ? [['Paid At',  new Date(selected.paid_at).toLocaleString()]]     : []),
+                ].map(([l, v]) => (
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
+                    <span style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600 }}>{l}</span>
+                    <span style={{ fontFamily:'monospace', fontSize:10, color:'var(--text)', maxWidth:160, textAlign:'right' as const, wordBreak:'break-all' as const }}>{v}</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          )}
-        </Card>
-      </DashboardLayout>
-      <ToastContainer toasts={toasts} dismiss={dismiss}/>
+              </div>
+
+              {/* Wallet address */}
+              {selected.wallet_address && (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, marginBottom:6 }}>
+                    {selected.method?.includes('bank') ? 'Bank Details' : 'Wallet Address'}
+                  </div>
+                  <div style={{ padding:'10px', background:'var(--bg3)', border:'1px solid var(--bdr2)', fontFamily:'monospace', fontSize:10, wordBreak:'break-all' as const, color:'var(--gold)', cursor:'pointer' }}
+                    onClick={() => { navigator.clipboard.writeText(selected.wallet_address); toast('success','📋','Copied','Address copied to clipboard') }}>
+                    {selected.wallet_address}
+                    <span style={{ float:'right', fontSize:9, color:'var(--text3)' }}>📋</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selected.trader_notes && (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, marginBottom:6 }}>Trader Notes</div>
+                  <div style={{ padding:10, background:'var(--bg3)', border:'1px solid var(--dim)', fontSize:11, color:'var(--text2)', fontStyle:'italic' as const }}>
+                    "{selected.trader_notes}"
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {selected.status === 'pending' && (<>
+                  <button onClick={() => updateStatus(selected.id,'approved', selected.user?.first_name ?? '')}
+                    style={{ width:'100%', padding:'10px', fontSize:10, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'var(--green)', color:'#000', border:'none' }}>
+                    ✓ Approve Payout
+                  </button>
+                  <button onClick={() => updateStatus(selected.id,'rejected', selected.user?.first_name ?? '')}
+                    style={{ width:'100%', padding:'10px', fontSize:10, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.12)', color:'var(--red)', border:'1px solid rgba(255,51,82,.3)' }}>
+                    ✕ Reject Payout
+                  </button>
+                </>)}
+                {selected.status === 'approved' && (
+                  <button onClick={() => navigate(`/admin/payouts/${selected.id}`)}
+                    style={{ width:'100%', padding:'12px', fontSize:11, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'var(--gold)', color:'#000', border:'none' }}>
+                    💸 Process Payment
+                  </button>
+                )}
+                {selected.status === 'paid' && (
+                  <div style={{ textAlign:'center' as const, padding:10, fontSize:11, color:'var(--green)', fontFamily:'monospace', border:'1px solid rgba(0,217,126,.2)', background:'rgba(0,217,126,.05)' }}>
+                    ✓ Payment completed
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
+    <ToastContainer toasts={toasts} dismiss={dismiss}/>
     </>
   )
 }

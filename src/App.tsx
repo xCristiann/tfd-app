@@ -17,7 +17,8 @@ import { SettingsPage }       from './app/dashboard/settings/page'
 import { PlatformPage }       from './app/platform/page'
 import { AdminDashboardPage } from './app/admin/page'
 import { AdminTradersPage }   from './app/admin/traders/page'
-import { AdminPayoutsPage }   from './app/admin/payouts/page'
+import { AdminPayoutsPage }        from './app/admin/payouts/page'
+import { AdminPayoutDetailPage }   from './app/admin/payouts/[id]/page'
 import { AdminRiskPage }      from './app/admin/risk/page'
 import { AdminSupportPage }   from './app/admin/support/page'
 import { AdminChallengePage } from './app/admin/challenges/page'
@@ -77,6 +78,7 @@ export default function App() {
       <Route path="/admin"                element={<ProtectedRoute roles={['admin']}><AdminDashboardPage /></ProtectedRoute>} />
       <Route path="/admin/traders"        element={<ProtectedRoute roles={['admin']}><AdminTradersPage /></ProtectedRoute>} />
       <Route path="/admin/payouts"        element={<ProtectedRoute roles={['admin','support']}><AdminPayoutsPage /></ProtectedRoute>} />
+      <Route path="/admin/payouts/:id"    element={<ProtectedRoute roles={['admin','support']}><AdminPayoutDetailPage /></ProtectedRoute>} />
       <Route path="/admin/risk"           element={<ProtectedRoute roles={['admin']}><AdminRiskPage /></ProtectedRoute>} />
       <Route path="/admin/support"        element={<ProtectedRoute roles={['admin','support']}><AdminSupportPage /></ProtectedRoute>} />
       <Route path="/admin/challenges"     element={<ProtectedRoute roles={['admin']}><AdminChallengePage /></ProtectedRoute>} />
