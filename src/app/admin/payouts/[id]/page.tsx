@@ -36,7 +36,7 @@ export function AdminPayoutDetailPage() {
       // Fetch user and account separately
       const [userRes, accRes] = await Promise.all([
         data.user_id    ? supabase.from('users').select('*').eq('id', data.user_id).single() : { data: null },
-        data.account_id ? supabase.from('accounts').select('*').eq('id', data.account_id).single() : { data: null },
+        data.account_id ? supabase.from('accounts').select('id,account_number,balance,equity,starting_balance,phase,status').eq('id', data.account_id).single() : { data: null },
       ])
 
       setPayout({ ...data, user: userRes.data, account: accRes.data })
@@ -59,14 +59,8 @@ export function AdminPayoutDetailPage() {
     }).eq('id', payout.id)
     if (error) { toast('error','❌','Error', error.message); setMarking(false); return }
 
-    // 2. If not yet deducted (status was 'approved', deduction already happened)
-    // Just ensure account is active — balance was already deducted on approve
-    if (payout.account_id) {
-      await supabase.from('accounts').update({
-        status: 'active',
-        payout_locked: false,
-      }).eq('id', payout.account_id)
-    }
+    // Balance was already reset to starting_balance when admin clicked Approve.
+    // markPaid just confirms the external transfer was sent — no balance changes needed.
 
     setPayout((p: any) => ({ ...p, status: 'paid', tx_hash: txHash, admin_notes: adminNote }))
     toast('success','💰','Payment Complete','Payout marked as paid.')
@@ -120,7 +114,11 @@ export function AdminPayoutDetailPage() {
                   ['Email',    payout.user?.email ?? '—'],
                   ['Account',  payout.account?.account_number ?? '—'],
                   ['Phase',    payout.account?.phase ?? '—'],
-                  ['Balance',  payout.account ? fmt(payout.account.balance) : '—'],
+                  ['Balance',    payout.account ? fmt(payout.account.balance) : '—'],
+                  ['Start Balance', payout.account?.starting_balance ? fmt(payout.account.starting_balance) : '—'],
+                  ['Profit',     payout.account?.starting_balance
+                    ? fmt(payout.account.balance - payout.account.starting_balance)
+                    : '—'],
                   ['Submitted',new Date(payout.created_at).toLocaleString()],
                   ...(payout.approved_at ? [['Approved', new Date(payout.approved_at).toLocaleString()]] : []),
                 ].map(([l, v]) => (

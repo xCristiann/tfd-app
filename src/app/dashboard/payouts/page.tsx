@@ -79,7 +79,7 @@ export function PayoutsPage() {
     setPayouts(p => [data, ...p])
     setAmount(''); setWallet(''); setNotes('')
     toast('success','💰','Payout Requested',
-      `$${amount} submitted. Account locked until admin reviews. Processing within 24h.`)
+      `$${amount} submitted. Your account is locked for trading until admin reviews. You will be notified within 24h.`)
   }
 
   const totalPaid = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + (p.net_usd ?? p.requested_usd), 0)

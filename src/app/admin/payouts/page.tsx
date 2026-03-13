@@ -46,7 +46,7 @@ export function AdminPayoutsPage() {
         ? supabase.from('users').select('id,first_name,last_name,email').in('id', userIds)
         : { data: [] },
       accountIds.length > 0
-        ? supabase.from('accounts').select('id,account_number,balance,phase').in('id', accountIds)
+        ? supabase.from('accounts').select('id,account_number,balance,equity,starting_balance,phase,status').in('id', accountIds)
         : { data: [] },
     ])
 
@@ -81,36 +81,46 @@ export function AdminPayoutsPage() {
     if (error) { toast('error','❌','Error', error.message); return }
 
     // 2. Update account based on status
-    if (payout.account_id) {
-      if (status === 'approved' || status === 'rejected') {
-        // Deduct amount from balance on both approve AND reject
-        // Reactivate account (was locked when payout submitted)
-        const currentBalance = payout.account?.balance ?? 0
-        const newBalance = Math.max(0, parseFloat((currentBalance - payout.requested_usd).toFixed(2)))
+    if (payout.account_id && (status === 'approved' || status === 'rejected')) {
+      // After payout: balance resets to starting_balance (profit is distributed)
+      // We must also reset daily_high_balance and dd_used so the trigger
+      // does NOT fire a drawdown violation — the balance drop is intentional.
+      const startingBalance = payout.account?.starting_balance ?? payout.account?.balance ?? 0
 
-        await supabase.from('accounts').update({
-          balance: newBalance,
-          equity: newBalance,
-          status: 'active',  // reactivate after admin responds
-          payout_locked: false,
-        }).eq('id', payout.account_id)
+      const { error: accError } = await supabase.from('accounts').update({
+        balance:             startingBalance,   // reset to starting balance
+        equity:              startingBalance,
+        daily_high_balance:  startingBalance,   // reset high — prevents DD trigger
+        daily_dd_used:       0,                 // clear daily DD
+        max_dd_used:         0,                 // clear max DD
+        status:              'active',           // reactivate account
+        payout_locked:       false,
+      }).eq('id', payout.account_id)
 
-        // Update local account data
-        setPayouts(ps => ps.map(p => p.id === id ? {
-          ...p, status,
-          account: p.account ? { ...p.account, balance: newBalance, status: 'active' } : p.account
-        } : p))
-      } else {
-        setPayouts(ps => ps.map(p => p.id === id ? { ...p, status } : p))
+      if (accError) {
+        toast('error','❌','Account Update Failed', accError.message)
+        return
       }
+
+      setPayouts(ps => ps.map(p => p.id === id ? {
+        ...p, status,
+        account: p.account ? {
+          ...p.account,
+          balance: startingBalance,
+          equity: startingBalance,
+          status: 'active',
+        } : p.account,
+      } : p))
     } else {
       setPayouts(ps => ps.map(p => p.id === id ? { ...p, status } : p))
     }
 
     if (selected?.id === id) setSelected((s: any) => ({ ...s, status }))
-    const action = status === 'approved' ? '✓ Approved — balance deducted, account reactivated'
-                 : status === 'rejected' ? '✕ Rejected — balance deducted, account reactivated'
-                 : `Updated → ${status}`
+    const action = status === 'approved'
+      ? `✓ Approved — balance reset to $${(payout.account?.starting_balance ?? 0).toLocaleString()}, account reactivated`
+      : status === 'rejected'
+      ? `✕ Rejected — balance reset to $${(payout.account?.starting_balance ?? 0).toLocaleString()}, account reactivated`
+      : `Updated → ${status}`
     toast('success','✅', name, action)
   }
 
