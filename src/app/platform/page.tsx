@@ -6,55 +6,64 @@ import { ToastContainer } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/utils'
 
-const LEVERAGE = 50
-const LOT_SIZE = 100_000
+const LEVERAGE  = 50
+const LOT_SIZE  = 100_000
+const POLY_KEY  = 'G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO'
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   DATA SOURCES
-   ───────────────────────────────────────────────────────────────────────────
-   LIVE PRICES  → Binance aggTrade WebSocket (tick-by-tick, free, no key)
-                  + Binance REST ticker/price poll every 1s (gap filler)
-                  + Yahoo Finance REST poll 3s for NAS100
+/* ═══════════════════════════════════════════════════════════════════
+   ALL DATA: Polygon.io (free tier, real OHLC, CORS enabled)
+   Live prices : wss://socket.polygon.io/forex  (WebSocket, real-time)
+   Candle hist : /v2/aggs/ticker/…              (REST, unlimited history)
 
-   INTRADAY     → Binance /api/v3/klines paginated
-                  5 requests × 1000 candles = 5000 candles per symbol
-                  EUR/USD=EURUSDT, GBP/USD=GBPUSDT, XAU=PAXGUSDT,
-                  USD/JPY=USDTJPY, BTC=BTCUSDT, ETH=ETHUSDT
-                  NAS100 intraday = Yahoo Finance /v8/finance/chart/^NDX
-
-   DAILY (D1)   → Stooq.com CSV (free, no key, years of data, CORS open)
-                  eurusd, gbpusd, xauusd, usdjpy, btcusd, %5endx
-   ═══════════════════════════════════════════════════════════════════════════ */
+   Tickers:
+     EUR/USD → C:EURUSD     GBP/USD → C:GBPUSD
+     XAU/USD → C:XAUUSD     USD/JPY → C:USDJPY
+     NAS100  → I:NDX        UK100   → I:FTSE
+     GER40   → I:DAX
+   ═══════════════════════════════════════════════════════════════════ */
 
 const INSTRUMENTS = [
-  // useBinanceChart: true  = use Binance klines for candle history (reliable OHLC)
-  // useBinanceChart: false = use Yahoo Finance via proxy (for pairs not on Binance spot)
-  { sym:'EUR/USD', bin:'EURUSDT',  yahoo:'EURUSD=X', useBinanceChart:true,  spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', bin:'GBPUSDT',  yahoo:'GBPUSD=X', useBinanceChart:true,  spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'XAU/USD', bin:'PAXGUSDT', yahoo:'GC=F',     useBinanceChart:true,  spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
-  { sym:'NAS100',  bin:null,        yahoo:'%5ENDX',   useBinanceChart:false, spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
-  { sym:'BTC/USD', bin:'BTCUSDT',  yahoo:'BTC-USD',  useBinanceChart:true,  spread:10.0,    dec:1, pip:1.0,    lotUSD:(p:number)=>p          },
-  { sym:'USD/JPY', bin:'USDTJPY',  yahoo:'USDJPY=X', useBinanceChart:false, spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'ETH/USD', bin:'ETHUSDT',  yahoo:'ETH-USD',  useBinanceChart:true,  spread:1.0,     dec:2, pip:1.0,    lotUSD:(p:number)=>p          },
+  { sym:'EUR/USD', poly:'C:EURUSD', wsSub:'C.EUR/USD', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', poly:'C:GBPUSD', wsSub:'C.GBP/USD', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'XAU/USD', poly:'C:XAUUSD', wsSub:'C.XAU/USD', spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
+  { sym:'USD/JPY', poly:'C:USDJPY', wsSub:'C.USD/JPY', spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
+  { sym:'GBP/JPY', poly:'C:GBPJPY', wsSub:'C.GBP/JPY', spread:0.030,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'EUR/JPY', poly:'C:EURJPY', wsSub:'C.EUR/JPY', spread:0.025,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'NAS100',  poly:'I:NDX',    wsSub:'T.NDX',      spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
+  { sym:'US500',   poly:'I:SPX',    wsSub:'T.SPX',      spread:0.50,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*50       },
+  { sym:'GER40',   poly:'I:DAX',    wsSub:'T.DAX',      spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*25       },
+  { sym:'UK100',   poly:'I:FTSE',   wsSub:'T.FTSE',     spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
 ]
 
 const SEED: Record<string,number> = {
   'EUR/USD':1.1464,'GBP/USD':1.2940,'XAU/USD':2980,
-  'NAS100':19200,'BTC/USD':83000,'USD/JPY':148.50,'ETH/USD':1900,
+  'USD/JPY':148.50,'GBP/JPY':192.50,'EUR/JPY':170.20,
+  'NAS100':19200,'US500':5800,'GER40':22500,'UK100':8700,
 }
 
-const BIN_INTERVAL: Record<string,string>  = { M1:'1m',M5:'5m',M15:'15m',M30:'30m',H1:'1h',H4:'4h',D1:'1d' }
-const TF_SEC:       Record<string,number>  = { M1:60,M5:300,M15:900,M30:1800,H1:3600,H4:14400,D1:86400 }
+/* Polygon timespan mapping + date range for enough history */
+const TF_POLY: Record<string,{mult:number; span:string; daysBack:number}> = {
+  M1:  { mult:1,  span:'minute', daysBack:5    },
+  M5:  { mult:5,  span:'minute', daysBack:30   },
+  M15: { mult:15, span:'minute', daysBack:60   },
+  M30: { mult:30, span:'minute', daysBack:90   },
+  H1:  { mult:1,  span:'hour',   daysBack:365  },
+  H4:  { mult:4,  span:'hour',   daysBack:730  },
+  D1:  { mult:1,  span:'day',    daysBack:3650 },
+}
+const TF_SEC: Record<string,number> = {
+  M1:60,M5:300,M15:900,M30:1800,H1:3600,H4:14400,D1:86400,
+}
 
 type Candle = {time:number;open:number;high:number;low:number;close:number}
 
-/* ─── LWC loader ─────────────────────────────────────────────────────────── */
-let _lwcReady=false; const _lwcQ: Array<()=>void>=[]
-function loadLWC(): Promise<void> {
+/* ── LWC loader ────────────────────────────────────────────────── */
+let _lwcReady=false; const _lwcQ:Array<()=>void>=[]
+function loadLWC():Promise<void>{
   return new Promise(res=>{
     if(_lwcReady){res();return}
     _lwcQ.push(res)
-    if(document.getElementById('lwc-s')) return
+    if(document.getElementById('lwc-s'))return
     const s=document.createElement('script')
     s.id='lwc-s'
     s.src='https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js'
@@ -63,148 +72,50 @@ function loadLWC(): Promise<void> {
   })
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   CANDLE HISTORY STRATEGY
-   ══════════════════════════════════════════════════════════════════
-   BTC/USD, ETH/USD  → Binance /api/v3/klines (paginated, 5000 bars)
-   All others        → Yahoo Finance via allorigins.win CORS proxy
-                       (proxy wraps the request server-side, bypasses CORS)
-   ══════════════════════════════════════════════════════════════════ */
+/* ── Polygon REST candles ──────────────────────────────────────── */
+async function fetchPolyCandles(polyTicker:string, tf:string):Promise<Candle[]>{
+  const {mult,span,daysBack}=TF_POLY[tf]??TF_POLY.H1
+  const to   = new Date()
+  const from = new Date(Date.now() - daysBack*86400*1000)
+  const fmt2 = (d:Date)=>d.toISOString().split('T')[0]
 
-const YAHOO_TF: Record<string,{interval:string; range:string}> = {
-  M1:  {interval:'1m',  range:'5d'   },
-  M5:  {interval:'5m',  range:'60d'  },
-  M15: {interval:'15m', range:'60d'  },
-  M30: {interval:'30m', range:'60d'  },
-  H1:  {interval:'1h',  range:'730d' },
-  H4:  {interval:'1h',  range:'730d' },
-  D1:  {interval:'1d',  range:'3650d'},
-}
+  // Polygon allows up to 50000 results per call
+  const url = `https://api.polygon.io/v2/aggs/ticker/${polyTicker}/range/${mult}/${span}/${fmt2(from)}/${fmt2(to)}` +
+    `?adjusted=true&sort=asc&limit=50000&apiKey=${POLY_KEY}`
 
-function dedup(candles: Candle[]): Candle[] {
-  const seen = new Set<number>()
-  return candles
-    .filter(c => { if(seen.has(c.time)) return false; seen.add(c.time); return true })
-    .sort((a,b) => a.time - b.time)
-}
+  try{
+    const r = await fetch(url)
+    if(!r.ok) throw new Error(`HTTP ${r.status}`)
+    const d = await r.json()
+    if(d.status==='ERROR') throw new Error(d.error||'Polygon error')
+    if(!d.results?.length) return []
 
-function toH4(candles: Candle[]): Candle[] {
-  const agg: Candle[] = []
-  for(let i = 0; i + 3 < candles.length; i += 4)
-    agg.push({
-      time:  candles[i].time,
-      open:  candles[i].open,
-      high:  Math.max(candles[i].high, candles[i+1].high, candles[i+2].high, candles[i+3].high),
-      low:   Math.min(candles[i].low,  candles[i+1].low,  candles[i+2].low,  candles[i+3].low),
-      close: candles[i+3].close,
-    })
-  return agg
-}
-
-/* Binance klines — crypto only, paginated 5×1000 = 5000 bars */
-async function fetchBinance(binSym: string, tf: string): Promise<Candle[]> {
-  const intervalMap: Record<string,string> = {
-    M1:'1m',M5:'5m',M15:'15m',M30:'30m',H1:'1h',H4:'4h',D1:'1d'
+    return (d.results as any[]).map(b=>({
+      time:  Math.floor(b.t/1000),
+      open:  b.o,
+      high:  b.h,
+      low:   b.l,
+      close: b.c,
+    }))
+  }catch(e){
+    console.warn(`[Polygon] ${polyTicker} ${tf}:`, e)
+    return []
   }
-  const interval = intervalMap[tf]
-  const secPerBar = TF_SEC[tf]
-  const limit = 1000
-  const pages = 5
-  const all: Candle[] = []
-  let startTime = Date.now() - pages * limit * secPerBar * 1000
-
-  for(let p = 0; p < pages; p++) {
-    try {
-      const r = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${binSym}&interval=${interval}&startTime=${Math.floor(startTime)}&limit=${limit}`
-      )
-      if(!r.ok) break
-      const d: any[] = await r.json()
-      if(!Array.isArray(d) || d.length === 0) break
-      for(const k of d) all.push({
-        time: Math.floor(k[0]/1000),
-        open: parseFloat(k[1]), high: parseFloat(k[2]),
-        low:  parseFloat(k[3]), close: parseFloat(k[4]),
-      })
-      startTime = d[d.length-1][0] + 1
-      if(d.length < limit) break
-    } catch { break }
-  }
-  return dedup(all)
 }
 
-/* Yahoo Finance via allorigins CORS proxy — forex, gold, indices */
-async function fetchYahoo(yahooSym: string, tf: string): Promise<Candle[]> {
-  const {interval, range} = YAHOO_TF[tf] ?? YAHOO_TF.H1
-  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=${interval}&range=${range}&includePrePost=false`
-
-  // Try direct first, then via allorigins proxy
-  const attempts = [
-    () => fetch(yahooUrl, {headers:{'Accept':'application/json'}}),
-    () => fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`),
-    () => fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`),
-  ]
-
-  for(const attempt of attempts) {
-    try {
-      const r = await attempt()
-      if(!r.ok) continue
-      let json: any = await r.json()
-      // allorigins wraps in {contents: "...json string..."}
-      if(typeof json?.contents === 'string') json = JSON.parse(json.contents)
-
-      const res = json?.chart?.result?.[0]
-      if(!res?.timestamp) continue
-      const ts = res.timestamp as number[]
-      const q  = res.indicators?.quote?.[0]
-      if(!q || !ts.length) continue
-
-      let candles: Candle[] = ts
-        .map((t:number, i:number) => ({
-          time:  t,
-          open:  parseFloat(q.open?.[i])  || 0,
-          high:  parseFloat(q.high?.[i])  || 0,
-          low:   parseFloat(q.low?.[i])   || 0,
-          close: parseFloat(q.close?.[i]) || 0,
-        }))
-        .filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0)
-
-      if(candles.length < 2) continue
-
-      if(tf === 'H4') candles = toH4(candles)
-      return dedup(candles)
-    } catch { continue }
-  }
-
-  console.warn(`[Chart] All sources failed for ${yahooSym} ${tf}`)
-  return []
-}
-
-/* ─── Main candle fetcher ───────────────────────────────────────── */
-async function fetchCandles(sym: string, tf: string): Promise<Candle[]> {
-  const inst = INSTRUMENTS.find(i => i.sym === sym)!
-  // Use Binance for symbols that have reliable klines on Binance Spot
-  if(inst.useBinanceChart && inst.bin)
-    return fetchBinance(inst.bin, tf)
-  // USD/JPY and NAS100: Yahoo Finance via CORS proxy
-  return fetchYahoo(inst.yahoo, tf)
-}
-
-/* ─── Chart component ────────────────────────────────────────────────────── */
+/* ── Chart component ───────────────────────────────────────────── */
 function CandleChart({sym,tf,livePrice}:{sym:string;tf:string;livePrice:number}){
   const divRef  = useRef<HTMLDivElement>(null)
   const chartRef= useRef<any>(null)
   const serRef  = useRef<any>(null)
   const lastRef = useRef<Candle|null>(null)
 
-  // Build chart + load history
   useEffect(()=>{
     const el=divRef.current; if(!el) return
     let dead=false
     loadLWC().then(async()=>{
       if(dead||!divRef.current) return
       try{chartRef.current?.remove()}catch{}
-
       const LWC=(window as any).LightweightCharts
       const chart=LWC.createChart(el,{
         width:el.clientWidth,height:el.clientHeight,
@@ -220,33 +131,29 @@ function CandleChart({sym,tf,livePrice}:{sym:string;tf:string;livePrice:number})
         wickUpColor:'#00D97E',wickDownColor:'#FF3352',
       })
       chartRef.current=chart; serRef.current=series
-
       const ro=new ResizeObserver(()=>{
         if(chartRef.current&&divRef.current)
           chartRef.current.resize(divRef.current.clientWidth,divRef.current.clientHeight)
       })
       ro.observe(el)
 
-      const candles=await fetchCandles(sym,tf)
+      const inst=INSTRUMENTS.find(i=>i.sym===sym)!
+      const candles=await fetchPolyCandles(inst.poly, tf)
       if(dead){ro.disconnect();return}
-
       if(candles.length>0){
         series.setData(candles)
         lastRef.current=candles[candles.length-1]
         chart.timeScale().fitContent()
       } else {
-        // Seed with current price if no data
         const now=Math.floor(Date.now()/1000)
         const seed:Candle={time:now,open:livePrice,high:livePrice,low:livePrice,close:livePrice}
-        lastRef.current=seed
-        series.setData([seed])
+        lastRef.current=seed; series.setData([seed])
       }
       return ()=>ro.disconnect()
     })
     return ()=>{dead=true}
-  },[sym,tf])  // intentionally not re-running on livePrice change
+  },[sym,tf])
 
-  // Update last candle on every live tick
   useEffect(()=>{
     if(!serRef.current||livePrice<=0) return
     const sec=TF_SEC[tf]
@@ -254,8 +161,8 @@ function CandleChart({sym,tf,livePrice}:{sym:string;tf:string;livePrice:number})
     const cTime=Math.floor(now/sec)*sec
     const prev=lastRef.current
     const c:Candle=(!prev||cTime>prev.time)
-      ? {time:cTime,open:livePrice,high:livePrice,low:livePrice,close:livePrice}
-      : {time:prev.time,open:prev.open,high:Math.max(prev.high,livePrice),low:Math.min(prev.low,livePrice),close:livePrice}
+      ?{time:cTime,open:livePrice,high:livePrice,low:livePrice,close:livePrice}
+      :{time:prev.time,open:prev.open,high:Math.max(prev.high,livePrice),low:Math.min(prev.low,livePrice),close:livePrice}
     lastRef.current=c
     try{serRef.current.update(c)}catch{}
   },[livePrice,tf])
@@ -263,95 +170,126 @@ function CandleChart({sym,tf,livePrice}:{sym:string;tf:string;livePrice:number})
   return <div ref={divRef} style={{width:'100%',height:'100%'}}/>
 }
 
-/* ─── Price feed ─────────────────────────────────────────────────────────── */
+/* ── Price feed — Polygon WebSocket ────────────────────────────── */
+/*
+  Polygon forex WS: wss://socket.polygon.io/forex
+  Auth → subscribe to C.EUR/USD etc.
+  Event: { ev:'C', p:'EUR/USD', bp:bid, ap:ask, s:symbol, t:ts }
+  
+  For indices (NAS100 etc): Polygon free doesn't stream indices live
+  → use REST snapshot /v2/snapshot/locale/global/markets/forex/tickers
+  → poll every 3s for indices
+*/
 function usePriceFeed(){
   const [prices,setPrices]=useState<Record<string,number>>({...SEED})
   const refPrev  =useRef<Record<string,number>>({...SEED})
-  // refPrices always holds the LATEST price — used by risk monitor to avoid stale closure
   const refPrices=useRef<Record<string,number>>({...SEED})
 
   const push=useCallback((sym:string,price:number)=>{
     if(!price||isNaN(price)||price<=0) return
-    const prev=refPrices.current[sym]||price
-    refPrev.current[sym]=prev
+    refPrev.current[sym]=refPrices.current[sym]||price
     refPrices.current[sym]=price
     setPrices(p=>p[sym]===price?p:{...p,[sym]:price})
   },[])
 
   useEffect(()=>{
-    let dead=false, ws:WebSocket, wsTimer:ReturnType<typeof setTimeout>
-    let pollInterval:ReturnType<typeof setInterval>
+    let dead=false
+    let ws:WebSocket
+    let wsTimer:ReturnType<typeof setTimeout>
+    let pollTimer:ReturnType<typeof setInterval>
+    let authenticated=false
 
-    const binInsts=INSTRUMENTS.filter(i=>i.bin)
-    const streams =binInsts.map(i=>`${i.bin!.toLowerCase()}@aggTrade`).join('/')
-    const binMap  =Object.fromEntries(binInsts.map(i=>[i.bin!,i.sym]))
-
-    // WebSocket — aggTrade = every single trade, real-time
-    const connect=()=>{
+    /* ── Polygon Forex WebSocket ── */
+    const connectWS=()=>{
       if(dead) return
       try{
-        ws=new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`)
+        ws=new WebSocket('wss://socket.polygon.io/forex')
+        ws.onopen=()=>{
+          ws.send(JSON.stringify({action:'auth',params:POLY_KEY}))
+        }
         ws.onmessage=({data})=>{
           try{
-            const d=JSON.parse(data).data
-            if(d?.s&&d?.p){const sym=binMap[d.s];if(sym)push(sym,parseFloat(d.p))}
+            const msgs:any[]=JSON.parse(data)
+            for(const msg of msgs){
+              // Auth response
+              if(msg.ev==='status'&&msg.status==='auth_success'){
+                authenticated=true
+                // Subscribe to all forex pairs
+                const forexSubs=INSTRUMENTS
+                  .filter(i=>i.sym.includes('/')||i.sym.includes('USD'))
+                  .map(i=>i.wsSub).join(',')
+                ws.send(JSON.stringify({action:'subscribe',params:forexSubs}))
+              }
+              // Forex currency update
+              if(msg.ev==='C'){
+                // Polygon sends bid (bp) and ask (ap) — use midpoint
+                const mid=((msg.bp||0)+(msg.ap||0))/2||msg.l||0
+                if(mid>0){
+                  const inst=INSTRUMENTS.find(i=>i.wsSub===`C.${msg.p}`)
+                  if(inst) push(inst.sym, mid)
+                }
+              }
+            }
           }catch{}
         }
-        ws.onclose=()=>{if(!dead)wsTimer=setTimeout(connect,1500)}
+        ws.onclose=()=>{ authenticated=false; if(!dead) wsTimer=setTimeout(connectWS,2000) }
         ws.onerror=()=>{try{ws.close()}catch{}}
-      }catch{if(!dead)wsTimer=setTimeout(connect,3000)}
+      }catch{
+        if(!dead) wsTimer=setTimeout(connectWS,3000)
+      }
     }
 
-    // Binance REST — crypto live prices (BTC, ETH + any forex Binance actually has)
-    const pollBinance = async () => {
+    /* ── Poll Polygon REST for latest prices (all instruments) ── */
+    /* This covers: indices (not on WS free), and fills any WS gaps */
+    const pollPrices=async()=>{
       if(dead) return
+      // Snapshot endpoint for forex
+      const forexTickers=INSTRUMENTS
+        .filter(i=>i.poly.startsWith('C:'))
+        .map(i=>i.poly).join(',')
+      // Index tickers
+      const idxTickers=INSTRUMENTS
+        .filter(i=>i.poly.startsWith('I:'))
+        .map(i=>i.poly).join(',')
+
+      // Forex snapshot
       try{
-        const syms = binInsts.map(i=>`"${i.bin}"`).join(',')
-        const arr: any[] = await fetch(
-          `https://api.binance.com/api/v3/ticker/price?symbols=[${syms}]`
-        ).then(r=>r.json())
-        arr.forEach(x=>{ const sym=binMap[x.symbol]; if(sym) push(sym, parseFloat(x.price)) })
-      }catch{}
-    }
-
-    // Yahoo Finance REST — forex, gold, indices + crypto backup (every 2s)
-    // This is the primary source for EUR/USD, GBP/USD, XAU/USD, NAS100, USD/JPY
-    const yahooLiveMap: [string,string][] = [
-      ['EURUSD=X', 'EUR/USD'],
-      ['GBPUSD=X', 'GBP/USD'],
-      ['GC=F',     'XAU/USD'],
-      ['%5ENDX',   'NAS100' ],
-      ['USDJPY=X', 'USD/JPY'],
-    ]
-    const pollYahoo = async () => {
-      if(dead) return
-      await Promise.allSettled(yahooLiveMap.map(async ([ySym, ourSym]) => {
-        try{
-          const d = await fetch(
-            `https://query2.finance.yahoo.com/v8/finance/chart/${ySym}?interval=1m&range=1d`,
-            {headers:{'Accept':'application/json'}}
-          ).then(r=>r.json())
-          const closes = d?.chart?.result?.[0]?.indicators?.quote?.[0]?.close as (number|null)[]
-          if(!closes) return
-          for(let i=closes.length-1; i>=0; i--){
-            if(closes[i]!=null && closes[i]!>0){ push(ourSym, closes[i]!); break }
+        const r=await fetch(
+          `https://api.polygon.io/v2/snapshot/locale/global/markets/forex/tickers?tickers=${forexTickers}&apiKey=${POLY_KEY}`
+        )
+        const d=await r.json()
+        if(d.tickers){
+          for(const t of d.tickers){
+            const inst=INSTRUMENTS.find(i=>i.poly===t.ticker)
+            if(!inst) continue
+            const price=t.day?.c||t.lastQuote?.ap||t.lastTrade?.p||0
+            if(price>0) push(inst.sym, price)
           }
-        }catch{}
-      }))
+        }
+      }catch{}
+
+      // Index prices — use /v2/aggs/ticker/{ticker}/prev
+      await Promise.allSettled(
+        INSTRUMENTS.filter(i=>i.poly.startsWith('I:')).map(async inst=>{
+          try{
+            const r=await fetch(
+              `https://api.polygon.io/v2/aggs/ticker/${inst.poly}/prev?adjusted=true&apiKey=${POLY_KEY}`
+            )
+            const d=await r.json()
+            const price=d.results?.[0]?.c||0
+            if(price>0) push(inst.sym,price)
+          }catch{}
+        })
+      )
     }
 
-    connect()
-    pollBinance()
-    pollYahoo()
-    // Poll Binance every 1s for crypto; Yahoo every 2s for forex/gold/indices
-    const binInterval = setInterval(pollBinance, 1000)
-    pollInterval      = setInterval(pollYahoo,   2000)
+    connectWS()
+    pollPrices()
+    pollTimer=setInterval(pollPrices, 3000)
 
     return ()=>{
       dead=true
-      clearTimeout(wsTimer)
-      clearInterval(binInterval)
-      clearInterval(pollInterval)
+      clearTimeout(wsTimer); clearInterval(pollTimer)
       try{ws?.close()}catch{}
     }
   },[push])
@@ -359,29 +297,25 @@ function usePriceFeed(){
   return {prices,refPrev,refPrices}
 }
 
-/* ─── P&L ────────────────────────────────────────────────────────────────── */
-function calcPnl(trade:any, price:number):number{
+/* ── P&L ────────────────────────────────────────────────────────── */
+function calcPnl(trade:any,price:number):number{
   const inst=INSTRUMENTS.find(i=>i.sym===trade.symbol)
   const diff=trade.direction==='buy'?price-trade.open_price:trade.open_price-price
-  const units=trade.symbol==='USD/JPY'?LOT_SIZE/price:(inst?.lotUSD(1)??LOT_SIZE)
+  const units=['USD/JPY','GBP/JPY','EUR/JPY'].includes(trade.symbol)
+    ?LOT_SIZE/price:(inst?.lotUSD(1)??LOT_SIZE)
   return diff*units*trade.lots
 }
 
-/* ─── Risk monitor — interval-based, ref-only, NO stale closure ──────────── */
-/*
-  THE FIX: instead of useEffect([prices]) which has stale closure issues,
-  we run setInterval(500ms) and read everything from refs.
-  This guarantees breach triggers with the LATEST balance, prices, trades.
-*/
+/* ── Risk Monitor — interval-based, ref-only ────────────────────── */
 function useRiskMonitor(
-  tradesRef:   {current:any[]},
-  pricesRef:   {current:Record<string,number>},
-  primaryRef:  {current:any},
-  accountId:   string|null|undefined,
-  onBreach:    (reason:string, trades:any[])=>void
+  tradesRef:{current:any[]},
+  pricesRef:{current:Record<string,number>},
+  primaryRef:{current:any},
+  accountId:string|null|undefined,
+  onBreach:(reason:string,trades:any[])=>void
 ){
-  const firedRef   = useRef(false)
-  const callbackRef= useRef(onBreach)
+  const firedRef   =useRef(false)
+  const callbackRef=useRef(onBreach)
   callbackRef.current=onBreach
 
   useEffect(()=>{
@@ -392,99 +326,53 @@ function useRiskMonitor(
       if(!primary||!trades.length||firedRef.current) return
       if(primary.status==='breached'||primary.status==='passed') return
 
-      const balance   = primary.balance ?? 0
-      // starting_balance = the original account size (e.g. $100,000)
-      // This is the BASE for max DD calculation — never changes
-      const startBal  = primary.starting_balance ?? balance
-      if(balance <= 0 || startBal <= 0) return
+      const balance  =primary.balance??0
+      const startBal =primary.starting_balance??balance
+      if(balance<=0||startBal<=0) return
 
-      // DD limits from challenge_products
-      const cp    = (primary as any).challenge_products
-      const phase = primary.phase ?? 'phase1'
-      const maxDDPct   = phase==='funded' ? (cp?.funded_max_dd   ?? 10)
-                       : phase==='phase2' ? (cp?.ph2_max_dd      ?? 10)
-                       :                    (cp?.ph1_max_dd      ?? 10)
-      const dailyDDPct = phase==='funded' ? (cp?.funded_daily_dd ?? 5)
-                       : phase==='phase2' ? (cp?.ph2_daily_dd    ?? 5)
-                       :                    (cp?.ph1_daily_dd    ?? 5)
+      const cp   =(primary as any).challenge_products
+      const phase=primary.phase??'phase1'
+      const maxDDPct  =phase==='funded'?(cp?.funded_max_dd??10) :phase==='phase2'?(cp?.ph2_max_dd??10) :(cp?.ph1_max_dd??10)
+      const dailyDDPct=phase==='funded'?(cp?.funded_daily_dd??5):phase==='phase2'?(cp?.ph2_daily_dd??5):(cp?.ph1_daily_dd??5)
 
-      // Max DD floor: equity must stay above (startBal - maxDD amount)
-      // e.g. $100k account with 10% max DD → floor = $90,000
-      const maxDDAmount = startBal * (maxDDPct / 100)
-      const maxDDFloor  = startBal - maxDDAmount
+      const maxDDFloor  =startBal-startBal*(maxDDPct/100)
+      const dailyHigh   =primary.daily_high_balance??startBal
+      const dailyFloor  =dailyHigh-dailyHigh*(dailyDDPct/100)
 
-      // Daily DD floor: equity must stay above (daily_high_balance - dailyDD amount)
-      // e.g. daily high $100k, 5% daily DD → daily floor = $95,000
-      const dailyHigh   = primary.daily_high_balance ?? startBal
-      const dailyDDAmount = dailyHigh * (dailyDDPct / 100)
-      const dailyFloor    = dailyHigh - dailyDDAmount
+      const floatPnl=trades.reduce((s:number,t:any)=>{
+        const cur=prices[t.symbol]||SEED[t.symbol]||t.open_price
+        return s+calcPnl(t,cur)
+      },0)
+      const equity=balance+floatPnl
 
-      // Current equity = current balance + all open trade floating P&L
-      const floatPnl = trades.reduce((s: number, t: any) => {
-        const cur = prices[t.symbol] || SEED[t.symbol] || t.open_price
-        return s + calcPnl(t, cur)
-      }, 0)
-      const equity = balance + floatPnl
-
-      // Debug log every 5s (remove in production)
-      if(Math.floor(Date.now()/1000) % 5 === 0){
-        console.log('[RiskMonitor]', {
-          balance, startBal, equity: equity.toFixed(2),
-          floatPnl: floatPnl.toFixed(2),
-          maxDDFloor: maxDDFloor.toFixed(2),
-          dailyFloor: dailyFloor.toFixed(2),
-          dailyHigh, maxDDPct, dailyDDPct,
-          tradesCount: trades.length,
-          status: primary.status,
-        })
-      }
-
-      // ── Check 1: Max drawdown ───────────────────────────────────────────
-      // equity dropped more than maxDDPct% from starting balance
-      if(equity <= maxDDFloor){
-        firedRef.current = true
-        callbackRef.current(
-          `Max drawdown breached — equity $${equity.toFixed(2)} ≤ floor $${maxDDFloor.toFixed(2)} (${maxDDPct}% of $${startBal.toFixed(0)})`,
-          trades
-        )
+      if(equity<=maxDDFloor){
+        firedRef.current=true
+        callbackRef.current(`Max drawdown breached — equity $${equity.toFixed(2)} ≤ floor $${maxDDFloor.toFixed(2)} (${maxDDPct}% max DD)`,trades)
         return
       }
-
-      // ── Check 2: Daily drawdown ─────────────────────────────────────────
-      // equity dropped more than dailyDDPct% from today's high
-      if(equity <= dailyFloor){
-        firedRef.current = true
-        callbackRef.current(
-          `Daily drawdown breached — equity $${equity.toFixed(2)} ≤ daily floor $${dailyFloor.toFixed(2)} (${dailyDDPct}% of daily high $${dailyHigh.toFixed(0)})`,
-          trades
-        )
+      if(equity<=dailyFloor){
+        firedRef.current=true
+        callbackRef.current(`Daily drawdown breached — equity $${equity.toFixed(2)} ≤ daily floor $${dailyFloor.toFixed(2)} (${dailyDDPct}% daily DD)`,trades)
         return
       }
-
-      // ── Check 3: Single trade -5% of STARTING balance ──────────────────
-      // Any single open trade losing ≥5% of starting balance → breach
       for(const t of trades){
-        const cur = prices[t.symbol] || SEED[t.symbol] || t.open_price
-        const pnl = calcPnl(t, cur)
-        const pct = (pnl / startBal) * 100   // % of starting balance, not current
-        if(pct <= -5){
-          firedRef.current = true
-          callbackRef.current(
-            `Single trade ${t.symbol} loss ${pct.toFixed(2)}% of account (limit -5% of $${startBal.toFixed(0)})`,
-            trades
-          )
+        const cur=prices[t.symbol]||SEED[t.symbol]||t.open_price
+        const pnl=calcPnl(t,cur)
+        const pct=(pnl/startBal)*100
+        if(pct<=-5){
+          firedRef.current=true
+          callbackRef.current(`${t.symbol} trade loss ${pct.toFixed(2)}% of account (limit -5%)`,trades)
           return
         }
       }
-    }, 500)
-    return () => clearInterval(iv)
-  }, [])  // empty deps — interval reads everything from refs
+    },500)
+    return ()=>clearInterval(iv)
+  },[])
 
-  // Reset fired flag when switching accounts
-  useEffect(() => { firedRef.current = false }, [accountId])
+  useEffect(()=>{firedRef.current=false},[accountId])
 }
 
-/* ─── Platform Page ──────────────────────────────────────────────────────── */
+/* ── Platform Page ──────────────────────────────────────────────── */
 export function PlatformPage(){
   const navigate =useNavigate()
   const {toasts,toast,dismiss}=useToast()
@@ -492,22 +380,21 @@ export function PlatformPage(){
   const [selAccId,setSelAccId]=useState<string|null>(null)
   const primary=accounts.find(a=>a.id===selAccId)??defPrimary
 
-  const [sym,      setSym]      =useState('BTC/USD')
-  const [tf,       setTf]       =useState('H1')
-  const [dir,      setDir]      =useState<'buy'|'sell'>('buy')
-  const [lots,     setLots]     =useState('0.10')
-  const [sl,       setSl]       =useState('')
-  const [tp,       setTp]       =useState('')
-  const [ordType,  setOrdType]  =useState('Market')
-  const [tab,      setTab]      =useState('positions')
-  const [confirm,  setConfirm]  =useState(false)
-  const [placing,  setPlacing]  =useState(false)
-  const [openTrades,  setOpenTrades]  =useState<any[]>([])
-  const [closedTrades,setClosedTrades]=useState<any[]>([])
+  const [sym,     setSym]    =useState('EUR/USD')
+  const [tf,      setTf]     =useState('H1')
+  const [dir,     setDir]    =useState<'buy'|'sell'>('buy')
+  const [lots,    setLots]   =useState('0.10')
+  const [sl,      setSl]     =useState('')
+  const [tp,      setTp]     =useState('')
+  const [ordType, setOrdType]=useState('Market')
+  const [tab,     setTab]    =useState('positions')
+  const [confirm, setConfirm]=useState(false)
+  const [placing, setPlacing]=useState(false)
+  const [openTrades,   setOpenTrades]  =useState<any[]>([])
+  const [closedTrades, setClosedTrades]=useState<any[]>([])
 
   const {prices,refPrev,refPrices}=usePriceFeed()
 
-  // Refs for risk monitor — always latest values
   const tradesRef =useRef(openTrades);  tradesRef.current=openTrades
   const primaryRef=useRef(primary);     primaryRef.current=primary
 
@@ -539,17 +426,15 @@ export function PlatformPage(){
       .order('closed_at',{ascending:false}).limit(50).then(({data})=>setClosedTrades(data??[]))
   },[primary?.id])
 
-  // Auto-breach handler
   const handleBreach=useCallback(async(reason:string,trades:any[])=>{
     if(!primary) return
     toast('error','🚨','Account Breached',reason)
-
     const closed=await Promise.all(trades.map(async t=>{
       const ti   =INSTRUMENTS.find(i=>i.sym===t.symbol)!
       const cur  =refPrices.current[t.symbol]||SEED[t.symbol]
       const closeP=+(t.direction==='buy'?cur:cur+ti.spread).toFixed(ti.dec)
       const diff =t.direction==='buy'?closeP-t.open_price:t.open_price-closeP
-      const units=t.symbol==='USD/JPY'?LOT_SIZE/closeP:ti.lotUSD(1)
+      const units=['USD/JPY','GBP/JPY','EUR/JPY'].includes(t.symbol)?LOT_SIZE/closeP:ti.lotUSD(1)
       const netPnl=+(diff*units*t.lots).toFixed(2)
       const pips  =+(diff/ti.pip).toFixed(1)
       await supabase.from('trades').update({
@@ -558,24 +443,19 @@ export function PlatformPage(){
       }).eq('id',t.id)
       return {...t,status:'closed',close_price:closeP,net_pnl:netPnl,pips}
     }))
-
-    const totalPnl=closed.reduce((s,t)=>s+(t.net_pnl||0),0)
-    const newBal  =+(balance+totalPnl).toFixed(2)
-
+    const newBal=+(balance+closed.reduce((s,t)=>s+(t.net_pnl||0),0)).toFixed(2)
     await supabase.from('accounts').update({
       status:'breached',phase:'breached',balance:newBal,equity:newBal,
       breached_at:new Date().toISOString(),breach_reason:reason,
     }).eq('id',primary.id)
-
     await supabase.from('notifications').insert([
       {user_id:primary.user_id,type:'breach',title:'🚨 Account Breached',
-       body:`Account ${primary.account_number} was auto-breached. ${reason}`,
-       is_read:false,metadata:{account_id:primary.id,reason,balance:newBal}},
+       body:`Account ${primary.account_number} auto-breached. ${reason}`,is_read:false,
+       metadata:{account_id:primary.id,reason,balance:newBal}},
       {user_id:null,type:'breach',title:`🚨 Breach — ${primary.account_number}`,
-       body:`Auto-breached. ${reason}. Final balance: $${newBal}`,
-       is_read:false,metadata:{account_id:primary.id,account_number:primary.account_number,reason}},
+       body:`Auto-breached. ${reason}. Final balance: $${newBal}`,is_read:false,
+       metadata:{account_id:primary.id,account_number:primary.account_number,reason}},
     ])
-
     setOpenTrades([])
     setClosedTrades(p=>[...closed,...p])
   },[primary,refPrices,balance])
@@ -583,10 +463,10 @@ export function PlatformPage(){
   useRiskMonitor(tradesRef,refPrices,primaryRef,primary?.id,handleBreach)
 
   async function placeOrder(){
-    if(!primary)                                                          {toast('error','❌','No Account','No active account');return}
-    if((primary as any).payout_locked||primary.status==='suspended')     {toast('error','⛔','Locked','Payout pending');return}
-    if(primary.status==='breached'||primary.status==='passed')           {toast('error','⛔','Locked','Account not active');return}
-    if(reqMargin>freeMargin)                                              {toast('error','⛔','Margin',`Need $${reqMargin.toFixed(2)}`);return}
+    if(!primary)                                                       {toast('error','❌','No Account','No active account');return}
+    if((primary as any).payout_locked||primary.status==='suspended')  {toast('error','⛔','Locked','Payout pending');return}
+    if(primary.status==='breached'||primary.status==='passed')        {toast('error','⛔','Locked','Account not active');return}
+    if(reqMargin>freeMargin)                                           {toast('error','⛔','Margin',`Need $${reqMargin.toFixed(2)}`);return}
     setPlacing(true);setConfirm(false)
     const {data,error}=await supabase.from('trades').insert({
       account_id:primary.id,user_id:primary.user_id,
@@ -607,7 +487,7 @@ export function PlatformPage(){
     const cur  =refPrices.current[trade.symbol]||SEED[trade.symbol]
     const closeP=+(trade.direction==='buy'?cur:cur+ti.spread).toFixed(ti.dec)
     const diff =trade.direction==='buy'?closeP-trade.open_price:trade.open_price-closeP
-    const units=trade.symbol==='USD/JPY'?LOT_SIZE/closeP:ti.lotUSD(1)
+    const units=['USD/JPY','GBP/JPY','EUR/JPY'].includes(trade.symbol)?LOT_SIZE/closeP:ti.lotUSD(1)
     const netPnl=+(diff*units*trade.lots).toFixed(2)
     const pips  =+(diff/ti.pip).toFixed(1)
     await supabase.from('trades').update({
@@ -621,15 +501,11 @@ export function PlatformPage(){
     toast(netPnl>=0?'success':'warning',netPnl>=0?'💰':'🔴','Closed',`${trade.symbol} ${netPnl>=0?'+':''}${fmt(netPnl)}`)
   }
 
-  // UI helpers
-  const L=(s:string)=>({fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:4} as const)
-  const mono=(color='var(--text)')=>({fontFamily:'monospace',fontSize:12,color} as const)
-
   return(
   <>
   <div style={{display:'flex',height:'100vh',overflow:'hidden',background:'#0A0A0F',color:'var(--text)',fontSize:12}}>
 
-    {/* ── Watchlist ── */}
+    {/* Watchlist */}
     <div style={{width:158,flexShrink:0,background:'var(--bg2)',borderRight:'1px solid var(--bdr)',display:'flex',flexDirection:'column'}}>
       <div style={{padding:'10px 12px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:8}}>
         <div style={{width:20,height:20,border:'1px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'var(--gold)'}}>✦</div>
@@ -640,7 +516,7 @@ export function PlatformPage(){
           const cur =prices[i.sym]||SEED[i.sym]
           const prv =refPrev.current[i.sym]||cur
           const isUp=cur>=prv
-          const live=prices[i.sym]>0&&Math.abs(prices[i.sym]-SEED[i.sym])>0.0001
+          const live=prices[i.sym]>0&&Math.abs(prices[i.sym]-SEED[i.sym])>0.00001
           return(
             <div key={i.sym} onClick={()=>setSym(i.sym)} style={{
               padding:'8px 12px',cursor:'pointer',borderBottom:'1px solid rgba(212,168,67,.04)',
@@ -659,8 +535,7 @@ export function PlatformPage(){
       </div>
       <div style={{padding:'8px 12px',borderTop:'1px solid var(--bdr)'}}>
         {accounts.length>1
-          ?<select value={selAccId??primary?.id??''} onChange={e=>setSelAccId(e.target.value)}
-              style={{width:'100%',padding:'5px 6px',background:'var(--bg3)',border:'1px solid var(--dim)',color:'var(--text)',fontSize:9,fontFamily:'monospace',outline:'none',marginBottom:8}}>
+          ?<select value={selAccId??primary?.id??''} onChange={e=>setSelAccId(e.target.value)} style={{width:'100%',padding:'5px 6px',background:'var(--bg3)',border:'1px solid var(--dim)',color:'var(--text)',fontSize:9,fontFamily:'monospace',outline:'none',marginBottom:8}}>
               {accounts.map(a=><option key={a.id} value={a.id}>{a.account_number}</option>)}
             </select>
           :<div style={{marginBottom:8,padding:'5px 6px',background:'var(--bg3)',border:'1px solid var(--dim)',fontSize:9,fontFamily:'monospace',color:'var(--gold)',textAlign:'center' as const}}>{primary?.account_number??'—'}</div>
@@ -669,7 +544,7 @@ export function PlatformPage(){
       </div>
     </div>
 
-    {/* ── Main ── */}
+    {/* Main */}
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
 
       {/* Topbar */}
@@ -679,11 +554,11 @@ export function PlatformPage(){
         <span style={{fontSize:10,flexShrink:0,color:up?'var(--green)':'var(--red)'}}>{up?'▲':'▼'} {Math.abs(livePrice-prevPrice).toFixed(inst.dec)}</span>
         <div style={{display:'flex',gap:14,padding:'4px 14px',background:'rgba(0,0,0,.4)',border:'1px solid rgba(212,168,67,.1)',marginLeft:6,flexShrink:0}}>
           {[
-            {l:'BALANCE',    v:fmt(balance),                           c:'var(--gold)'},
-            {l:'EQUITY',     v:fmt(equity),                            c:equity>=balance?'var(--green)':'var(--red)'},
-            {l:'P&L',        v:`${openPnl>=0?'+':''}${fmt(openPnl)}`,  c:openPnl>=0?'var(--green)':'var(--red)'},
-            {l:'FREE MARGIN',v:fmt(freeMargin),                         c:freeMargin<0?'var(--red)':'var(--text2)'},
-            ...(usedMargin>0?[{l:'MARGIN LVL',v:`${marginLvl.toFixed(0)}%`,c:marginLvl<150?'var(--red)':'var(--text2)'}]:[]),
+            {l:'BALANCE',v:fmt(balance),c:'var(--gold)'},
+            {l:'EQUITY', v:fmt(equity), c:equity>=balance?'var(--green)':'var(--red)'},
+            {l:'P&L',    v:`${openPnl>=0?'+':''}${fmt(openPnl)}`,c:openPnl>=0?'var(--green)':'var(--red)'},
+            {l:'FREE MARGIN',v:fmt(freeMargin),c:freeMargin<0?'var(--red)':'var(--text2)'},
+            ...(usedMargin>0?[{l:'MARGIN',v:`${marginLvl.toFixed(0)}%`,c:marginLvl<150?'var(--red)':'var(--text2)'}]:[]),
           ].map(({l,v,c})=>(
             <div key={l} style={{flexShrink:0}}>
               <div style={{fontSize:7,letterSpacing:1.5,color:'var(--text3)',fontWeight:600,textTransform:'uppercase' as const}}>{l}</div>
@@ -693,7 +568,7 @@ export function PlatformPage(){
         </div>
         {(primary as any)?.payout_locked&&<div style={{padding:'4px 10px',background:'rgba(212,168,67,.1)',border:'1px solid var(--bdr2)',fontSize:9,color:'var(--gold)',letterSpacing:1,fontWeight:600,textTransform:'uppercase' as const,flexShrink:0}}>⏳ Payout Pending</div>}
         <div style={{marginLeft:'auto',display:'flex',gap:2}}>
-          {Object.keys(BIN_INTERVAL).map(t=>(
+          {Object.keys(TF_POLY).map(t=>(
             <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 7px',fontSize:9,fontFamily:'monospace',fontWeight:'bold',cursor:'pointer',background:tf===t?'rgba(212,168,67,.15)':'transparent',border:tf===t?'1px solid var(--bdr2)':'1px solid transparent',color:tf===t?'var(--gold)':'var(--text3)'}}>{t}</button>
           ))}
         </div>
@@ -703,7 +578,7 @@ export function PlatformPage(){
         </div>
       </div>
 
-      {/* Chart — key forces full remount on sym/tf change */}
+      {/* Chart */}
       <div style={{flex:1,overflow:'hidden'}}>
         <div key={`${sym}_${tf}`} style={{width:'100%',height:'100%'}}>
           <CandleChart sym={sym} tf={tf} livePrice={livePrice}/>
@@ -718,87 +593,82 @@ export function PlatformPage(){
           ))}
         </div>
         <div style={{flex:1,overflow:'auto'}}>
-
           {tab==='positions'&&(openTrades.length===0
             ?<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'var(--text3)',fontSize:11}}>No open positions</div>
             :<table style={{width:'100%',borderCollapse:'collapse',fontSize:10}}>
-                <thead><tr style={{borderBottom:'1px solid var(--dim)'}}>
-                  {['Symbol','Dir','Lots','Open','Current','P&L','DD%','SL','TP','Time',''].map(h=>(
-                    <th key={h} style={{padding:'5px 10px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',textAlign:'left' as const,fontWeight:600}}>{h}</th>
-                  ))}
-                </tr></thead>
-                <tbody>
-                  {openTrades.map(t=>{
-                    const cur  =prices[t.symbol]||SEED[t.symbol]
-                    const ti   =INSTRUMENTS.find(i=>i.sym===t.symbol)!
-                    const pnl  =calcPnl(t,cur)
-                    const ddPct=balance>0?(pnl/balance)*100:0
-                    const warn =ddPct<=-4
-                    return(
-                      <tr key={t.id} style={{borderBottom:'1px solid rgba(212,168,67,.04)',background:warn?'rgba(255,51,82,.05)':'transparent'}}>
-                        <td style={{padding:'6px 10px',fontWeight:700}}>{t.symbol}</td>
-                        <td style={{padding:'6px 10px'}}><span style={{fontSize:8,fontWeight:'bold',letterSpacing:1,color:t.direction==='buy'?'var(--green)':'var(--red)'}}>{t.direction.toUpperCase()}</span></td>
-                        <td style={{padding:'6px 10px',fontFamily:'monospace'}}>{t.lots}</td>
-                        <td style={{padding:'6px 10px',fontFamily:'monospace',color:'var(--text2)'}}>{t.open_price}</td>
-                        <td style={{padding:'6px 10px',fontFamily:'monospace',fontWeight:600,color:cur>=t.open_price?'var(--green)':'var(--red)'}}>{cur.toFixed(ti.dec)}</td>
-                        <td style={{padding:'6px 10px',fontFamily:'monospace',fontWeight:700,fontSize:11,color:pnl>=0?'var(--green)':'var(--red)'}}>{pnl>=0?'+':''}{fmt(pnl)}</td>
-                        <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:10,fontWeight:600,color:warn?'var(--red)':ddPct<0?'rgba(255,51,82,.7)':'var(--green)'}}>{ddPct>=0?'+':''}{ddPct.toFixed(2)}%</td>
-                        <td style={{padding:'6px 10px',fontFamily:'monospace',color:'var(--red)',fontSize:9}}>{t.sl??'—'}</td>
-                        <td style={{padding:'6px 10px',fontFamily:'monospace',color:'var(--green)',fontSize:9}}>{t.tp??'—'}</td>
-                        <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:9,color:'var(--text3)'}}>{new Date(t.opened_at).toLocaleTimeString()}</td>
-                        <td style={{padding:'6px 10px'}}>
-                          <button onClick={()=>closeTrade(t)} style={{padding:'3px 10px',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:'rgba(255,51,82,.1)',color:'var(--red)',border:'1px solid rgba(255,51,82,.25)'}}>✕</button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+               <thead><tr style={{borderBottom:'1px solid var(--dim)'}}>
+                 {['Symbol','Dir','Lots','Open','Current','P&L','DD%','SL','TP','Time',''].map(h=>(
+                   <th key={h} style={{padding:'5px 10px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',textAlign:'left' as const,fontWeight:600}}>{h}</th>
+                 ))}
+               </tr></thead>
+               <tbody>
+                 {openTrades.map(t=>{
+                   const cur =prices[t.symbol]||SEED[t.symbol]
+                   const ti  =INSTRUMENTS.find(i=>i.sym===t.symbol)!
+                   const pnl =calcPnl(t,cur)
+                   const ddPct=balance>0?(pnl/balance)*100:0
+                   const warn=ddPct<=-4
+                   return(
+                     <tr key={t.id} style={{borderBottom:'1px solid rgba(212,168,67,.04)',background:warn?'rgba(255,51,82,.05)':'transparent'}}>
+                       <td style={{padding:'6px 10px',fontWeight:700}}>{t.symbol}</td>
+                       <td style={{padding:'6px 10px'}}><span style={{fontSize:8,fontWeight:'bold',letterSpacing:1,color:t.direction==='buy'?'var(--green)':'var(--red)'}}>{t.direction.toUpperCase()}</span></td>
+                       <td style={{padding:'6px 10px',fontFamily:'monospace'}}>{t.lots}</td>
+                       <td style={{padding:'6px 10px',fontFamily:'monospace',color:'var(--text2)'}}>{t.open_price}</td>
+                       <td style={{padding:'6px 10px',fontFamily:'monospace',fontWeight:600,color:cur>=t.open_price?'var(--green)':'var(--red)'}}>{cur.toFixed(ti.dec)}</td>
+                       <td style={{padding:'6px 10px',fontFamily:'monospace',fontWeight:700,fontSize:11,color:pnl>=0?'var(--green)':'var(--red)'}}>{pnl>=0?'+':''}{fmt(pnl)}</td>
+                       <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:10,fontWeight:600,color:warn?'var(--red)':ddPct<0?'rgba(255,51,82,.7)':'var(--green)'}}>{ddPct>=0?'+':''}{ddPct.toFixed(2)}%</td>
+                       <td style={{padding:'6px 10px',fontFamily:'monospace',color:'var(--red)',fontSize:9}}>{t.sl??'—'}</td>
+                       <td style={{padding:'6px 10px',fontFamily:'monospace',color:'var(--green)',fontSize:9}}>{t.tp??'—'}</td>
+                       <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:9,color:'var(--text3)'}}>{new Date(t.opened_at).toLocaleTimeString()}</td>
+                       <td style={{padding:'6px 10px'}}><button onClick={()=>closeTrade(t)} style={{padding:'3px 10px',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:'rgba(255,51,82,.1)',color:'var(--red)',border:'1px solid rgba(255,51,82,.25)'}}>✕</button></td>
+                     </tr>
+                   )
+                 })}
+               </tbody>
+             </table>
           )}
-
           {tab==='history'&&(closedTrades.length===0
             ?<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'var(--text3)',fontSize:11}}>No history</div>
             :<table style={{width:'100%',borderCollapse:'collapse',fontSize:10}}>
-                <thead><tr style={{borderBottom:'1px solid var(--dim)'}}>
-                  {['Symbol','Dir','Lots','Open','Close','Pips','P&L','Reason','Date'].map(h=>(
-                    <th key={h} style={{padding:'5px 10px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',textAlign:'left' as const,fontWeight:600}}>{h}</th>
-                  ))}
-                </tr></thead>
-                <tbody>
-                  {closedTrades.map(t=>(
-                    <tr key={t.id} style={{borderBottom:'1px solid rgba(212,168,67,.04)'}}>
-                      <td style={{padding:'6px 10px',fontWeight:700}}>{t.symbol}</td>
-                      <td style={{padding:'6px 10px'}}><span style={{fontSize:8,fontWeight:'bold',color:t.direction==='buy'?'var(--green)':'var(--red)'}}>{t.direction.toUpperCase()}</span></td>
-                      <td style={{padding:'6px 10px',fontFamily:'monospace'}}>{t.lots}</td>
-                      <td style={{padding:'6px 10px',fontFamily:'monospace'}}>{t.open_price}</td>
-                      <td style={{padding:'6px 10px',fontFamily:'monospace'}}>{t.close_price??'—'}</td>
-                      <td style={{padding:'6px 10px',fontFamily:'monospace',color:(t.pips??0)>=0?'var(--green)':'var(--red)'}}>{t.pips!=null?`${t.pips>0?'+':''}${t.pips}`:'—'}</td>
-                      <td style={{padding:'6px 10px',fontFamily:'monospace',fontWeight:700,color:(t.net_pnl??0)>=0?'var(--green)':'var(--red)'}}>{t.net_pnl!=null?`${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}`:'—'}</td>
-                      <td style={{padding:'6px 10px',fontSize:9,color:t.close_reason==='breach'?'var(--red)':'var(--text3)'}}>{t.close_reason==='breach'?'🚨 Breach':'Manual'}</td>
-                      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:9,color:'var(--text3)'}}>{t.closed_at?new Date(t.closed_at).toLocaleString():'—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+               <thead><tr style={{borderBottom:'1px solid var(--dim)'}}>
+                 {['Symbol','Dir','Lots','Open','Close','Pips','P&L','Reason','Date'].map(h=>(
+                   <th key={h} style={{padding:'5px 10px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',textAlign:'left' as const,fontWeight:600}}>{h}</th>
+                 ))}
+               </tr></thead>
+               <tbody>
+                 {closedTrades.map(t=>(
+                   <tr key={t.id} style={{borderBottom:'1px solid rgba(212,168,67,.04)'}}>
+                     <td style={{padding:'6px 10px',fontWeight:700}}>{t.symbol}</td>
+                     <td style={{padding:'6px 10px'}}><span style={{fontSize:8,fontWeight:'bold',color:t.direction==='buy'?'var(--green)':'var(--red)'}}>{t.direction.toUpperCase()}</span></td>
+                     <td style={{padding:'6px 10px',fontFamily:'monospace'}}>{t.lots}</td>
+                     <td style={{padding:'6px 10px',fontFamily:'monospace'}}>{t.open_price}</td>
+                     <td style={{padding:'6px 10px',fontFamily:'monospace'}}>{t.close_price??'—'}</td>
+                     <td style={{padding:'6px 10px',fontFamily:'monospace',color:(t.pips??0)>=0?'var(--green)':'var(--red)'}}>{t.pips!=null?`${t.pips>0?'+':''}${t.pips}`:'—'}</td>
+                     <td style={{padding:'6px 10px',fontFamily:'monospace',fontWeight:700,color:(t.net_pnl??0)>=0?'var(--green)':'var(--red)'}}>{t.net_pnl!=null?`${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}`:'—'}</td>
+                     <td style={{padding:'6px 10px',fontSize:9,color:t.close_reason==='breach'?'var(--red)':'var(--text3)'}}>{t.close_reason==='breach'?'🚨 Breach':'Manual'}</td>
+                     <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:9,color:'var(--text3)'}}>{t.closed_at?new Date(t.closed_at).toLocaleString():'—'}</td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
           )}
-
           {tab==='account'&&(
             <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,padding:16}}>
               {([
-                ['Balance',    fmt(balance),                            'var(--gold)'],
-                ['Equity',     fmt(equity),                             equity>=balance?'var(--green)':'var(--red)'],
-                ['Open P&L',   `${openPnl>=0?'+':''}${fmt(openPnl)}`,  openPnl>=0?'var(--green)':'var(--red)'],
-                ['Free Margin',fmt(freeMargin),                          freeMargin<0?'var(--red)':'var(--text)'],
-                ['Used Margin',fmt(usedMargin),                          'var(--text)'],
-                ['Margin Lvl', usedMargin>0?`${marginLvl.toFixed(0)}%`:'∞', marginLvl<150&&usedMargin>0?'var(--red)':'var(--green)'],
-                ['Leverage',   `1:${LEVERAGE}`,                          'var(--text2)'],
-                ['Open Pos.',  String(openTrades.length),                'var(--text)'],
-                ['Account',    primary?.account_number??'—',             'var(--gold)'],
-                ['Phase',      primary?.phase??'—',                      'var(--text2)'],
+                ['Balance',    fmt(balance),                           'var(--gold)'],
+                ['Equity',     fmt(equity),                            equity>=balance?'var(--green)':'var(--red)'],
+                ['Open P&L',   `${openPnl>=0?'+':''}${fmt(openPnl)}`, openPnl>=0?'var(--green)':'var(--red)'],
+                ['Free Margin',fmt(freeMargin),                         freeMargin<0?'var(--red)':'var(--text)'],
+                ['Used Margin',fmt(usedMargin),                         'var(--text)'],
+                ['Margin Lvl', usedMargin>0?`${marginLvl.toFixed(0)}%`:'∞',marginLvl<150&&usedMargin>0?'var(--red)':'var(--green)'],
+                ['Leverage',   `1:${LEVERAGE}`,                         'var(--text2)'],
+                ['Open Pos.',  String(openTrades.length),               'var(--text)'],
+                ['Account',    primary?.account_number??'—',            'var(--gold)'],
+                ['Phase',      primary?.phase??'—',                     'var(--text2)'],
               ] as [string,string,string][]).map(([l,v,c])=>(
                 <div key={l}>
-                  <div style={{...L(l)}}>{l}</div>
-                  <div style={{...mono(c)}}>{v}</div>
+                  <div style={{fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:4}}>{l}</div>
+                  <div style={{fontFamily:'monospace',fontSize:12,color:c}}>{v}</div>
                 </div>
               ))}
             </div>
@@ -807,7 +677,7 @@ export function PlatformPage(){
       </div>
     </div>
 
-    {/* ── Order Panel ── */}
+    {/* Order Panel */}
     <div style={{width:210,flexShrink:0,background:'var(--bg2)',borderLeft:'1px solid var(--bdr)',display:'flex',flexDirection:'column'}}>
       <div style={{padding:'10px 12px',borderBottom:'1px solid var(--bdr)'}}>
         <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:8}}>Order Panel</div>
@@ -817,20 +687,17 @@ export function PlatformPage(){
         </div>
       </div>
       <div style={{flex:1,overflowY:'auto',padding:12,display:'flex',flexDirection:'column',gap:8}}>
-        {/* Price display */}
         <div style={{textAlign:'center' as const,padding:'10px 8px',border:`1px solid ${up?'rgba(0,217,126,.25)':'rgba(255,51,82,.25)'}`,background:'var(--bg3)'}}>
           <div style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:3}}>{dir==='buy'?'Ask':'Bid'}</div>
           <div style={{fontFamily:'monospace',fontSize:22,fontWeight:700,letterSpacing:-1,color:up?'var(--green)':'var(--red)'}}>{execPrice.toFixed(inst.dec)}</div>
           <div style={{fontSize:8,color:'var(--text3)',marginTop:3}}>spread {inst.spread.toFixed(inst.dec)}</div>
         </div>
-        {/* Order type */}
         <div>
           <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:4}}>Order Type</div>
           <div style={{display:'flex',background:'var(--bg3)',border:'1px solid var(--dim)'}}>
             {['Market','Limit','Stop'].map(t=><button key={t} onClick={()=>setOrdType(t)} style={{flex:1,padding:'6px 0',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',border:'none',background:ordType===t?'rgba(212,168,67,.12)':'transparent',color:ordType===t?'var(--gold)':'var(--text3)'}}>{t}</button>)}
           </div>
         </div>
-        {/* Lot size */}
         <div>
           <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:4}}>Lot Size <span style={{fontWeight:400}}>max {maxLots}</span></div>
           <div style={{display:'flex',background:'var(--bg3)',border:'1px solid var(--dim)'}}>
@@ -839,8 +706,7 @@ export function PlatformPage(){
             <button onClick={()=>setLots(l=>String((+l+0.01).toFixed(2)))} style={{padding:'0 10px',background:'transparent',border:'none',borderLeft:'1px solid var(--dim)',cursor:'pointer',color:'var(--text3)',fontSize:16}}>+</button>
           </div>
         </div>
-        {/* SL/TP */}
-        {(['Stop Loss','Take Profit'] as const).map((l,i)=>{
+        {['Stop Loss','Take Profit'].map((l,i)=>{
           const v=i===0?sl:tp; const sv=i===0?setSl:setTp
           return(
             <div key={l}>
@@ -849,7 +715,6 @@ export function PlatformPage(){
             </div>
           )
         })}
-        {/* Margin info */}
         <div style={{background:'var(--bg3)',border:'1px solid var(--dim)',padding:'8px 10px'}}>
           {([['Req. Margin',`$${reqMargin.toFixed(2)}`,reqMargin>freeMargin?'var(--red)':'var(--text)'],['Free Margin',`$${freeMargin.toFixed(2)}`,freeMargin<reqMargin?'var(--red)':'var(--green)'],['Leverage',`1:${LEVERAGE}`,'var(--text3)']] as [string,string,string][]).map(([l,v,c])=>(
             <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
@@ -865,7 +730,6 @@ export function PlatformPage(){
     </div>
   </div>
 
-  {/* Confirm modal */}
   {confirm&&(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.8)',backdropFilter:'blur(4px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div style={{background:'var(--bg2)',border:'1px solid var(--bdr2)',padding:24,minWidth:300}}>
