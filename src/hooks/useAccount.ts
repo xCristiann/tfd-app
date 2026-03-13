@@ -10,23 +10,15 @@ export function useAccount() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let userId: string | null = null
-
     accountsApi.getMine()
-      .then(async (data) => {
+      .then((data) => {
         setAccounts(data)
         const funded = data.find((a) => a.phase === 'funded') ?? data[0] ?? null
         setPrimary(funded)
-
-        // Get user id for realtime filter
-        const { data: { user } } = await supabase.auth.getUser()
-        userId = user?.id ?? null
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
 
-    // Realtime: subscribe to ALL account changes for this user
-    // We use a channel on the whole table filtered by user_id
     const channel = supabase
       .channel('all-my-accounts')
       .on('postgres_changes', {
@@ -35,19 +27,21 @@ export function useAccount() {
         table: 'accounts',
       }, (payload) => {
         const updated = payload.new as Account
-        // Update accounts array
-        setAccounts(prev => {
-          const newAccounts = prev.map(a => a.id === updated.id ? { ...a, ...updated } : a)
-          return newAccounts
-        })
-        // Update primary if it's the same account
-        setPrimary(p => p?.id === updated.id ? { ...p, ...updated } : p)
+        // Merge update but KEEP challenge_products from previous state
+        setAccounts(prev => prev.map(a =>
+          a.id === updated.id
+            ? { ...updated, challenge_products: (a as any).challenge_products }
+            : a
+        ))
+        setPrimary(p =>
+          p?.id === updated.id
+            ? { ...updated, challenge_products: (p as any).challenge_products }
+            : p
+        )
       })
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   return { accounts, primary, loading, error }
