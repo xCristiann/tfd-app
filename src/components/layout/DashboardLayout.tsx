@@ -20,11 +20,25 @@ function AdminNotifications() {
   const [notifs, setNotifs] = useState<any[]>([])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchNotifs()
-    const iv = setInterval(fetchNotifs, 30000)
-    return () => clearInterval(iv)
+    const iv = setInterval(fetchNotifs, 5000)
+
+    const channel = supabase
+      .channel('admin-notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+      }, () => fetchNotifs())
+      .subscribe()
+
+    return () => {
+      clearInterval(iv)
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   async function fetchNotifs() {
@@ -99,7 +113,21 @@ function AdminNotifications() {
               <div className="py-10 text-center text-[11px] text-[var(--text3)]">No notifications</div>
             ) : notifs.map(n => (
               <div key={n.id}
-                onClick={() => markRead(n.id)}
+                onClick={async () => {
+                  await markRead(n.id)
+                  setOpen(false)
+                  // Navigate to trader management for admin notifications
+                  if (n.type === 'admin_target_reached' || n.type === 'admin_breach') {
+                    // Extract account number from title e.g. "Trader Target Reached — TFD-25K-1234"
+                    const match = n.title.match(/—\s*(TFD-\S+)/)
+                    const accountNumber = match?.[1]
+                    if (accountNumber) {
+                      navigate(`/admin/traders?account=${accountNumber}`)
+                    } else {
+                      navigate('/admin/traders')
+                    }
+                  }
+                }}
                 className={`flex gap-3 px-4 py-3 border-b border-[var(--dim)] border-l-2 cursor-pointer hover:bg-[var(--bg3)] transition-all ${
                   !n.is_read ? (colorMap[n.type] ?? colorMap.default) : 'border-l-transparent opacity-50'
                 }`}>

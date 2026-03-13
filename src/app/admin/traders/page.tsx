@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Badge, phaseVariant } from '@/components/ui/Badge'
@@ -32,6 +33,26 @@ export function AdminTradersPage() {
   // Edit balance modal
   const [editBalAcc, setEditBalAcc] = useState<any>(null)
   const [editBalValue, setEditBalValue] = useState('')
+
+  const location = useLocation()
+
+  // Auto-open trader when navigating from a notification
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const accountNumber = params.get('account')
+    if (!accountNumber || traders.length === 0) return
+
+    // Find trader that owns this account number
+    supabase.from('accounts')
+      .select('user_id')
+      .eq('account_number', accountNumber)
+      .single()
+      .then(({ data }) => {
+        if (!data) return
+        const trader = traders.find(t => t.id === data.user_id)
+        if (trader) openTrader(trader)
+      })
+  }, [location.search, traders.length])
 
   useEffect(() => {
     supabase.from('users')
@@ -110,7 +131,39 @@ export function AdminTradersPage() {
   }
 
   async function editBalance(account: any, newBal: number) {
-    await supabase.from('accounts').update({ balance: newBal, equity: newBal }).eq('id', account.id)
+    const { error } = await supabase.from('accounts').update({ balance: newBal, equity: newBal }).eq('id', account.id)
+    if (error) { toast('error', '❌', 'Error', error.message); return }
+
+    const prod = account.challenge_products ?? account.product
+    if (prod && (account.phase === 'phase1' || account.phase === 'phase2')) {
+      const dailyLimit = account.phase === 'phase2' ? (prod.ph2_daily_dd ?? prod.ph1_daily_dd ?? 5) : (prod.ph1_daily_dd ?? 5)
+      const maxLimit   = account.phase === 'phase2' ? (prod.ph2_max_dd ?? prod.ph1_max_dd ?? 10) : (prod.ph1_max_dd ?? 10)
+      const targetPct  = account.phase === 'phase2' ? (prod.ph2_profit_target ?? 5) : (prod.ph1_profit_target ?? 8)
+      const profitPct  = account.starting_balance > 0 ? ((newBal - account.starting_balance) / account.starting_balance) * 100 : 0
+
+      if ((account.daily_dd_used ?? 0) >= dailyLimit || (account.max_dd_used ?? 0) >= maxLimit) {
+        if (account.status !== 'breached') {
+          await supabase.from('accounts').update({ status: 'breached', phase: 'breached' }).eq('id', account.id)
+          await supabase.from('notifications').insert([
+            { user_id: account.user_id, type: 'breach', title: 'Account Breached',
+              body: `Account ${account.account_number} breached due to drawdown limits.`, is_read: false },
+            { user_id: null, type: 'admin_breach', title: `Account Breached — ${account.account_number}`,
+              body: `${selectedTrader?.first_name} ${selectedTrader?.last_name} breached ${account.account_number}.`, is_read: false }
+          ])
+          toast('warning', '🚨', 'Account Breached', `${account.account_number} breached.`)
+        }
+      } else if (profitPct >= targetPct && account.status !== 'passed' && account.status !== 'breached') {
+        await supabase.from('accounts').update({ status: 'passed' }).eq('id', account.id)
+        await supabase.from('notifications').insert([
+          { user_id: account.user_id, type: 'target_reached', title: 'Profit Target Reached!',
+            body: `Account ${account.account_number} hit the ${targetPct}% target. Awaiting review.`, is_read: false },
+          { user_id: null, type: 'admin_target_reached', title: `Trader Target Reached — ${account.account_number}`,
+            body: `${selectedTrader?.first_name} ${selectedTrader?.last_name} reached ${profitPct.toFixed(2)}% on ${account.account_number}. Review and advance phase.`, is_read: false }
+        ])
+        toast('success', '🎯', 'Target Reached', `${account.account_number} hit profit target.`)
+      }
+    }
+
     toast('success', '✅', 'Balance Updated', `Set to $${newBal.toLocaleString()}`)
     setEditBalAcc(null)
     openTrader(selectedTrader)
