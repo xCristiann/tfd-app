@@ -115,7 +115,8 @@ export function DashboardPage() {
   const maxLimit   = prod?.ph1_max_dd   ?? 10
   const targetPct  = account?.phase === 'phase2' ? (prod?.ph2_profit_target ?? 5) : (prod?.ph1_profit_target ?? 8)
   const isFunded   = account?.phase === 'funded'
-  const isLocked   = account?.status === 'breached' || account?.status === 'passed'
+  const isLocked    = account?.status === 'breached' || account?.status === 'passed' || account?.status === 'suspended'
+  const isWarning   = account?.status === 'soft_locked'
 
   return (
     <>
@@ -171,21 +172,42 @@ export function DashboardPage() {
               </button>
             </div>
 
+            {/* Warning banner — soft locked */}
+            {isWarning && (
+              <div className="flex items-center gap-3 px-5 py-3 border border-[rgba(255,180,0,.3)] bg-[rgba(255,180,0,.06)] text-[#ffb400]">
+                <span className="text-[16px]">⚠️</span>
+                <div>
+                  <div className="font-semibold text-[12px]">Drawdown Warning — Soft Locked</div>
+                  <div className="text-[10px] opacity-80">Your account is approaching drawdown limits. Risk management has flagged this account. Reduce exposure immediately.</div>
+                </div>
+              </div>
+            )}
+
             {/* Locked banner */}
             {isLocked && (
               <div className={`flex items-center gap-3 px-5 py-3 border ${
                 account?.status === 'breached'
                   ? 'border-[rgba(255,51,82,.3)] bg-[rgba(255,51,82,.06)] text-[var(--red)]'
+                  : account?.status === 'suspended'
+                  ? 'border-[rgba(255,51,82,.3)] bg-[rgba(255,51,82,.06)] text-[var(--red)]'
                   : 'border-[rgba(212,168,67,.3)] bg-[rgba(212,168,67,.06)] text-[var(--gold)]'
               }`}>
-                <span className="text-[16px]">{account?.status === 'breached' ? '🚨' : '🎯'}</span>
+                <span className="text-[16px]">
+                  {account?.status === 'breached' ? '🚨' : account?.status === 'suspended' ? '⛔' : '🎯'}
+                </span>
                 <div>
                   <div className="font-semibold text-[12px]">
-                    {account?.status === 'breached' ? 'Account Breached — Trading Locked' : 'Profit Target Reached — Pending Admin Review'}
+                    {account?.status === 'breached'
+                      ? 'Account Breached — Trading Locked'
+                      : account?.status === 'suspended'
+                      ? 'Account Suspended by Risk Management'
+                      : 'Profit Target Reached — Pending Admin Review'}
                   </div>
                   <div className="text-[10px] opacity-80">
                     {account?.status === 'breached'
                       ? 'Your drawdown limit was exceeded. This account can no longer trade.'
+                      : account?.status === 'suspended'
+                      ? 'This account has been suspended. Please contact support for details.'
                       : 'Congratulations! Your account is locked while admin reviews and advances you to the next phase.'
                     }
                   </div>

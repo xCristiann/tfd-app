@@ -121,18 +121,18 @@ export function AdminRiskPage() {
                               }}
                               className="px-[10px] py-[4px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,51,82,.15)] text-[var(--red)] border border-[rgba(255,51,82,.25)]">Notify</button>
                             <button onClick={async ()=>{
-                                if (!window.confirm(`Suspend account ${a.account_number}? Trader will not be able to trade.`)) return
-                                await supabase.from('accounts').update({ status: 'suspended' }).eq('id', a.id)
+                                if (!window.confirm(`Soft-lock account ${a.account_number}? Trader will see a warning but can still view their account.`)) return
+                                await supabase.from('accounts').update({ status: 'soft_locked' }).eq('id', a.id)
                                 await supabase.from('notifications').insert({
                                   user_id: a.user_id,
-                                  type: 'suspended',
-                                  title: 'Account Suspended',
-                                  body: `Account ${a.account_number} has been suspended by risk management. Contact support for details.`,
+                                  type: 'breach_warning',
+                                  title: '⚠️ Drawdown Warning — Soft Locked',
+                                  body: `Account ${a.account_number} has been flagged by risk management. You are approaching drawdown limits. Reduce exposure immediately or your account may be breached.`,
                                   is_read: false
                                 })
-                                toast('warning','⛔','Suspended',`${a.account_number} suspended.`)
+                                toast('warning','⚠️','Soft Locked',`${a.account_number} flagged with warning.`)
                               }}
-                              className="px-[10px] py-[4px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,140,66,.1)] text-[var(--gold)] border border-[rgba(255,140,66,.25)]">Suspend</button>
+                              className="px-[10px] py-[4px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,140,66,.1)] text-[var(--gold)] border border-[rgba(255,140,66,.25)]">Soft Lock</button>
                           </div>
                         </div>
                         <DrawdownBar label={`Daily DD — ${a.daily_dd_used}%`} value={Number(a.daily_dd_used)} max={5} warn={60} danger={80}/>
