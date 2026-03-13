@@ -329,20 +329,39 @@ export function AdminTradersPage() {
                             Login: <span className="font-mono text-[var(--text)]">{acc.platform_login}</span>
                             &nbsp;·&nbsp;P&L: <span className={profitPct >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}>{profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%</span>
                           </div>
-                          {acc.status !== 'inactive' && (
-                            <div className="flex gap-2">
-                              {canAdvance && (
-                                <button onClick={()=>advancePhase(acc)}
-                                  className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(212,168,67,.1)] text-[var(--gold)] border border-[var(--bdr2)]">
-                                  → Move to {nextPhase}
-                                </button>
-                              )}
+                          <div className="flex gap-2 flex-wrap">
+                            {canAdvance && acc.status !== 'inactive' && acc.phase !== 'breached' && (
+                              <button onClick={()=>advancePhase(acc)}
+                                className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(212,168,67,.1)] text-[var(--gold)] border border-[var(--bdr2)]">
+                                → Move to {nextPhase}
+                              </button>
+                            )}
+                            {acc.status !== 'inactive' && (
                               <button onClick={()=>{ setEditBalAcc(acc); setEditBalValue(String(acc.balance)) }}
                                 className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(59,130,246,.1)] text-blue-400 border border-[rgba(59,130,246,.2)]">
                                 Edit Balance
                               </button>
-                            </div>
-                          )}
+                            )}
+                            {acc.phase !== 'breached' && acc.status !== 'inactive' && (
+                              <button onClick={async ()=>{
+                                await supabase.from('accounts').update({ status: 'breached', phase: 'breached' }).eq('id', acc.id)
+                                toast('warning','⛔','Breached',`${acc.account_number} marked as breached.`)
+                                openTrader(selectedTrader)
+                              }}
+                                className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,140,0,.1)] text-[var(--gold)] border border-[rgba(255,140,0,.2)]">
+                                Mark Breached
+                              </button>
+                            )}
+                            <button onClick={async ()=>{
+                              if (!window.confirm(`Delete account ${acc.account_number}? This cannot be undone.`)) return
+                              await supabase.from('accounts').delete().eq('id', acc.id)
+                              toast('error','🗑','Deleted',`${acc.account_number} deleted.`)
+                              openTrader(selectedTrader)
+                            }}
+                              className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,51,82,.1)] text-[var(--red)] border border-[rgba(255,51,82,.2)]">
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       )
                     })}

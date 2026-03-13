@@ -26,11 +26,9 @@ export function DashboardPage() {
   const [curve, setCurve] = useState<DailySnapshot[]>([])
   const [openTrades, setOpenTrades] = useState<any[]>([])
 
-  // Resolve active account
   const account: Account | null = (selectedId ? accounts.find(a => a.id === selectedId) : null) ?? accounts[0] ?? null
   const prod = (account as any)?.challenge_products
 
-  // Auto-select first account once loaded
   useEffect(() => {
     if (accounts.length > 0 && !selectedId) setSelectedId(accounts[0].id)
   }, [accounts.length])
@@ -44,7 +42,60 @@ export function DashboardPage() {
       .eq('account_id', account.id).eq('status', 'open')
       .order('opened_at', { ascending: false })
       .then(({ data }) => setOpenTrades(data ?? []))
-  }, [account?.id])
+
+    // Check breach/target conditions for active phase1/phase2 accounts
+    if (account.phase === 'phase1' || account.phase === 'phase2') {
+      checkRuleViolations(account, prod)
+    }
+  }, [account?.id, account?.balance, account?.daily_dd_used, account?.max_dd_used])
+
+  async function checkRuleViolations(acc: Account, product: any) {
+    if (!product) return
+    const dailyLimit = acc.phase === 'phase2' ? (product.ph2_daily_dd ?? product.ph1_daily_dd ?? 5) : (product.ph1_daily_dd ?? 5)
+    const maxLimit   = acc.phase === 'phase2' ? (product.ph2_max_dd ?? product.ph1_max_dd ?? 10) : (product.ph1_max_dd ?? 10)
+    const targetPct  = acc.phase === 'phase2' ? (product.ph2_profit_target ?? 5) : (product.ph1_profit_target ?? 8)
+    const profitPct  = acc.starting_balance > 0 ? ((acc.balance - acc.starting_balance) / acc.starting_balance) * 100 : 0
+
+    // Breach: daily or max DD exceeded
+    if ((acc.daily_dd_used ?? 0) >= dailyLimit || (acc.max_dd_used ?? 0) >= maxLimit) {
+      if (acc.status !== 'breached') {
+        await supabase.from('accounts').update({ status: 'breached', phase: 'breached' }).eq('id', acc.id)
+        await supabase.from('notifications').insert({
+          user_id: profile?.id,
+          type: 'breach',
+          title: 'Account Breached',
+          message: `Account ${acc.account_number} has been breached due to drawdown limits being exceeded.`,
+          read: false,
+        }).then(() => {})
+        toast('error', '🚨', 'Account Breached', 'Your drawdown limit was exceeded. Account locked.')
+      }
+      return
+    }
+
+    // Target reached: lock account and notify admin
+    if (profitPct >= targetPct && acc.status === 'active') {
+      await supabase.from('accounts').update({ status: 'passed' }).eq('id', acc.id)
+      // Notify admin
+      await supabase.from('notifications').insert([
+        {
+          user_id: profile?.id,
+          type: 'target_reached',
+          title: 'Profit Target Reached!',
+          message: `Account ${acc.account_number} has reached the ${targetPct}% profit target. Awaiting admin review.`,
+          read: false,
+        },
+        // Admin notification — we store with a special marker
+        {
+          user_id: '00000000-0000-0000-0000-000000000000', // admin sentinel
+          type: 'admin_target_reached',
+          title: `Trader Target Reached — ${acc.account_number}`,
+          message: `${profile?.first_name} ${profile?.last_name} reached ${profitPct.toFixed(2)}% on ${acc.account_number}. Review and advance phase.`,
+          read: false,
+        }
+      ]).then(() => {})
+      toast('success', '🎯', 'Target Reached!', 'Profit target hit! Account locked pending admin review.')
+    }
+  }
 
   const profit     = account ? (account.balance - account.starting_balance) : 0
   const profitPct  = account && account.starting_balance > 0 ? ((profit / account.starting_balance) * 100).toFixed(2) : '0.00'
@@ -52,6 +103,8 @@ export function DashboardPage() {
   const dailyLimit = prod?.ph1_daily_dd ?? 5
   const maxLimit   = prod?.ph1_max_dd   ?? 10
   const targetPct  = account?.phase === 'phase2' ? (prod?.ph2_profit_target ?? 5) : (prod?.ph1_profit_target ?? 8)
+  const isFunded   = account?.phase === 'funded'
+  const isLocked   = account?.status === 'breached' || account?.status === 'passed'
 
   return (
     <>
@@ -82,7 +135,7 @@ export function DashboardPage() {
           </Card>
         ) : (
           <>
-            {/* ── Account selector — always shown ── */}
+            {/* Account selector */}
             <div className="flex items-center gap-3 p-3 bg-[var(--bg2)] border border-[var(--bdr)] mb-1">
               <span className="text-[8px] tracking-[2px] uppercase text-[var(--text3)] font-semibold whitespace-nowrap">Select Account</span>
               <div className="flex gap-2 flex-wrap">
@@ -96,9 +149,7 @@ export function DashboardPage() {
                           : 'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)] hover:text-[var(--text2)]'
                       }`}>
                       {a.account_number}
-                      <span className={`ml-2 text-[8px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>
-                        {phaseLabel(a.phase)}
-                      </span>
+                      <span className={`ml-2 text-[8px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>{phaseLabel(a.phase)}</span>
                     </button>
                   )
                 })}
@@ -108,6 +159,28 @@ export function DashboardPage() {
                 + New Challenge
               </button>
             </div>
+
+            {/* Locked banner */}
+            {isLocked && (
+              <div className={`flex items-center gap-3 px-5 py-3 border ${
+                account?.status === 'breached'
+                  ? 'border-[rgba(255,51,82,.3)] bg-[rgba(255,51,82,.06)] text-[var(--red)]'
+                  : 'border-[rgba(212,168,67,.3)] bg-[rgba(212,168,67,.06)] text-[var(--gold)]'
+              }`}>
+                <span className="text-[16px]">{account?.status === 'breached' ? '🚨' : '🎯'}</span>
+                <div>
+                  <div className="font-semibold text-[12px]">
+                    {account?.status === 'breached' ? 'Account Breached — Trading Locked' : 'Profit Target Reached — Pending Admin Review'}
+                  </div>
+                  <div className="text-[10px] opacity-80">
+                    {account?.status === 'breached'
+                      ? 'Your drawdown limit was exceeded. This account can no longer trade.'
+                      : 'Congratulations! Your account is locked while admin reviews and advances you to the next phase.'
+                    }
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* KPI Row */}
             <div className="grid grid-cols-5 gap-[11px]">
@@ -130,18 +203,34 @@ export function DashboardPage() {
                 <CardHeader title="Risk Dashboard" />
                 <DrawdownBar label="Daily Drawdown" value={account!.daily_dd_used ?? 0} max={dailyLimit} />
                 <DrawdownBar label="Max Drawdown"   value={account!.max_dd_used   ?? 0} max={maxLimit} warn={60} danger={80} />
-                <div className="mb-[11px]">
-                  <div className="flex justify-between mb-[4px]">
-                    <span className="text-[9px] tracking-[1.5px] uppercase text-[var(--text3)] font-semibold">Profit Progress</span>
-                    <span className={`mono text-[11px] ${parseFloat(profitPct) >= targetPct ? 'text-[var(--green)]' : 'text-[var(--gold)]'}`}>
-                      {profitPct}% / {targetPct}% target
-                    </span>
+
+                {/* Profit target — only for phase1/phase2 */}
+                {!isFunded && (
+                  <div className="mb-[11px]">
+                    <div className="flex justify-between mb-[4px]">
+                      <span className="text-[9px] tracking-[1.5px] uppercase text-[var(--text3)] font-semibold">Profit Progress</span>
+                      <span className={`mono text-[11px] ${parseFloat(profitPct) >= targetPct ? 'text-[var(--green)]' : 'text-[var(--gold)]'}`}>
+                        {profitPct}% / {targetPct}% target
+                      </span>
+                    </div>
+                    <div className="h-[4px] bg-white/5 rounded-[2px] overflow-hidden">
+                      <div className="h-full rounded-[2px] bg-[var(--green)] transition-all"
+                        style={{ width: `${Math.min((parseFloat(profitPct) / targetPct) * 100, 100)}%` }} />
+                    </div>
                   </div>
-                  <div className="h-[4px] bg-white/5 rounded-[2px] overflow-hidden">
-                    <div className="h-full rounded-[2px] bg-[var(--green)] transition-all"
-                      style={{ width: `${Math.min((parseFloat(profitPct) / targetPct) * 100, 100)}%` }} />
+                )}
+
+                {/* Funded: no target, show profit */}
+                {isFunded && (
+                  <div className="mb-[11px] p-3 bg-[rgba(212,168,67,.05)] border border-[rgba(212,168,67,.15)]">
+                    <div className="text-[8px] uppercase tracking-[1.5px] text-[var(--gold)] font-semibold mb-1">Funded Account — No Target</div>
+                    <div className="text-[11px] text-[var(--text2)]">
+                      Keep drawdown in check and request payouts anytime.
+                      Withdrawable: <span className="text-[var(--gold)] font-mono">{fmt(withdrawable)}</span>
+                    </div>
                   </div>
-                </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-2 mt-3">
                   {[
                     ['Best Trade',   stats?.best_trade  != null ? fmt(stats.best_trade)  : '—', 'var(--green)'],
