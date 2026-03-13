@@ -60,13 +60,22 @@ export function DashboardPage() {
     if ((acc.daily_dd_used ?? 0) >= dailyLimit || (acc.max_dd_used ?? 0) >= maxLimit) {
       if (acc.status !== 'breached') {
         await supabase.from('accounts').update({ status: 'breached', phase: 'breached' }).eq('id', acc.id)
-        await supabase.from('notifications').insert({
-          user_id: profile?.id,
-          type: 'breach',
-          title: 'Account Breached',
-          message: `Account ${acc.account_number} has been breached due to drawdown limits being exceeded.`,
-          read: false,
-        }).then(() => {})
+        await supabase.from('notifications').insert([
+          {
+            user_id: profile?.id,
+            type: 'breach',
+            title: 'Account Breached',
+            message: `Account ${acc.account_number} has been breached due to drawdown limits being exceeded.`,
+            read: false,
+          },
+          {
+            user_id: '00000000-0000-0000-0000-000000000000',
+            type: 'admin_breach',
+            title: `Account Breached — ${acc.account_number}`,
+            message: `${profile?.first_name} ${profile?.last_name} breached account ${acc.account_number}. Daily DD: ${acc.daily_dd_used}% / Max DD: ${acc.max_dd_used}%.`,
+            read: false,
+          }
+        ]).then(() => {})
         toast('error', '🚨', 'Account Breached', 'Your drawdown limit was exceeded. Account locked.')
       }
       return
