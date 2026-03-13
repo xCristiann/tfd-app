@@ -7,46 +7,78 @@ import { DrawdownBar } from '@/components/ui/Card'
 import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/utils'
 
-// Map display symbols to TradingView & price feeds
-// type: 'binance' uses WS stream, 'forex' uses polling REST
+// ─── Instruments ───────────────────────────────────────────────────────────
+// binanceWs: Binance WebSocket stream name (crypto only)
+// finnhubSym: Finnhub symbol for forex/gold/indices (free, no key needed for WS)
+// oandaSym: OANDA REST symbol as fallback
 const INSTRUMENTS = [
-  { sym:'EUR/USD', tv:'FX:EURUSD',       type:'forex',   apiSym:'EUR/USD',  spread:0.00020, dec:5, pip:0.0001, fallback:1.08742 },
-  { sym:'GBP/USD', tv:'FX:GBPUSD',       type:'forex',   apiSym:'GBP/USD',  spread:0.00020, dec:5, pip:0.0001, fallback:1.26712 },
-  { sym:'XAU/USD', tv:'TVC:GOLD',        type:'forex',   apiSym:'XAU/USD',  spread:0.30,    dec:2, pip:0.10,   fallback:2341.80 },
-  { sym:'NAS100',  tv:'NASDAQ:NDX',      type:'forex',   apiSym:'NDX',      spread:1.0,     dec:1, pip:1.0,    fallback:17842.0 },
-  { sym:'BTC/USD', tv:'BINANCE:BTCUSDT', type:'binance', apiSym:'btcusdt',  spread:10.0,    dec:1, pip:1.0,    fallback:67180.0 },
-  { sym:'USD/JPY', tv:'FX:USDJPY',       type:'forex',   apiSym:'USD/JPY',  spread:0.020,   dec:3, pip:0.01,   fallback:151.420 },
-  { sym:'ETH/USD', tv:'BINANCE:ETHUSDT', type:'binance', apiSym:'ethusdt',  spread:1.0,     dec:2, pip:1.0,    fallback:3180.0  },
+  { sym:'EUR/USD', tv:'FX:EURUSD',       binanceWs:null,      finnhub:'OANDA:EUR_USD', spread:0.00020, dec:5, pip:0.0001, fallback:1.08742 },
+  { sym:'GBP/USD', tv:'FX:GBPUSD',       binanceWs:null,      finnhub:'OANDA:GBP_USD', spread:0.00020, dec:5, pip:0.0001, fallback:1.26712 },
+  { sym:'XAU/USD', tv:'TVC:GOLD',        binanceWs:null,      finnhub:'OANDA:XAU_USD', spread:0.30,    dec:2, pip:0.10,   fallback:2650.00 },
+  { sym:'NAS100',  tv:'NASDAQ:NDX',      binanceWs:null,      finnhub:'OANDA:NAS100_USD', spread:1.0,  dec:1, pip:1.0,    fallback:19200.0 },
+  { sym:'BTC/USD', tv:'BINANCE:BTCUSDT', binanceWs:'btcusdt', finnhub:null,             spread:10.0,   dec:1, pip:1.0,    fallback:84000.0 },
+  { sym:'USD/JPY', tv:'FX:USDJPY',       binanceWs:null,      finnhub:'OANDA:USD_JPY',  spread:0.020,  dec:3, pip:0.01,   fallback:149.500 },
+  { sym:'ETH/USD', tv:'BINANCE:ETHUSDT', binanceWs:'ethusdt', finnhub:null,             spread:1.0,    dec:2, pip:1.0,    fallback:1900.0  },
 ]
 const TFS: Record<string,string> = {
   'M1':'1', 'M5':'5', 'M15':'15', 'M30':'30', 'H1':'60', 'H4':'240', 'D1':'D'
 }
 
-// Fetch live price for a symbol — Binance for crypto, exchangerate.host for forex/commodities
-async function fetchLivePrice(instrument: typeof INSTRUMENTS[0]): Promise<number | null> {
-  try {
-    if (instrument.type === 'binance') {
-      const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${instrument.apiSym.toUpperCase()}`)
-      const d = await r.json()
-      return parseFloat(d.price)
-    } else {
-      // Use frankfurter for forex pairs, fallback to exchangerate
-      if (instrument.apiSym.includes('/') && !instrument.apiSym.includes('XAU') && instrument.apiSym !== 'NDX') {
-        const [base, quote] = instrument.apiSym.split('/')
-        const r = await fetch(`https://api.frankfurter.app/latest?from=${base}&to=${quote}`)
-        const d = await r.json()
-        return d.rates?.[quote] ?? null
-      }
-      // For XAU/USD and indices use exchangerate.host metals endpoint
-      if (instrument.apiSym === 'XAU/USD') {
-        const r = await fetch('https://api.exchangerate.host/latest?base=XAU&symbols=USD&source=ecb')
-        const d = await r.json()
-        return d.rates?.USD ?? null
-      }
-      return null
+// ─── Finnhub WebSocket (free, no API key for forex/gold/indices) ─────────────
+// Uses public Finnhub WS — 60 symbols/connection, real-time forex
+const FINNHUB_API_KEY = 'd0lbgopr01ql4s0b4cu0d0lbgopr01ql4s0b4cug' // free public demo key
+
+class FinnhubPriceFeed {
+  private ws: WebSocket | null = null
+  private subscribers: Map<string, (price: number) => void> = new Map()
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+
+  connect() {
+    if (this.ws?.readyState === WebSocket.OPEN) return
+    this.ws = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_API_KEY}`)
+    this.ws.onopen = () => {
+      this.subscribers.forEach((_, sym) => {
+        this.ws?.send(JSON.stringify({ type: 'subscribe', symbol: sym }))
+      })
     }
-  } catch { return null }
+    this.ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data)
+      if (msg.type === 'trade' && msg.data) {
+        msg.data.forEach((trade: any) => {
+          const cb = this.subscribers.get(trade.s)
+          if (cb && trade.p) cb(trade.p)
+        })
+      }
+    }
+    this.ws.onclose = () => {
+      this.reconnectTimer = setTimeout(() => this.connect(), 3000)
+    }
+    this.ws.onerror = () => this.ws?.close()
+  }
+
+  subscribe(symbol: string, cb: (price: number) => void) {
+    this.subscribers.set(symbol, cb)
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: 'subscribe', symbol }))
+    } else {
+      this.connect()
+    }
+  }
+
+  unsubscribe(symbol: string) {
+    this.subscribers.delete(symbol)
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: 'unsubscribe', symbol }))
+    }
+  }
+
+  disconnect() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    this.ws?.close()
+  }
 }
+
+const finnhubFeed = new FinnhubPriceFeed()
 
 // TradingView Advanced Chart Widget
 function TVChart({ tvSymbol, tf }: { tvSymbol: string; tf: string }) {
@@ -112,48 +144,84 @@ function TVChart({ tvSymbol, tf }: { tvSymbol: string; tf: string }) {
   return <div id="tv_chart_container" ref={ref} style={{ width:'100%', height:'100%' }} />
 }
 
-// Live price hook — Binance WS for crypto, polling for forex
+// Live price hook — Binance WS for crypto, Finnhub WS for forex/gold/indices
 function useLivePrice(instrument: typeof INSTRUMENTS[0]) {
   const [price, setPrice] = useState(instrument.fallback)
   const [prev, setPrev] = useState(instrument.fallback)
-  const wsRef = useRef<WebSocket | null>(null)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const binanceWsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
     setPrice(instrument.fallback)
     setPrev(instrument.fallback)
 
-    // Close previous connections
-    if (wsRef.current) { wsRef.current.close(); wsRef.current = null }
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
-
-    if (instrument.type === 'binance') {
-      // WebSocket for crypto — real-time tick
-      const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${instrument.apiSym}@trade`)
-      wsRef.current = ws
+    if (instrument.binanceWs) {
+      // Binance WebSocket for crypto
+      if (binanceWsRef.current) binanceWsRef.current.close()
+      const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${instrument.binanceWs}@trade`)
+      binanceWsRef.current = ws
       ws.onmessage = (e) => {
-        const data = JSON.parse(e.data)
-        const p = parseFloat(data.p)
+        const d = JSON.parse(e.data)
+        const p = parseFloat(d.p)
         if (!isNaN(p)) setPrice(cur => { setPrev(cur); return p })
       }
       ws.onerror = () => {}
-    } else {
-      // Poll every 3s for forex/commodities
-      const poll = async () => {
-        const p = await fetchLivePrice(instrument)
-        if (p && !isNaN(p)) setPrice(cur => { setPrev(cur); return p })
-      }
-      poll()
-      pollRef.current = setInterval(poll, 3000)
-    }
-
-    return () => {
-      if (wsRef.current) wsRef.current.close()
-      if (pollRef.current) clearInterval(pollRef.current)
+      return () => ws.close()
+    } else if (instrument.finnhub) {
+      // Finnhub WebSocket for forex/gold/indices
+      finnhubFeed.subscribe(instrument.finnhub, (p) => {
+        setPrice(cur => { setPrev(cur); return p })
+      })
+      return () => { if (instrument.finnhub) finnhubFeed.unsubscribe(instrument.finnhub) }
     }
   }, [instrument.sym])
 
   return { price, prev }
+}
+
+// All-instruments price feed for watchlist
+function useAllPrices() {
+  const [prices, setPrices] = useState<Record<string, number>>(
+    Object.fromEntries(INSTRUMENTS.map(i => [i.sym, i.fallback]))
+  )
+  const [prevPrices, setPrevPrices] = useState<Record<string, number>>(
+    Object.fromEntries(INSTRUMENTS.map(i => [i.sym, i.fallback]))
+  )
+
+  useEffect(() => {
+    // Binance WS for crypto instruments
+    const binanceInsts = INSTRUMENTS.filter(i => i.binanceWs)
+    const binanceSyms = binanceInsts.map(i => `${i.binanceWs}@trade`).join('/')
+    const bws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${binanceSyms}`)
+    bws.onmessage = (e) => {
+      const msg = JSON.parse(e.data)
+      const d = msg.data
+      if (!d?.p) return
+      const p = parseFloat(d.p)
+      const inst = binanceInsts.find(i => i.binanceWs && d.s === i.binanceWs.toUpperCase())
+      if (inst && !isNaN(p)) {
+        setPrevPrices(prev => ({ ...prev, [inst.sym]: prices[inst.sym] ?? inst.fallback }))
+        setPrices(prev => ({ ...prev, [inst.sym]: p }))
+      }
+    }
+    bws.onerror = () => {}
+
+    // Finnhub WS for forex/gold/indices
+    const finnhubInsts = INSTRUMENTS.filter(i => i.finnhub)
+    finnhubInsts.forEach(inst => {
+      if (!inst.finnhub) return
+      finnhubFeed.subscribe(inst.finnhub, (p) => {
+        setPrevPrices(prev => ({ ...prev, [inst.sym]: prev[inst.sym] ?? inst.fallback }))
+        setPrices(prev => ({ ...prev, [inst.sym]: p }))
+      })
+    })
+
+    return () => {
+      bws.close()
+      finnhubInsts.forEach(i => { if (i.finnhub) finnhubFeed.unsubscribe(i.finnhub) })
+    }
+  }, [])
+
+  return { prices, prevPrices }
 }
 
 export function PlatformPage() {
@@ -162,6 +230,8 @@ export function PlatformPage() {
   const { accounts, primary: defaultPrimary } = useAccount()
   const [selectedAccountId, setSelectedAccountId] = useState<string|null>(null)
   const primary = accounts.find(a => a.id === selectedAccountId) ?? defaultPrimary
+
+  const LEVERAGE = 50 // 1:50 default leverage
 
   const [sym, setSym] = useState('BTC/USD')
   const [tf, setTf] = useState('H1')
@@ -176,42 +246,38 @@ export function PlatformPage() {
   const [openTrades, setOpenTrades] = useState<any[]>([])
   const [closedTrades, setClosedTrades] = useState<any[]>([])
 
-  // Per-instrument prices via Binance WS — only active symbol connects
+  // All live prices from Finnhub + Binance
+  const { prices: allPrices, prevPrices: allPrevPrices } = useAllPrices()
   const inst = INSTRUMENTS.find(i => i.sym === sym)!
-  const { price: livePrice, prev: prevPrice } = useLivePrice(inst)
+  const livePrice = allPrices[sym] ?? inst.fallback
+  const prevPrice = allPrevPrices[sym] ?? inst.fallback
 
-  // Watchlist prices — poll REST for non-active instruments
-  const [watchPrices, setWatchPrices] = useState<Record<string,number>>(
-    Object.fromEntries(INSTRUMENTS.map(i => [i.sym, i.fallback]))
-  )
+  // Live equity = balance + sum of open P&L
+  const calcPnl = (trade: any) => {
+    const ti = INSTRUMENTS.find(p => p.sym === trade.symbol) ?? inst
+    const cur = allPrices[trade.symbol] ?? ti.fallback
+    const diff = trade.direction === 'buy' ? cur - trade.open_price : trade.open_price - cur
+    const lotSize = 100000 // standard lot
+    return parseFloat((diff * lotSize * trade.lots).toFixed(2))
+  }
+  const openPnl = openTrades.reduce((s, t) => s + calcPnl(t), 0)
+  const balance = primary?.balance ?? 0
+  const equity = balance + openPnl
 
-  useEffect(() => {
-    // Update watchlist price for active symbol from WS
-    setWatchPrices(p => ({ ...p, [sym]: livePrice }))
-  }, [livePrice, sym])
+  // Margin calculations
+  const usedMargin = openTrades.reduce((s, t) => {
+    const ti = INSTRUMENTS.find(p => p.sym === t.symbol) ?? inst
+    const price = allPrices[t.symbol] ?? ti.fallback
+    return s + (price * t.lots * 100000) / LEVERAGE
+  }, 0)
+  const freeMargin = equity - usedMargin
+  const marginLevel = usedMargin > 0 ? (equity / usedMargin) * 100 : 0
 
-  useEffect(() => {
-    // Poll all other symbols every 3s using correct feed per type
-    const iv = setInterval(async () => {
-      const others = INSTRUMENTS.filter(i => i.sym !== sym)
-      const results = await Promise.all(
-        others.map(async i => {
-          const p = await fetchLivePrice(i)
-          return p && !isNaN(p) ? { sym: i.sym, price: p } : null
-        })
-      )
-      const updates: Record<string,number> = {}
-      results.forEach(r => { if (r) updates[r.sym] = r.price })
-      setWatchPrices(prev => ({ ...prev, ...updates }))
-    }, 3000)
-    return () => clearInterval(iv)
-  }, [sym])
-
-  const [prevWatchPrices, setPrevWatchPrices] = useState<Record<string,number>>({})
-  useEffect(() => {
-    const timer = setTimeout(() => setPrevWatchPrices(watchPrices), 800)
-    return () => clearTimeout(timer)
-  }, [watchPrices])
+  // Margin for current order
+  const execPrice = dir === 'buy' ? livePrice + inst.spread : livePrice
+  const lotsNum = parseFloat(lots) || 0.01
+  const requiredMargin = (execPrice * lotsNum * 100000) / LEVERAGE
+  const maxLots = Math.floor((freeMargin * LEVERAGE) / (execPrice * 100000) * 100) / 100
 
   // Load trades
   useEffect(() => {
@@ -228,13 +294,24 @@ export function PlatformPage() {
 
   async function placeOrder() {
     if (!primary) { toast('error','❌','No Account','No active trading account found.'); return }
+    // Margin check
+    if (requiredMargin > freeMargin) {
+      toast('error','⛔','Insufficient Margin',
+        `Need $${requiredMargin.toFixed(2)} margin. Free: $${freeMargin.toFixed(2)}. Max lots: ${maxLots}`)
+      return
+    }
+    if (lotsNum > maxLots && maxLots > 0) {
+      toast('warning','⚠️','Reducing Lots',`Max lots with current margin: ${maxLots}`)
+      setLots(String(maxLots))
+      return
+    }
     setPlacing(true); setConfirmOpen(false)
     const { data, error } = await supabase.from('trades').insert({
       account_id: primary.id,
       user_id: primary.user_id,
       symbol: sym,
       direction: dir,
-      lots: parseFloat(lots),
+      lots: lotsNum,
       order_type: orderType.toLowerCase(),
       open_price: parseFloat(execPrice.toFixed(inst.dec)),
       sl: sl ? parseFloat(sl) : null,
@@ -251,21 +328,32 @@ export function PlatformPage() {
 
   async function closeTrade(trade: any) {
     const ti = INSTRUMENTS.find(p => p.sym === trade.symbol) ?? inst
-    const cp = watchPrices[trade.symbol] ?? ti.fallback
-    const closePrice = trade.direction === 'buy' ? cp : cp + ti.spread
+    const cp = allPrices[trade.symbol] ?? ti.fallback
+    const closePrice = parseFloat((trade.direction === 'buy' ? cp : cp + ti.spread).toFixed(ti.dec))
     const priceDiff = trade.direction === 'buy' ? closePrice - trade.open_price : trade.open_price - closePrice
     const pips = parseFloat((priceDiff / ti.pip).toFixed(1))
-    const netPnl = parseFloat((pips * ti.pip * trade.lots * 100000 * 0.1).toFixed(2))
+    const netPnl = parseFloat((priceDiff * 100000 * trade.lots).toFixed(2))
+
+    // Update trade as closed
     const { error } = await supabase.from('trades').update({
       status: 'closed',
-      close_price: parseFloat(closePrice.toFixed(ti.dec)),
+      close_price: closePrice,
       closed_at: new Date().toISOString(),
       pips, net_pnl: netPnl, gross_pnl: netPnl,
     }).eq('id', trade.id)
     if (error) { toast('error','❌','Error', error.message); return }
+
+    // Update account balance = old balance + pnl
+    const newBalance = parseFloat((balance + netPnl).toFixed(2))
+    await supabase.from('accounts').update({
+      balance: newBalance,
+      equity: newBalance,
+    }).eq('id', primary!.id)
+
     setOpenTrades(t => t.filter(x => x.id !== trade.id))
     setClosedTrades(t => [{ ...trade, status:'closed', close_price: closePrice, net_pnl: netPnl, pips }, ...t])
-    toast(netPnl >= 0 ? 'success':'warning','🔴','Closed', `${trade.symbol} ${netPnl>=0?'+':''}${fmt(netPnl)}`)
+    toast(netPnl >= 0 ? 'success':'warning', netPnl >= 0 ? '💰':'🔴', 'Trade Closed',
+      `${trade.symbol} ${netPnl>=0?'+':''}${fmt(netPnl)}`)
   }
 
   return (
@@ -280,8 +368,8 @@ export function PlatformPage() {
         </div>
         <div style={{ flex:1, overflowY:'auto' }}>
           {INSTRUMENTS.map(i => {
-            const cur = sym === i.sym ? livePrice : (watchPrices[i.sym] ?? i.fallback)
-            const prv = sym === i.sym ? prevPrice : (prevWatchPrices[i.sym] ?? i.fallback)
+            const cur = allPrices[i.sym] ?? i.fallback
+            const prv = allPrevPrices[i.sym] ?? i.fallback
             const up = cur >= prv
             return (
               <div key={i.sym} onClick={() => setSym(i.sym)}
@@ -391,9 +479,9 @@ export function PlatformPage() {
                     <tbody>
                       {openTrades.map(t => {
                         const ti = INSTRUMENTS.find(p => p.sym === t.symbol) ?? inst
-                        const cur = t.symbol === sym ? livePrice : (watchPrices[t.symbol] ?? ti.fallback)
+                        const cur = allPrices[t.symbol] ?? ti.fallback
                         const diff = t.direction === 'buy' ? cur - t.open_price : t.open_price - cur
-                        const pnl = parseFloat((diff / ti.pip * ti.pip * t.lots * 100000 * 0.1).toFixed(2))
+                        const pnl = parseFloat((diff * 100000 * t.lots).toFixed(2))
                         return (
                           <tr key={t.id} style={{ borderBottom:'1px solid rgba(212,168,67,.04)' }}>
                             <td style={{ padding:'6px 10px', fontWeight:600 }}>{t.symbol}</td>
@@ -443,16 +531,20 @@ export function PlatformPage() {
                   </table>
             )}
             {tab==='account' && (
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, padding:16 }}>
-                {[['Balance',fmt(primary?.balance??0)],['Equity',fmt(primary?.equity??0)],['Open P&L',fmt(openTrades.reduce((s,t)=>{
-                  const ti = INSTRUMENTS.find(p=>p.sym===t.symbol)??inst
-                  const cur = watchPrices[t.symbol]??ti.fallback
-                  const diff = t.direction==='buy'?cur-t.open_price:t.open_price-cur
-                  return s + parseFloat((diff/ti.pip*ti.pip*t.lots*100000*0.1).toFixed(2))
-                },0))],['Account',primary?.account_number??'—']].map(([l,v])=>(
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, padding:16 }}>
+                {[
+                  ['Balance', fmt(balance), 'var(--gold)'],
+                  ['Equity', fmt(equity), openPnl >= 0 ? 'var(--green)' : 'var(--red)'],
+                  ['Open P&L', `${openPnl>=0?'+':''}${fmt(openPnl)}`, openPnl >= 0 ? 'var(--green)' : 'var(--red)'],
+                  ['Free Margin', fmt(freeMargin), freeMargin < 0 ? 'var(--red)' : 'var(--text)'],
+                  ['Used Margin', fmt(usedMargin), 'var(--text)'],
+                  ['Margin Level', usedMargin > 0 ? `${marginLevel.toFixed(0)}%` : '∞', marginLevel < 100 && usedMargin > 0 ? 'var(--red)' : 'var(--green)'],
+                  ['Leverage', `1:${LEVERAGE}`, 'var(--text)'],
+                  ['Account', primary?.account_number??'—', 'var(--gold)'],
+                ].map(([l,v,c])=>(
                   <div key={l}>
                     <div style={{ fontSize:7, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>{l}</div>
-                    <div style={{ fontFamily:'monospace', fontSize:13, color:'var(--gold)' }}>{v}</div>
+                    <div style={{ fontFamily:'monospace', fontSize:12, color: c ?? 'var(--gold)' }}>{v}</div>
                   </div>
                 ))}
                 <div style={{ gridColumn:'span 2' }}><DrawdownBar label="Daily DD" value={primary?.daily_dd_used??0} max={5}/></div>
@@ -480,10 +572,28 @@ export function PlatformPage() {
         </div>
         <div style={{ flex:1, overflowY:'auto', padding:12, display:'flex', flexDirection:'column', gap:10 }}>
           <div style={{ textAlign:'center', padding:'8px', border:'1px solid var(--bdr)', background:'var(--bg3)' }}>
-            <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>{dir==='buy'?'Ask':'Bid'}</div>
+            <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:2 }}>{dir==='buy'?'Ask':'Bid'}</div>
             <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:500, color: livePrice>=prevPrice?'var(--green)':'var(--red)' }}>
               {execPrice.toFixed(inst.dec)}
             </div>
+            <div style={{ fontSize:8, color:'var(--text3)', marginTop:2 }}>
+              Spread: {inst.spread.toFixed(inst.dec)}
+            </div>
+          </div>
+
+          {/* Margin info */}
+          <div style={{ background:'var(--bg3)', border:'1px solid var(--dim)', padding:'8px 10px', display:'flex', flexDirection:'column', gap:4 }}>
+            {[
+              ['Margin Req.', `$${requiredMargin.toFixed(2)}`],
+              ['Free Margin', `$${freeMargin.toFixed(2)}`, freeMargin < requiredMargin ? 'var(--red)' : 'var(--green)'],
+              ['Max Lots', String(maxLots)],
+              ['Leverage', `1:${LEVERAGE}`],
+            ].map(([l,v,c]:any) => (
+              <div key={l} style={{ display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:8, color:'var(--text3)' }}>{l}</span>
+                <span style={{ fontSize:9, fontFamily:'monospace', color: c ?? 'var(--text)' }}>{v}</span>
+              </div>
+            ))}
           </div>
 
           <div>
