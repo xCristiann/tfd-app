@@ -16,6 +16,140 @@ interface Props {
   logoSubtitle?: string
 }
 
+function TraderNotifications({ userId }: { userId: string }) {
+  const [notifs, setNotifs] = useState<any[]>([])
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!userId) return
+    fetchNotifs()
+    const iv = setInterval(fetchNotifs, 5000)
+
+    const channel = supabase
+      .channel(`trader-notifs-${userId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      }, () => fetchNotifs())
+      .subscribe()
+
+    return () => {
+      clearInterval(iv)
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+
+  async function fetchNotifs() {
+    if (!userId) return
+    const { data } = await supabase.from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    setNotifs(data ?? [])
+  }
+
+  async function markRead(id: string) {
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+    setNotifs(n => n.map(x => x.id === id ? { ...x, is_read: true } : x))
+  }
+
+  async function markAllRead() {
+    await supabase.from('notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false)
+    setNotifs(n => n.map(x => ({ ...x, is_read: true })))
+  }
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
+
+  const unread = notifs.filter(n => !n.is_read).length
+
+  const iconMap: Record<string, string> = {
+    target_reached: '🎯',
+    breach: '🚨',
+    breach_warning: '⚠️',
+    suspended: '⛔',
+    payout: '💰',
+    default: '🔔',
+  }
+
+  const colorMap: Record<string, string> = {
+    target_reached: 'border-l-[var(--gold)] bg-[rgba(212,168,67,.04)]',
+    breach: 'border-l-[var(--red)] bg-[rgba(255,51,82,.04)]',
+    breach_warning: 'border-l-[var(--gold)] bg-[rgba(255,140,0,.04)]',
+    suspended: 'border-l-[var(--red)] bg-[rgba(255,51,82,.04)]',
+    default: 'border-l-[var(--bdr2)]',
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(o => !o)}
+        className="relative w-[36px] h-[36px] flex items-center justify-center bg-[var(--bg3)] border border-[var(--dim)] hover:border-[var(--bdr2)] transition-all cursor-pointer">
+        <span className="text-[15px]">🔔</span>
+        {unread > 0 && (
+          <span className="absolute -top-[4px] -right-[4px] w-[16px] h-[16px] rounded-full bg-[var(--red)] text-white text-[8px] font-bold flex items-center justify-center">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-[42px] w-[320px] bg-[var(--bg2)] border border-[var(--bdr)] shadow-lg z-50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--bdr)]">
+            <span className="text-[11px] font-semibold">Notifications {unread > 0 && <span className="text-[var(--red)]">({unread} new)</span>}</span>
+            {unread > 0 && (
+              <button onClick={markAllRead} className="text-[9px] uppercase tracking-[1px] text-[var(--text3)] hover:text-[var(--gold)] cursor-pointer bg-none border-none">
+                Mark all read
+              </button>
+            )}
+          </div>
+          <div className="max-h-[380px] overflow-y-auto">
+            {notifs.length === 0 ? (
+              <div className="py-10 text-center text-[11px] text-[var(--text3)]">No notifications</div>
+            ) : notifs.map(n => (
+              <div key={n.id}
+                onClick={async () => {
+                  await markRead(n.id)
+                  setOpen(false)
+                  // Navigate to relevant page based on type
+                  if (n.type === 'breach' || n.type === 'suspended') {
+                    navigate('/dashboard')
+                  } else if (n.type === 'target_reached') {
+                    navigate('/dashboard')
+                  } else if (n.type === 'breach_warning') {
+                    navigate('/dashboard')
+                  } else if (n.type === 'payout') {
+                    navigate('/dashboard/payouts')
+                  }
+                }}
+                className={`flex gap-3 px-4 py-3 border-b border-[var(--dim)] border-l-2 cursor-pointer hover:bg-[var(--bg3)] transition-all ${
+                  !n.is_read ? (colorMap[n.type] ?? colorMap.default) : 'border-l-transparent opacity-50'
+                }`}>
+                <span className="text-[16px] flex-shrink-0 mt-[1px]">{iconMap[n.type] ?? '🔔'}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-semibold mb-[2px]">{n.title}</div>
+                  <div className="text-[10px] text-[var(--text3)] leading-[1.5]">{n.body}</div>
+                  <div className="text-[9px] text-[var(--text3)] mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                </div>
+                {!n.is_read && <span className="w-[6px] h-[6px] rounded-full bg-[var(--red)] flex-shrink-0 mt-[5px]"/>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AdminNotifications() {
   const [notifs, setNotifs] = useState<any[]>([])
   const [open, setOpen] = useState(false)
@@ -116,16 +250,13 @@ function AdminNotifications() {
                 onClick={async () => {
                   await markRead(n.id)
                   setOpen(false)
-                  // Navigate to trader management for admin notifications
-                  if (n.type === 'admin_target_reached' || n.type === 'admin_breach') {
-                    // Extract account number from title e.g. "Trader Target Reached — TFD-25K-1234"
-                    const match = n.title.match(/—\s*(TFD-\S+)/)
-                    const accountNumber = match?.[1]
-                    if (accountNumber) {
-                      navigate(`/admin/traders?account=${accountNumber}`)
-                    } else {
-                      navigate('/admin/traders')
-                    }
+                  // Extract account number from title — works for any "— TFD-XXX" pattern
+                  const match = n.title.match(/[—-]\s*(TFD-[\w-]+)/)
+                  const accountNumber = match?.[1]
+                  if (accountNumber) {
+                    navigate(`/admin/traders?account=${accountNumber}`)
+                  } else {
+                    navigate('/admin/traders')
                   }
                 }}
                 className={`flex gap-3 px-4 py-3 border-b border-[var(--dim)] border-l-2 cursor-pointer hover:bg-[var(--bg3)] transition-all ${
@@ -208,7 +339,10 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
           <h1 className="serif text-[17px] font-bold">{title}</h1>
           <div className="ml-auto flex items-center gap-[9px]">
             {topbarRight}
-            {isAdmin && <AdminNotifications />}
+            {isAdmin
+              ? <AdminNotifications />
+              : profile?.id ? <TraderNotifications userId={profile.id} /> : null
+            }
           </div>
         </div>
 
