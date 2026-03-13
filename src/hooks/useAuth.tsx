@@ -21,7 +21,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const done = () => { if (mounted) setLoading(false) }
 
-    // Hard timeout — after 2s, stop loading NO MATTER WHAT
     const timeout = setTimeout(done, 2000)
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -29,7 +28,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(s)
       if (!s) { clearTimeout(timeout); done(); return }
 
-      // Try to get profile but don't block on it
       supabase.from('users').select('*').eq('id', s.user.id).single()
         .then(({ data }) => { if (mounted) setProfile(data) })
         .catch(() => {})
@@ -42,11 +40,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!s) { setProfile(null); done(); return }
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // Don't block — navigate first, load profile in background
         done()
         supabase.from('users').select('*').eq('id', s.user.id).single()
           .then(({ data }) => { if (mounted) setProfile(data) })
           .catch(() => {})
+
+        // Capture IP on every sign in
+        if (event === 'SIGNED_IN') {
+          fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(({ ip }) => {
+              const now = new Date().toISOString()
+              supabase.from('users').update({
+                last_login_ip: ip,
+                last_login_at: now,
+              }).eq('id', s.user.id).then(() => {})
+              // Append to history via RPC
+              supabase.rpc('append_login_history', {
+                p_user_id: s.user.id,
+                p_ip: ip,
+                p_at: now,
+              }).then(() => {}).catch(() => {})
+            })
+            .catch(() => {})
+        }
       }
     })
 

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardHeader } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
@@ -13,6 +12,7 @@ export function AdminTradersPage() {
   const [traders, setTraders] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [selectedTrader, setSelectedTrader] = useState<any>(null)
 
   useEffect(() => {
     supabase.from('users')
@@ -26,7 +26,8 @@ export function AdminTradersPage() {
   const filtered = traders.filter(t =>
     !search ||
     `${t.first_name} ${t.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
-    t.email.toLowerCase().includes(search.toLowerCase())
+    t.email.toLowerCase().includes(search.toLowerCase()) ||
+    (t.last_login_ip ?? '').includes(search)
   )
 
   async function setRole(id: string, role: string) {
@@ -46,7 +47,7 @@ export function AdminTradersPage() {
           }/>
           <div className="flex bg-[var(--bg3)] border border-[var(--dim)] focus-within:border-[var(--bdr2)] mb-3 transition-colors">
             <span className="px-3 flex items-center text-[var(--text3)]">🔍</span>
-            <input className={inp} placeholder="Search name or email…" value={search} onChange={e=>setSearch(e.target.value)}/>
+            <input className={inp} placeholder="Search name, email or IP…" value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
           {loading ? (
             <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[var(--red)] border-t-transparent rounded-full animate-spin"/></div>
@@ -56,7 +57,7 @@ export function AdminTradersPage() {
             <table className="w-full border-collapse text-[11px]">
               <thead>
                 <tr className="border-b border-[var(--dim)]">
-                  {['Name','Email','Country','Accounts','Best Phase','Role','Joined','Actions'].map(h=>(
+                  {['Name','Email','Country','Last IP','Last Login','Accounts','Best Phase','Role','Joined','Actions'].map(h=>(
                     <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left bg-[rgba(255,51,82,.02)]">{h}</th>
                   ))}
                 </tr>
@@ -72,6 +73,22 @@ export function AdminTradersPage() {
                       <td className="px-[11px] py-[8px] font-semibold">{t.first_name} {t.last_name}</td>
                       <td className="px-[11px] py-[8px] text-[var(--text2)]">{t.email}</td>
                       <td className="px-[11px] py-[8px] text-[var(--text3)]">{t.country ?? '—'}</td>
+                      <td className="px-[11px] py-[8px]">
+                        {t.last_login_ip ? (
+                          <button
+                            onClick={() => setSelectedTrader(t)}
+                            className="font-mono text-[10px] text-[var(--gold)] bg-[rgba(212,168,67,.08)] border border-[var(--bdr2)] px-[6px] py-[2px] cursor-pointer hover:bg-[rgba(212,168,67,.15)] transition-all"
+                            title="Click to see login history"
+                          >
+                            {t.last_login_ip}
+                          </button>
+                        ) : (
+                          <span className="text-[var(--text3)]">—</span>
+                        )}
+                      </td>
+                      <td className="px-[11px] py-[8px] text-[var(--text3)] text-[10px]">
+                        {t.last_login_at ? new Date(t.last_login_at).toLocaleString() : '—'}
+                      </td>
                       <td className="px-[11px] py-[8px] font-mono">{accounts.length}</td>
                       <td className="px-[11px] py-[8px]">
                         {bestPhase !== '—' ? <Badge variant={bestPhase as any}>{bestPhase}</Badge> : <span className="text-[var(--text3)]">—</span>}
@@ -101,6 +118,47 @@ export function AdminTradersPage() {
             </table>
           )}
         </Card>
+
+        {/* IP History Modal */}
+        {selectedTrader && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6" onClick={()=>setSelectedTrader(null)}>
+            <div className="bg-[var(--bg2)] border border-[var(--bdr)] w-full max-w-[480px] p-6" onClick={e=>e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="font-serif text-[16px] font-bold">{selectedTrader.first_name} {selectedTrader.last_name}</div>
+                  <div className="text-[10px] text-[var(--text3)]">{selectedTrader.email}</div>
+                </div>
+                <button onClick={()=>setSelectedTrader(null)} className="text-[var(--text3)] hover:text-[var(--text)] text-[18px] cursor-pointer bg-none border-none">✕</button>
+              </div>
+
+              <div className="mb-4 p-3 bg-[var(--bg3)] border border-[var(--dim)]">
+                <div className="text-[8px] uppercase tracking-[2px] text-[var(--text3)] font-semibold mb-2">Current / Last Login</div>
+                <div className="flex justify-between items-center">
+                  <span className="font-mono text-[13px] text-[var(--gold)]">{selectedTrader.last_login_ip ?? '—'}</span>
+                  <span className="text-[10px] text-[var(--text3)]">
+                    {selectedTrader.last_login_at ? new Date(selectedTrader.last_login_at).toLocaleString() : '—'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[8px] uppercase tracking-[2px] text-[var(--text3)] font-semibold mb-2">Login History</div>
+                {selectedTrader.login_history && selectedTrader.login_history.length > 0 ? (
+                  <div className="flex flex-col gap-[4px] max-h-[240px] overflow-y-auto">
+                    {[...selectedTrader.login_history].reverse().map((entry: any, i: number) => (
+                      <div key={i} className="flex justify-between items-center px-3 py-[6px] bg-[var(--bg3)] border border-[var(--dim)] text-[11px]">
+                        <span className="font-mono text-[var(--gold)]">{entry.ip}</span>
+                        <span className="text-[var(--text3)] text-[10px]">{new Date(entry.at).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-[var(--text3)] py-4 text-center">No history yet — recorded from next login</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </DashboardLayout>
       <ToastContainer toasts={toasts} dismiss={dismiss}/>
     </>
