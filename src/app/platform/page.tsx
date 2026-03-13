@@ -65,84 +65,131 @@ function loadLWC(): Promise<void> {
   })
 }
 
-/* ─── Binance klines — paginated to get 5000 candles ────────────────────── */
-/* ─── Yahoo Finance candles — ALL symbols, ALL timeframes ───────────────── */
-/*
-  Yahoo Finance /v8/finance/chart is:
-  - Free, no API key
-  - CORS enabled (works from browser)
-  - Covers forex, gold, indices, crypto
-  - History: 1m=7d, 5m/15m/30m=60d, 1h=2yr, 1d=10yr+
-*/
+/* ══════════════════════════════════════════════════════════════════
+   CANDLE HISTORY STRATEGY
+   ══════════════════════════════════════════════════════════════════
+   BTC/USD, ETH/USD  → Binance /api/v3/klines (paginated, 5000 bars)
+   All others        → Yahoo Finance via allorigins.win CORS proxy
+                       (proxy wraps the request server-side, bypasses CORS)
+   ══════════════════════════════════════════════════════════════════ */
+
 const YAHOO_TF: Record<string,{interval:string; range:string}> = {
-  M1:  {interval:'1m',  range:'7d'  },
-  M5:  {interval:'5m',  range:'60d' },
-  M15: {interval:'15m', range:'60d' },
-  M30: {interval:'30m', range:'60d' },
-  H1:  {interval:'1h',  range:'730d'},
-  H4:  {interval:'1h',  range:'730d'},  // fetch 1h then aggregate to 4h
-  D1:  {interval:'1d',  range:'3650d'}, // 10 years daily
+  M1:  {interval:'1m',  range:'5d'   },
+  M5:  {interval:'5m',  range:'60d'  },
+  M15: {interval:'15m', range:'60d'  },
+  M30: {interval:'30m', range:'60d'  },
+  H1:  {interval:'1h',  range:'730d' },
+  H4:  {interval:'1h',  range:'730d' },
+  D1:  {interval:'1d',  range:'3650d'},
 }
 
-async function fetchYahooCandles(yahooSym: string, tf: string): Promise<Candle[]> {
-  const {interval, range} = YAHOO_TF[tf] ?? YAHOO_TF.H1
-  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}` +
-    `?interval=${interval}&range=${range}&includePrePost=false&events=history`
-  try {
-    // Try query2 first (less rate-limited), fallback to query1
-    let r = await fetch(url, {headers:{'Accept':'application/json'}})
-    if(!r.ok) {
-      r = await fetch(url.replace('query2','query1'), {headers:{'Accept':'application/json'}})
-    }
-    if(!r.ok) throw new Error(`HTTP ${r.status}`)
-    const d    = await r.json()
-    const res  = d?.chart?.result?.[0]
-    if(!res?.timestamp) return []
-    const ts   = res.timestamp as number[]
-    const q    = res.indicators?.quote?.[0]
-    if(!q) return []
+function dedup(candles: Candle[]): Candle[] {
+  const seen = new Set<number>()
+  return candles
+    .filter(c => { if(seen.has(c.time)) return false; seen.add(c.time); return true })
+    .sort((a,b) => a.time - b.time)
+}
 
-    let candles: Candle[] = ts
-      .map((t:number, i:number) => ({
-        time:  t,
-        open:  q.open?.[i]  as number,
-        high:  q.high?.[i]  as number,
-        low:   q.low?.[i]   as number,
-        close: q.close?.[i] as number,
-      }))
-      .filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0)
+function toH4(candles: Candle[]): Candle[] {
+  const agg: Candle[] = []
+  for(let i = 0; i + 3 < candles.length; i += 4)
+    agg.push({
+      time:  candles[i].time,
+      open:  candles[i].open,
+      high:  Math.max(candles[i].high, candles[i+1].high, candles[i+2].high, candles[i+3].high),
+      low:   Math.min(candles[i].low,  candles[i+1].low,  candles[i+2].low,  candles[i+3].low),
+      close: candles[i+3].close,
+    })
+  return agg
+}
 
-    // H4: aggregate 4 × 1h candles into one 4h candle
-    if(tf === 'H4') {
-      const agg: Candle[] = []
-      for(let i = 0; i + 3 < candles.length; i += 4) {
-        agg.push({
-          time:  candles[i].time,
-          open:  candles[i].open,
-          high:  Math.max(candles[i].high, candles[i+1].high, candles[i+2].high, candles[i+3].high),
-          low:   Math.min(candles[i].low,  candles[i+1].low,  candles[i+2].low,  candles[i+3].low),
-          close: candles[i+3].close,
-        })
-      }
-      return agg
-    }
-
-    // Deduplicate timestamps (Yahoo sometimes has duplicates)
-    const seen = new Set<number>()
-    return candles
-      .filter(c => { if(seen.has(c.time)) return false; seen.add(c.time); return true })
-      .sort((a,b) => a.time - b.time)
-
-  } catch(e) {
-    console.warn(`[Yahoo] ${yahooSym} ${tf} failed:`, e)
-    return []
+/* Binance klines — crypto only, paginated 5×1000 = 5000 bars */
+async function fetchBinance(binSym: string, tf: string): Promise<Candle[]> {
+  const intervalMap: Record<string,string> = {
+    M1:'1m',M5:'5m',M15:'15m',M30:'30m',H1:'1h',H4:'4h',D1:'1d'
   }
+  const interval = intervalMap[tf]
+  const secPerBar = TF_SEC[tf]
+  const limit = 1000
+  const pages = 5
+  const all: Candle[] = []
+  let startTime = Date.now() - pages * limit * secPerBar * 1000
+
+  for(let p = 0; p < pages; p++) {
+    try {
+      const r = await fetch(
+        `https://api.binance.com/api/v3/klines?symbol=${binSym}&interval=${interval}&startTime=${Math.floor(startTime)}&limit=${limit}`
+      )
+      if(!r.ok) break
+      const d: any[] = await r.json()
+      if(!Array.isArray(d) || d.length === 0) break
+      for(const k of d) all.push({
+        time: Math.floor(k[0]/1000),
+        open: parseFloat(k[1]), high: parseFloat(k[2]),
+        low:  parseFloat(k[3]), close: parseFloat(k[4]),
+      })
+      startTime = d[d.length-1][0] + 1
+      if(d.length < limit) break
+    } catch { break }
+  }
+  return dedup(all)
 }
 
-/* ─── Main candle fetcher ────────────────────────────────────────────────── */
+/* Yahoo Finance via allorigins CORS proxy — forex, gold, indices */
+async function fetchYahoo(yahooSym: string, tf: string): Promise<Candle[]> {
+  const {interval, range} = YAHOO_TF[tf] ?? YAHOO_TF.H1
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=${interval}&range=${range}&includePrePost=false`
+
+  // Try direct first, then via allorigins proxy
+  const attempts = [
+    () => fetch(yahooUrl, {headers:{'Accept':'application/json'}}),
+    () => fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`),
+    () => fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`),
+  ]
+
+  for(const attempt of attempts) {
+    try {
+      const r = await attempt()
+      if(!r.ok) continue
+      let json: any = await r.json()
+      // allorigins wraps in {contents: "...json string..."}
+      if(typeof json?.contents === 'string') json = JSON.parse(json.contents)
+
+      const res = json?.chart?.result?.[0]
+      if(!res?.timestamp) continue
+      const ts = res.timestamp as number[]
+      const q  = res.indicators?.quote?.[0]
+      if(!q || !ts.length) continue
+
+      let candles: Candle[] = ts
+        .map((t:number, i:number) => ({
+          time:  t,
+          open:  parseFloat(q.open?.[i])  || 0,
+          high:  parseFloat(q.high?.[i])  || 0,
+          low:   parseFloat(q.low?.[i])   || 0,
+          close: parseFloat(q.close?.[i]) || 0,
+        }))
+        .filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0)
+
+      if(candles.length < 2) continue
+
+      if(tf === 'H4') candles = toH4(candles)
+      return dedup(candles)
+    } catch { continue }
+  }
+
+  console.warn(`[Chart] All sources failed for ${yahooSym} ${tf}`)
+  return []
+}
+
+/* ─── Main candle fetcher ───────────────────────────────────────── */
 async function fetchCandles(sym: string, tf: string): Promise<Candle[]> {
   const inst = INSTRUMENTS.find(i => i.sym === sym)!
-  return fetchYahooCandles(inst.yahoo, tf)
+  // Crypto: use Binance (best data, no CORS issues)
+  if(inst.bin && (sym === 'BTC/USD' || sym === 'ETH/USD'))
+    return fetchBinance(inst.bin, tf)
+  // Everything else: Yahoo Finance
+  return fetchYahoo(inst.yahoo, tf)
 }
 
 /* ─── Chart component ────────────────────────────────────────────────────── */
