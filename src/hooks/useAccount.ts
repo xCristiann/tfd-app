@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { accountsApi } from '@/lib/api/accounts'
+import { supabase } from '@/lib/supabase'
 import type { Account } from '@/types/database'
 
 export function useAccount() {
@@ -9,24 +10,45 @@ export function useAccount() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let userId: string | null = null
+
     accountsApi.getMine()
-      .then((data) => {
+      .then(async (data) => {
         setAccounts(data)
         const funded = data.find((a) => a.phase === 'funded') ?? data[0] ?? null
         setPrimary(funded)
+
+        // Get user id for realtime filter
+        const { data: { user } } = await supabase.auth.getUser()
+        userId = user?.id ?? null
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
 
-  // Subscribe to real-time updates on the primary account
-  useEffect(() => {
-    if (!primary) return
-    const sub = accountsApi.subscribeToAccount(primary.id, (updated) => {
-      setPrimary((p) => p ? { ...p, ...updated } : p)
-    })
-    return () => { sub.unsubscribe() }
-  }, [primary?.id])
+    // Realtime: subscribe to ALL account changes for this user
+    // We use a channel on the whole table filtered by user_id
+    const channel = supabase
+      .channel('all-my-accounts')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'accounts',
+      }, (payload) => {
+        const updated = payload.new as Account
+        // Update accounts array
+        setAccounts(prev => {
+          const newAccounts = prev.map(a => a.id === updated.id ? { ...a, ...updated } : a)
+          return newAccounts
+        })
+        // Update primary if it's the same account
+        setPrimary(p => p?.id === updated.id ? { ...p, ...updated } : p)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   return { accounts, primary, loading, error }
 }

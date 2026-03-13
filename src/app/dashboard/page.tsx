@@ -42,12 +42,14 @@ export function DashboardPage() {
       .eq('account_id', account.id).eq('status', 'open')
       .order('opened_at', { ascending: false })
       .then(({ data }) => setOpenTrades(data ?? []))
+  }, [account?.id])
 
-    // Check breach/target conditions for active phase1/phase2 accounts
+  useEffect(() => {
+    if (!account || !prod) return
     if (account.phase === 'phase1' || account.phase === 'phase2') {
       checkRuleViolations(account, prod)
     }
-  }, [account?.id, account?.balance, account?.daily_dd_used, account?.max_dd_used])
+  }, [account?.balance, account?.daily_dd_used, account?.max_dd_used])
 
   async function checkRuleViolations(acc: Account, product: any) {
     if (!product) return
