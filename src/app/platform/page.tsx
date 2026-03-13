@@ -27,13 +27,17 @@ const LOT_SIZE = 100_000
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const INSTRUMENTS = [
-  { sym:'EUR/USD', bin:'EURUSDT',  stooq:'eurusd',  nasdaq:null,   spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', bin:'GBPUSDT',  stooq:'gbpusd',  nasdaq:null,   spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'XAU/USD', bin:'PAXGUSDT', stooq:'xauusd',  nasdaq:null,   spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
-  { sym:'NAS100',  bin:null,        stooq:'%5endx',  nasdaq:'^NDX', spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
-  { sym:'BTC/USD', bin:'BTCUSDT',  stooq:'btcusd',  nasdaq:null,   spread:10.0,    dec:1, pip:1.0,    lotUSD:(p:number)=>p          },
-  { sym:'USD/JPY', bin:'USDTJPY',  stooq:'usdjpy',  nasdaq:null,   spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'ETH/USD', bin:'ETHUSDT',  stooq:'ethusd',  nasdaq:null,   spread:1.0,     dec:2, pip:1.0,    lotUSD:(p:number)=>p          },
+  // bin   = Binance symbol for LIVE prices (aggTrade WS + REST ticker)
+  // yahoo = Yahoo Finance symbol for CANDLE HISTORY (all timeframes)
+  // Binance forex pairs: EURUSDT, GBPUSDT DO exist on Binance as fiat pairs
+  // but klines are unreliable. Yahoo Finance has full verified history.
+  { sym:'EUR/USD', bin:'EURUSDT',  yahoo:'EURUSD=X', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', bin:'GBPUSDT',  yahoo:'GBPUSD=X', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'XAU/USD', bin:'PAXGUSDT', yahoo:'GC=F',     spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
+  { sym:'NAS100',  bin:null,        yahoo:'%5ENDX',   spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
+  { sym:'BTC/USD', bin:'BTCUSDT',  yahoo:'BTC-USD',  spread:10.0,    dec:1, pip:1.0,    lotUSD:(p:number)=>p          },
+  { sym:'USD/JPY', bin:'USDTJPY',  yahoo:'USDJPY=X', spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
+  { sym:'ETH/USD', bin:'ETHUSDT',  yahoo:'ETH-USD',  spread:1.0,     dec:2, pip:1.0,    lotUSD:(p:number)=>p          },
 ]
 
 const SEED: Record<string,number> = {
@@ -62,132 +66,83 @@ function loadLWC(): Promise<void> {
 }
 
 /* ─── Binance klines — paginated to get 5000 candles ────────────────────── */
-async function fetchBinanceCandles(binSym: string, tf: string): Promise<Candle[]> {
-  if(tf==='D1') return []  // D1 uses Stooq
-  const interval   = BIN_INTERVAL[tf]
-  const secPerBar  = TF_SEC[tf]
-  const pagesWanted = 5
-  const limit       = 1000
-  const all: Candle[] = []
+/* ─── Yahoo Finance candles — ALL symbols, ALL timeframes ───────────────── */
+/*
+  Yahoo Finance /v8/finance/chart is:
+  - Free, no API key
+  - CORS enabled (works from browser)
+  - Covers forex, gold, indices, crypto
+  - History: 1m=7d, 5m/15m/30m=60d, 1h=2yr, 1d=10yr+
+*/
+const YAHOO_TF: Record<string,{interval:string; range:string}> = {
+  M1:  {interval:'1m',  range:'7d'  },
+  M5:  {interval:'5m',  range:'60d' },
+  M15: {interval:'15m', range:'60d' },
+  M30: {interval:'30m', range:'60d' },
+  H1:  {interval:'1h',  range:'730d'},
+  H4:  {interval:'1h',  range:'730d'},  // fetch 1h then aggregate to 4h
+  D1:  {interval:'1d',  range:'3650d'}, // 10 years daily
+}
 
-  // Start from far enough back
-  let endTime = Date.now()
-  const startFrom = endTime - pagesWanted * limit * secPerBar * 1000
+async function fetchYahooCandles(yahooSym: string, tf: string): Promise<Candle[]> {
+  const {interval, range} = YAHOO_TF[tf] ?? YAHOO_TF.H1
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}` +
+    `?interval=${interval}&range=${range}&includePrePost=false&events=history`
+  try {
+    // Try query2 first (less rate-limited), fallback to query1
+    let r = await fetch(url, {headers:{'Accept':'application/json'}})
+    if(!r.ok) {
+      r = await fetch(url.replace('query2','query1'), {headers:{'Accept':'application/json'}})
+    }
+    if(!r.ok) throw new Error(`HTTP ${r.status}`)
+    const d    = await r.json()
+    const res  = d?.chart?.result?.[0]
+    if(!res?.timestamp) return []
+    const ts   = res.timestamp as number[]
+    const q    = res.indicators?.quote?.[0]
+    if(!q) return []
 
-  // Fetch from oldest to newest using startTime progression
-  let startTime = startFrom
-  for(let page=0; page<pagesWanted; page++){
-    try{
-      const url = `https://api.binance.com/api/v3/klines` +
-        `?symbol=${binSym}&interval=${interval}&startTime=${Math.floor(startTime)}&limit=${limit}`
-      const r = await fetch(url)
-      if(!r.ok) break
-      const d: any[] = await r.json()
-      if(!Array.isArray(d)||d.length===0) break
-      for(const k of d){
-        all.push({
-          time:  Math.floor(k[0]/1000),
-          open:  parseFloat(k[1]),
-          high:  parseFloat(k[2]),
-          low:   parseFloat(k[3]),
-          close: parseFloat(k[4]),
+    let candles: Candle[] = ts
+      .map((t:number, i:number) => ({
+        time:  t,
+        open:  q.open?.[i]  as number,
+        high:  q.high?.[i]  as number,
+        low:   q.low?.[i]   as number,
+        close: q.close?.[i] as number,
+      }))
+      .filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0)
+
+    // H4: aggregate 4 × 1h candles into one 4h candle
+    if(tf === 'H4') {
+      const agg: Candle[] = []
+      for(let i = 0; i + 3 < candles.length; i += 4) {
+        agg.push({
+          time:  candles[i].time,
+          open:  candles[i].open,
+          high:  Math.max(candles[i].high, candles[i+1].high, candles[i+2].high, candles[i+3].high),
+          low:   Math.min(candles[i].low,  candles[i+1].low,  candles[i+2].low,  candles[i+3].low),
+          close: candles[i+3].close,
         })
       }
-      startTime = d[d.length-1][0] + 1  // next page starts after last candle
-      if(d.length < limit) break          // no more data
-    } catch{ break }
-  }
-
-  // Dedup + sort
-  const seen=new Set<number>()
-  return all
-    .filter(c=>{if(seen.has(c.time))return false;seen.add(c.time);return true})
-    .sort((a,b)=>a.time-b.time)
-}
-
-/* ─── Stooq CSV — daily history, years of data ──────────────────────────── */
-async function fetchStooqCandles(stooqSym: string): Promise<Candle[]> {
-  try{
-    // Stooq returns CSV: Date,Open,High,Low,Close,Volume
-    // ?e=csv forces CSV, &d1=yyyymmdd&d2=yyyymmdd for date range
-    // Without date range = all history
-    const url = `https://stooq.com/q/d/l/?s=${stooqSym}&i=d`
-    const r = await fetch(url)
-    if(!r.ok) throw new Error('stooq http')
-    const text = await r.text()
-    const lines = text.trim().split('\n')
-    if(lines.length < 2) return []
-
-    const candles: Candle[] = []
-    // Skip header line
-    for(let i=1; i<lines.length; i++){
-      const parts = lines[i].split(',')
-      if(parts.length < 5) continue
-      const [dateStr, o, h, l, c] = parts
-      // Date format: YYYY-MM-DD
-      const ts = Math.floor(new Date(dateStr).getTime()/1000)
-      if(!ts||isNaN(ts)) continue
-      const open=parseFloat(o), high=parseFloat(h), low=parseFloat(l), close=parseFloat(c)
-      if(!open||!high||!low||!close) continue
-      candles.push({time:ts, open, high, low, close})
-    }
-    return candles.sort((a,b)=>a.time-b.time)
-  }catch{ return [] }
-}
-
-/* ─── Yahoo Finance — NAS100 intraday ───────────────────────────────────── */
-async function fetchYahooNas(tf: string): Promise<Candle[]> {
-  const MAP: Record<string,{interval:string;range:string}> = {
-    M1: {interval:'1m', range:'7d'},   M5: {interval:'5m',  range:'60d'},
-    M15:{interval:'15m',range:'60d'},  M30:{interval:'30m', range:'60d'},
-    H1: {interval:'1h', range:'2y'},   H4: {interval:'1h',  range:'2y'},
-    D1: {interval:'1d', range:'10y'},
-  }
-  const {interval,range}=MAP[tf]??MAP.H1
-  try{
-    const r=await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/%5ENDX?interval=${interval}&range=${range}&includePrePost=false`,
-      {headers:{'Accept':'application/json'}}
-    )
-    if(!r.ok) throw new Error('yahoo http')
-    const d=await r.json()
-    const res=d?.chart?.result?.[0]
-    if(!res?.timestamp) return []
-    const ts=res.timestamp as number[]
-    const q=res.indicators?.quote?.[0]
-    if(!q) return []
-    let candles: Candle[] = ts
-      .map((t:number,i:number)=>({time:t,open:q.open?.[i],high:q.high?.[i],low:q.low?.[i],close:q.close?.[i]}))
-      .filter((c:any)=>c.open&&c.high&&c.low&&c.close) as Candle[]
-    if(tf==='H4'){
-      const agg: Candle[]=[]
-      for(let i=0;i+3<candles.length;i+=4)
-        agg.push({time:candles[i].time,open:candles[i].open,
-          high:Math.max(candles[i].high,candles[i+1].high,candles[i+2].high,candles[i+3].high),
-          low:Math.min(candles[i].low,candles[i+1].low,candles[i+2].low,candles[i+3].low),
-          close:candles[i+3].close})
       return agg
     }
+
+    // Deduplicate timestamps (Yahoo sometimes has duplicates)
+    const seen = new Set<number>()
     return candles
-  }catch{return []}
+      .filter(c => { if(seen.has(c.time)) return false; seen.add(c.time); return true })
+      .sort((a,b) => a.time - b.time)
+
+  } catch(e) {
+    console.warn(`[Yahoo] ${yahooSym} ${tf} failed:`, e)
+    return []
+  }
 }
 
 /* ─── Main candle fetcher ────────────────────────────────────────────────── */
 async function fetchCandles(sym: string, tf: string): Promise<Candle[]> {
-  const inst = INSTRUMENTS.find(i=>i.sym===sym)!
-
-  if(tf==='D1'){
-    // D1: Stooq for ALL symbols (years of daily data)
-    if(sym==='NAS100') return fetchYahooNas('D1')   // Stooq ^NDX sometimes fails
-    return fetchStooqCandles(inst.stooq)
-  }
-
-  if(sym==='NAS100'){
-    return fetchYahooNas(tf)
-  }
-
-  // Intraday: Binance (5000 candles paginated)
-  return fetchBinanceCandles(inst.bin!, tf)
+  const inst = INSTRUMENTS.find(i => i.sym === sym)!
+  return fetchYahooCandles(inst.yahoo, tf)
 }
 
 /* ─── Chart component ────────────────────────────────────────────────────── */
@@ -302,30 +257,56 @@ function usePriceFeed(){
       }catch{if(!dead)wsTimer=setTimeout(connect,3000)}
     }
 
-    // REST ticker — fills gaps and updates NAS100
-    const pollAll=async()=>{
+    // Binance REST — crypto live prices (BTC, ETH + any forex Binance actually has)
+    const pollBinance = async () => {
       if(dead) return
-      // Binance batch price
       try{
-        const syms=binInsts.map(i=>`"${i.bin}"`).join(',')
-        const arr:any[]=await fetch(`https://api.binance.com/api/v3/ticker/price?symbols=[${syms}]`).then(r=>r.json())
-        arr.forEach(x=>{const sym=binMap[x.symbol];if(sym)push(sym,parseFloat(x.price))})
-      }catch{}
-      // NAS100
-      try{
-        const d=await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5ENDX?interval=1m&range=1d',
-          {headers:{'Accept':'application/json'}}).then(r=>r.json())
-        const closes=d?.chart?.result?.[0]?.indicators?.quote?.[0]?.close as (number|null)[]
-        if(closes){for(let i=closes.length-1;i>=0;i--)if(closes[i]!=null&&closes[i]!>0){push('NAS100',closes[i]!);break}}
+        const syms = binInsts.map(i=>`"${i.bin}"`).join(',')
+        const arr: any[] = await fetch(
+          `https://api.binance.com/api/v3/ticker/price?symbols=[${syms}]`
+        ).then(r=>r.json())
+        arr.forEach(x=>{ const sym=binMap[x.symbol]; if(sym) push(sym, parseFloat(x.price)) })
       }catch{}
     }
 
+    // Yahoo Finance REST — forex, gold, indices + crypto backup (every 2s)
+    // This is the primary source for EUR/USD, GBP/USD, XAU/USD, NAS100, USD/JPY
+    const yahooLiveMap: [string,string][] = [
+      ['EURUSD=X', 'EUR/USD'],
+      ['GBPUSD=X', 'GBP/USD'],
+      ['GC=F',     'XAU/USD'],
+      ['%5ENDX',   'NAS100' ],
+      ['USDJPY=X', 'USD/JPY'],
+    ]
+    const pollYahoo = async () => {
+      if(dead) return
+      await Promise.allSettled(yahooLiveMap.map(async ([ySym, ourSym]) => {
+        try{
+          const d = await fetch(
+            `https://query2.finance.yahoo.com/v8/finance/chart/${ySym}?interval=1m&range=1d`,
+            {headers:{'Accept':'application/json'}}
+          ).then(r=>r.json())
+          const closes = d?.chart?.result?.[0]?.indicators?.quote?.[0]?.close as (number|null)[]
+          if(!closes) return
+          for(let i=closes.length-1; i>=0; i--){
+            if(closes[i]!=null && closes[i]!>0){ push(ourSym, closes[i]!); break }
+          }
+        }catch{}
+      }))
+    }
+
     connect()
-    pollAll()
-    pollInterval=setInterval(pollAll,1000)  // 1s REST sync for smooth prices
+    pollBinance()
+    pollYahoo()
+    // Poll Binance every 1s for crypto; Yahoo every 2s for forex/gold/indices
+    const binInterval = setInterval(pollBinance, 1000)
+    pollInterval      = setInterval(pollYahoo,   2000)
 
     return ()=>{
-      dead=true;clearTimeout(wsTimer);clearInterval(pollInterval)
+      dead=true
+      clearTimeout(wsTimer)
+      clearInterval(binInterval)
+      clearInterval(pollInterval)
       try{ws?.close()}catch{}
     }
   },[push])
