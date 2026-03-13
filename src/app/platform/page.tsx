@@ -27,17 +27,15 @@ const LOT_SIZE = 100_000
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const INSTRUMENTS = [
-  // bin   = Binance symbol for LIVE prices (aggTrade WS + REST ticker)
-  // yahoo = Yahoo Finance symbol for CANDLE HISTORY (all timeframes)
-  // Binance forex pairs: EURUSDT, GBPUSDT DO exist on Binance as fiat pairs
-  // but klines are unreliable. Yahoo Finance has full verified history.
-  { sym:'EUR/USD', bin:'EURUSDT',  yahoo:'EURUSD=X', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', bin:'GBPUSDT',  yahoo:'GBPUSD=X', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'XAU/USD', bin:'PAXGUSDT', yahoo:'GC=F',     spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
-  { sym:'NAS100',  bin:null,        yahoo:'%5ENDX',   spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
-  { sym:'BTC/USD', bin:'BTCUSDT',  yahoo:'BTC-USD',  spread:10.0,    dec:1, pip:1.0,    lotUSD:(p:number)=>p          },
-  { sym:'USD/JPY', bin:'USDTJPY',  yahoo:'USDJPY=X', spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'ETH/USD', bin:'ETHUSDT',  yahoo:'ETH-USD',  spread:1.0,     dec:2, pip:1.0,    lotUSD:(p:number)=>p          },
+  // useBinanceChart: true  = use Binance klines for candle history (reliable OHLC)
+  // useBinanceChart: false = use Yahoo Finance via proxy (for pairs not on Binance spot)
+  { sym:'EUR/USD', bin:'EURUSDT',  yahoo:'EURUSD=X', useBinanceChart:true,  spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', bin:'GBPUSDT',  yahoo:'GBPUSD=X', useBinanceChart:true,  spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'XAU/USD', bin:'PAXGUSDT', yahoo:'GC=F',     useBinanceChart:true,  spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
+  { sym:'NAS100',  bin:null,        yahoo:'%5ENDX',   useBinanceChart:false, spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
+  { sym:'BTC/USD', bin:'BTCUSDT',  yahoo:'BTC-USD',  useBinanceChart:true,  spread:10.0,    dec:1, pip:1.0,    lotUSD:(p:number)=>p          },
+  { sym:'USD/JPY', bin:'USDTJPY',  yahoo:'USDJPY=X', useBinanceChart:false, spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
+  { sym:'ETH/USD', bin:'ETHUSDT',  yahoo:'ETH-USD',  useBinanceChart:true,  spread:1.0,     dec:2, pip:1.0,    lotUSD:(p:number)=>p          },
 ]
 
 const SEED: Record<string,number> = {
@@ -185,10 +183,10 @@ async function fetchYahoo(yahooSym: string, tf: string): Promise<Candle[]> {
 /* ─── Main candle fetcher ───────────────────────────────────────── */
 async function fetchCandles(sym: string, tf: string): Promise<Candle[]> {
   const inst = INSTRUMENTS.find(i => i.sym === sym)!
-  // Crypto: use Binance (best data, no CORS issues)
-  if(inst.bin && (sym === 'BTC/USD' || sym === 'ETH/USD'))
+  // Use Binance for symbols that have reliable klines on Binance Spot
+  if(inst.useBinanceChart && inst.bin)
     return fetchBinance(inst.bin, tf)
-  // Everything else: Yahoo Finance
+  // USD/JPY and NAS100: Yahoo Finance via CORS proxy
   return fetchYahoo(inst.yahoo, tf)
 }
 
