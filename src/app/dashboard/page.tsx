@@ -67,15 +67,15 @@ export function DashboardPage() {
             user_id: profile?.id,
             type: 'breach',
             title: 'Account Breached',
-            message: `Account ${acc.account_number} has been breached due to drawdown limits being exceeded.`,
-            read: false,
+            body: `Account ${acc.account_number} has been breached due to drawdown limits being exceeded.`,
+            is_read: false,
           },
           {
             user_id: null,
             type: 'admin_breach',
             title: `Account Breached — ${acc.account_number}`,
-            message: `${profile?.first_name} ${profile?.last_name} breached account ${acc.account_number}. Daily DD: ${acc.daily_dd_used}% / Max DD: ${acc.max_dd_used}%.`,
-            read: false,
+            body: `${profile?.first_name} ${profile?.last_name} breached account ${acc.account_number}. Daily DD: ${acc.daily_dd_used}% / Max DD: ${acc.max_dd_used}%.`,
+            is_read: false,
           }
         ]).then(() => {})
         toast('error', '🚨', 'Account Breached', 'Your drawdown limit was exceeded. Account locked.')
@@ -92,16 +92,16 @@ export function DashboardPage() {
           user_id: profile?.id,
           type: 'target_reached',
           title: 'Profit Target Reached!',
-          message: `Account ${acc.account_number} has reached the ${targetPct}% profit target. Awaiting admin review.`,
-          read: false,
+          body: `Account ${acc.account_number} has reached the ${targetPct}% profit target. Awaiting admin review.`,
+          is_read: false,
         },
         // Admin notification — we store with a special marker
         {
           user_id: null, // admin sentinel
           type: 'admin_target_reached',
           title: `Trader Target Reached — ${acc.account_number}`,
-          message: `${profile?.first_name} ${profile?.last_name} reached ${profitPct.toFixed(2)}% on ${acc.account_number}. Review and advance phase.`,
-          read: false,
+          body: `${profile?.first_name} ${profile?.last_name} reached ${profitPct.toFixed(2)}% on ${acc.account_number}. Review and advance phase.`,
+          is_read: false,
         }
       ]).then(() => {})
       toast('success', '🎯', 'Target Reached!', 'Profit target hit! Account locked pending admin review.')

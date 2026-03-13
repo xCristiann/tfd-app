@@ -37,16 +37,16 @@ function AdminNotifications() {
   }
 
   async function markRead(id: string) {
-    await supabase.from('notifications').update({ read: true }).eq('id', id)
-    setNotifs(n => n.map(x => x.id === id ? { ...x, read: true } : x))
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+    setNotifs(n => n.map(x => x.id === id ? { ...x, is_read: true } : x))
   }
 
   async function markAllRead() {
     await supabase.from('notifications')
-      .update({ read: true })
+      .update({ is_read: true })
       .is('user_id', null)
-      .eq('read', false)
-    setNotifs(n => n.map(x => ({ ...x, read: true })))
+      .eq('is_read', false)
+    setNotifs(n => n.map(x => ({ ...x, is_read: true })))
   }
 
   useEffect(() => {
@@ -57,7 +57,7 @@ function AdminNotifications() {
     return () => document.removeEventListener('mousedown', handle)
   }, [])
 
-  const unread = notifs.filter(n => !n.read).length
+  const unread = notifs.filter(n => !n.is_read).length
 
   const iconMap: Record<string, string> = {
     admin_target_reached: '🎯',
@@ -101,15 +101,15 @@ function AdminNotifications() {
               <div key={n.id}
                 onClick={() => markRead(n.id)}
                 className={`flex gap-3 px-4 py-3 border-b border-[var(--dim)] border-l-2 cursor-pointer hover:bg-[var(--bg3)] transition-all ${
-                  !n.read ? (colorMap[n.type] ?? colorMap.default) : 'border-l-transparent opacity-50'
+                  !n.is_read ? (colorMap[n.type] ?? colorMap.default) : 'border-l-transparent opacity-50'
                 }`}>
                 <span className="text-[16px] flex-shrink-0 mt-[1px]">{iconMap[n.type] ?? '🔔'}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-[11px] font-semibold mb-[2px]">{n.title}</div>
-                  <div className="text-[10px] text-[var(--text3)] leading-[1.5]">{n.message}</div>
+                  <div className="text-[10px] text-[var(--text3)] leading-[1.5]">{n.body}</div>
                   <div className="text-[9px] text-[var(--text3)] mt-1">{new Date(n.created_at).toLocaleString()}</div>
                 </div>
-                {!n.read && <span className="w-[6px] h-[6px] rounded-full bg-[var(--red)] flex-shrink-0 mt-[5px]"/>}
+                {!n.is_read && <span className="w-[6px] h-[6px] rounded-full bg-[var(--red)] flex-shrink-0 mt-[5px]"/>}
               </div>
             ))}
           </div>
