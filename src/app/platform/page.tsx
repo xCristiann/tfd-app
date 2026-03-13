@@ -24,16 +24,18 @@ const INSTRUMENTS = [
   { sym:'GBP/JPY', poly:'C:GBPJPY', yahoo:null,       market:'forex',  spread:0.030,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
   { sym:'EUR/JPY', poly:'C:EURJPY', yahoo:null,       market:'forex',  spread:0.025,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
   // Indices: use Polygon index tickers (I:NDX etc) - falls back to ETF if needed
-  { sym:'NAS100',  poly:'I:NDX',     etf:'QQQ',  etfMult:40,  market:'us',  spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*10  },
-  { sym:'US500',   poly:'I:SPX',     etf:'SPY',  etfMult:10,  market:'us',  spread:0.50, dec:2, pip:0.10, lotUSD:(p:number)=>p*50  },
-  { sym:'GER40',   poly:'I:DAX',     etf:'EWG',  etfMult:300, market:'eu',  spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*25  },
-  { sym:'UK100',   poly:'I:FTSE',    etf:'EWU',  etfMult:140, market:'uk',  spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*10  },
+  // ETF multipliers calibrated: QQQ≈516→NDX≈21700(÷42), SPY≈580→SPX≈5800(÷10)
+  // EWG≈30→DAX≈22500(÷750), EWU≈36→FTSE≈8700(÷240)
+  { sym:'NAS100',  poly:'I:NDX',  etf:'QQQ', etfMult:42,  market:'us', spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*10 },
+  { sym:'US500',   poly:'I:SPX',  etf:'SPY', etfMult:10,  market:'us', spread:0.50, dec:2, pip:0.10, lotUSD:(p:number)=>p*50 },
+  { sym:'GER40',   poly:'I:DAX',  etf:'EWG', etfMult:750, market:'eu', spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*25 },
+  { sym:'UK100',   poly:'I:FTSE', etf:'EWU', etfMult:240, market:'uk', spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*10 },
 ]
 
 const SEED: Record<string,number> = {
   'EUR/USD':1.1464,'GBP/USD':1.2940,'XAU/USD':2980,
   'USD/JPY':148.50,'GBP/JPY':192.50,'EUR/JPY':170.20,
-  'NAS100':19200,'US500':5800,'GER40':22500,'UK100':8700,
+  'NAS100':21700,'US500':5800,'GER40':22500,'UK100':8700,
 }
 
 const TF_POLY: Record<string,{mult:number;span:string;daysBack:number}> = {
@@ -55,78 +57,103 @@ const TF_SEC: Record<string,number> = {
 type Candle = {time:number;open:number;high:number;low:number;close:number}
 
 /* ══════════════════════════════════════════════════════════════════
-   MARKET HOURS (all UTC, DST-aware)
+   MARKET HOURS — Source: TraderMade CFD Opening Times
    ══════════════════════════════════════════════════════════════════
-   FOREX / XAU  : Sun 22:00 → Fri 22:00 UTC (24/5)
-                  Source: forex.com, cityindex.com
-   US (NYSE/NASDAQ): Mon–Fri 13:30–20:00 UTC
-                  (9:30am–4:00pm EST / 9:30am–4:00pm EDT during DST)
-   XETRA/DAX    : Mon–Fri 07:00–15:30 UTC
-                  (9:00am–5:30pm CET / 8:00am–4:30pm UTC summer)
-                  Simplified: 07:00–15:30 UTC year-round
-   LSE/FTSE     : Mon–Fri 08:00–16:30 UTC
-                  (8:00am–4:30pm GMT / 7:00am–3:30pm UTC summer)
-                  Simplified: 08:00–16:30 UTC year-round
+   CFD indices trade nearly 24/5 like forex, NOT just exchange hours.
+   Major prop firms use CFD hours, not exchange hours.
+
+   FOREX/XAU/XAG: Sun 22:00 → Fri 21:45 UTC (daily 22:00-23:00 break)
+   US30/NAS100/US500 CFD:
+     Summer (Mar–Nov): Sun 22:00 → Fri 20:15 UTC  break 20:15-20:30, 21:00-22:00
+     Winter (Nov–Mar): Sun 23:00 → Fri 21:15 UTC  break 21:15-21:30, 22:00-23:00
+   GER40/UK100 CFD: Mon 07:00 → Fri 21:00 UTC (daily 21:00-07:00 break)
+
+   Source: tradermade.com/cfd-opening-times
    ══════════════════════════════════════════════════════════════════ */
 function getMarketStatus(market: string): {open:boolean; label:string; nextOpen:string} {
   const now  = new Date()
-  const day  = now.getUTCDay()    // 0=Sun 1=Mon … 5=Fri 6=Sat
+  const day  = now.getUTCDay()
   const hour = now.getUTCHours()
   const min  = now.getUTCMinutes()
   const hm   = hour * 60 + min
+  const month= now.getUTCMonth() + 1  // 1-12
 
-  const isWeekend = day === 0 || day === 6
+  // DST: Summer = March(3) through November(10) inclusive
+  const isSummer = month >= 3 && month <= 10
 
-  // Helper: next weekday open time string
-  const nextWeekday = (openHH:number, openMM:number) => {
-    const d = new Date(now)
-    // advance until Monday if weekend
-    if(day === 6) d.setUTCDate(d.getUTCDate()+2)
-    else if(day === 0) d.setUTCDate(d.getUTCDate()+1)
-    else if(hm >= openHH*60+openMM) d.setUTCDate(d.getUTCDate()+1) // already past open today
-    d.setUTCHours(openHH, openMM, 0, 0)
-    return d.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC',timeZoneName:'short'})
+  const fmtNext=(d:Date)=>d.toLocaleString(undefined,{
+    weekday:'short',month:'short',day:'numeric',
+    hour:'2-digit',minute:'2-digit',timeZone:'UTC',timeZoneName:'short'
+  })
+
+  const nextSunday=(hh:number,mm:number)=>{
+    const d=new Date(now)
+    // find next Sunday
+    const daysUntilSun=(7-day)%7||7
+    d.setUTCDate(d.getUTCDate()+daysUntilSun)
+    d.setUTCHours(hh,mm,0,0)
+    return fmtNext(d)
   }
 
-  /* ── FOREX & METALS (XAU) ─────────────────────────────────────── */
+  const nextMonday=(hh:number,mm:number)=>{
+    const d=new Date(now)
+    const daysUntilMon=day===0?1:day===6?2:8-day
+    d.setUTCDate(d.getUTCDate()+(daysUntilMon%7||7))
+    d.setUTCHours(hh,mm,0,0)
+    return fmtNext(d)
+  }
+
+  /* ── FOREX + XAU (metals) ─────────────────────────────────────── */
+  /* Sun 22:00 → Fri 21:45 UTC, daily break 21:45-22:00 (1 min break) */
   if(market === 'forex'){
-    // Closed: Sat all day + Sun before 22:00 UTC + Fri after 22:00 UTC
-    const isClosed = day === 6
-      || (day === 0 && hm < 22*60)
-      || (day === 5 && hm >= 22*60)
-    if(!isClosed) return {open:true, label:'Forex Open', nextOpen:''}
-    const next = new Date(now)
-    if(day === 6){ next.setUTCDate(next.getUTCDate()+1); next.setUTCHours(22,0,0,0) }
-    else if(day === 0){ next.setUTCHours(22,0,0,0) }
-    else { next.setUTCDate(next.getUTCDate()+2); next.setUTCHours(22,0,0,0) }
-    return {open:false, label:'Forex Closed — Weekend', nextOpen:next.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC',timeZoneName:'short'})}
+    const dailyBreak = hm >= 21*60+45 && hm < 22*60
+    const isWeekendClosed = day===6 || (day===0 && hm<22*60) || (day===5 && hm>=21*60+45)
+    if(!isWeekendClosed && !dailyBreak) return {open:true, label:'Forex Open (24/5)', nextOpen:''}
+    if(isWeekendClosed){
+      return {open:false, label:'Forex Closed — Weekend', nextOpen:nextSunday(22,0)}
+    }
+    return {open:false, label:'Forex Daily Break (2 min)', nextOpen:'Reopens 22:00 UTC'}
   }
 
-  /* ── US MARKETS (NYSE / NASDAQ) ───────────────────────────────── */
+  /* ── US INDICES CFD (NAS100, US500, GER40 proxy for US) ───────── */
+  /* Summer: Sun 22:00 → Fri 20:15 UTC, breaks: 20:15-20:30, 21:00-22:00 */
+  /* Winter: Sun 23:00 → Fri 21:15 UTC, breaks: 21:15-21:30, 22:00-23:00 */
   if(market === 'us'){
-    // 13:30–20:00 UTC Mon–Fri (9:30am–4:00pm ET)
-    if(isWeekend) return {open:false, label:'US Market Closed — Weekend', nextOpen:nextWeekday(13,30)}
-    if(hm >= 13*60+30 && hm < 20*60) return {open:true, label:'US Market Open (NYSE/NASDAQ)', nextOpen:''}
-    if(hm < 13*60+30) return {open:false, label:'US Pre-Market', nextOpen:nextWeekday(13,30)}
-    return {open:false, label:'US Market Closed (After Hours)', nextOpen:nextWeekday(13,30)}
+    const openH  = isSummer ? 22 : 23
+    const closeH = isSummer ? 20*60+15 : 21*60+15
+    const break1S= isSummer ? 20*60+15 : 21*60+15  // break start
+    const break1E= isSummer ? 20*60+30 : 21*60+30  // break end
+    const break2S= isSummer ? 21*60    : 22*60      // break 2 start
+    const break2E= isSummer ? 22*60    : 23*60      // break 2 end (= next open)
+
+    const inBreak1 = hm >= break1S && hm < break1E
+    const inBreak2 = hm >= break2S && hm < break2E
+
+    // Weekend closed
+    if(day===6 || (day===0 && hm < openH*60) || (day===5 && hm >= break1S)){
+      return {open:false, label:'US Indices Closed — Weekend', nextOpen:nextSunday(openH,0)}
+    }
+    if(inBreak1) return {open:false, label:'US Indices — Daily Break', nextOpen:`Reopens ${isSummer?'20:30':'21:30'} UTC`}
+    if(inBreak2) return {open:false, label:'US Indices — Daily Break', nextOpen:`Reopens ${isSummer?'22:00':'23:00'} UTC`}
+    return {open:true, label:'US Indices Open (CFD)', nextOpen:''}
   }
 
-  /* ── XETRA / DAX (Germany) ────────────────────────────────────── */
-  if(market === 'eu'){
-    // 07:00–15:30 UTC Mon–Fri (9:00am–5:30pm CET)
-    if(isWeekend) return {open:false, label:'XETRA Closed — Weekend', nextOpen:nextWeekday(7,0)}
-    if(hm >= 7*60 && hm < 15*60+30) return {open:true, label:'XETRA Open (DAX)', nextOpen:''}
-    if(hm < 7*60) return {open:false, label:'XETRA Pre-Market', nextOpen:nextWeekday(7,0)}
-    return {open:false, label:'XETRA Closed (After Hours)', nextOpen:nextWeekday(7,0)}
-  }
-
-  /* ── LSE / FTSE (UK) ──────────────────────────────────────────── */
-  if(market === 'uk'){
-    // 08:00–16:30 UTC Mon–Fri
-    if(isWeekend) return {open:false, label:'LSE Closed — Weekend', nextOpen:nextWeekday(8,0)}
-    if(hm >= 8*60 && hm < 16*60+30) return {open:true, label:'LSE Open (FTSE 100)', nextOpen:''}
-    if(hm < 8*60) return {open:false, label:'LSE Pre-Market', nextOpen:nextWeekday(8,0)}
-    return {open:false, label:'LSE Closed (After Hours)', nextOpen:nextWeekday(8,0)}
+  /* ── EU/UK INDICES CFD ────────────────────────────────────────── */
+  /* Mon 07:00 → Fri 21:00 UTC, closed 21:00-07:00 daily */
+  if(market === 'eu' || market === 'uk'){
+    const name = market==='eu' ? 'GER40 (XETRA)' : 'UK100 (LSE)'
+    if(day===0||day===6) return {open:false, label:`${name} Closed — Weekend`, nextOpen:nextMonday(7,0)}
+    if(hm >= 7*60 && hm < 21*60) return {open:true, label:`${name} Open`, nextOpen:''}
+    // Overnight break
+    const next = new Date(now)
+    if(hm >= 21*60){
+      next.setUTCDate(next.getUTCDate()+1)
+      if(next.getUTCDay()===6) next.setUTCDate(next.getUTCDate()+2)
+      else if(next.getUTCDay()===0) next.setUTCDate(next.getUTCDate()+1)
+    }
+    next.setUTCHours(7,0,0,0)
+    const label = hm < 7*60 ? `${name} Pre-Market` : `${name} Closed (After Hours)`
+    return {open:false, label, nextOpen:fmtNext(next)}
   }
 
   return {open:true, label:'Open', nextOpen:''}
@@ -196,7 +223,7 @@ async function fetchCandles(sym:string, tf:string):Promise<Candle[]>{
 }
 
 /* ── Chart component ─────────────────────────────────────────────── */
-function CandleChart({sym,tf,livePrice}:{sym:string;tf:string;livePrice:number}){
+function CandleChart({sym,tf,livePrice,onPriceFromCandle}:{sym:string;tf:string;livePrice:number;onPriceFromCandle?:(p:number)=>void}){
   const divRef =useRef<HTMLDivElement>(null)
   const chartRef=useRef<any>(null)
   const serRef =useRef<any>(null)
@@ -233,6 +260,8 @@ function CandleChart({sym,tf,livePrice}:{sym:string;tf:string;livePrice:number})
         series.setData(candles)
         lastRef.current=candles[candles.length-1]
         chart.timeScale().fitContent()
+        // Seed the live price from last candle close so ask matches chart immediately
+        if(onPriceFromCandle) onPriceFromCandle(candles[candles.length-1].close)
       } else {
         const seed:Candle={time:Math.floor(Date.now()/1000),open:livePrice,high:livePrice,low:livePrice,close:livePrice}
         lastRef.current=seed; series.setData([seed])
@@ -318,17 +347,23 @@ function usePriceFeed(){
         }
       }catch{}
 
-      // Polygon snapshot for indices live price (using ETF fallback)
+      // Live price for indices: try Polygon index snapshot, fallback to ETF×mult
       await Promise.allSettled(
         (INSTRUMENTS as any[]).filter(i=>i.etf).map(async (inst:any)=>{
           try{
-            // Try index snapshot first
-            const r1=await fetch(
-              `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${inst.etf}?apiKey=${POLY_KEY}`
-            )
+            // 1. Try direct index price from Polygon (works on some plans)
+            const r0=await fetch(`https://api.polygon.io/v2/aggs/ticker/${inst.poly}/prev?adjusted=true&apiKey=${POLY_KEY}`)
+            const d0=await r0.json()
+            const idxPrice=d0?.results?.[0]?.c||0
+            if(idxPrice>0){ push(inst.sym,idxPrice); return }
+          }catch{}
+          try{
+            // 2. ETF snapshot × multiplier
+            const r1=await fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${inst.etf}?apiKey=${POLY_KEY}`)
             const d1=await r1.json()
-            const etfPrice=d1?.ticker?.day?.c||d1?.ticker?.lastTrade?.p||0
-            if(etfPrice>0 && inst.etfMult) push(inst.sym, etfPrice*inst.etfMult)
+            // Polygon snapshot: ticker.day.c = today's close, ticker.lastTrade.p = last trade
+            const etfPrice=d1?.ticker?.day?.c||d1?.ticker?.prevDay?.c||d1?.ticker?.lastTrade?.p||0
+            if(etfPrice>0) push(inst.sym, Math.round(etfPrice*inst.etfMult*10)/10)
           }catch{}
         })
       )
@@ -343,7 +378,11 @@ function usePriceFeed(){
     }
   },[push])
 
-  return {prices,refPrev,refPrices}
+  const seedPrice=useCallback((sym:string,price:number)=>{
+    if(price>0) push(sym,price)
+  },[push])
+
+  return {prices,refPrev,refPrices,seedPrice}
 }
 
 /* ── P&L ─────────────────────────────────────────────────────────── */
@@ -416,7 +455,7 @@ export function PlatformPage(){
   // Update clock every minute for market status
   useEffect(()=>{const iv=setInterval(()=>setNow(new Date()),60000);return ()=>clearInterval(iv)},[])
 
-  const {prices,refPrev,refPrices}=usePriceFeed()
+  const {prices,refPrev,refPrices,seedPrice}=usePriceFeed()
   const tradesRef=useRef(openTrades);  tradesRef.current=openTrades
   const primaryRef=useRef(primary);   primaryRef.current=primary
 
@@ -611,7 +650,7 @@ export function PlatformPage(){
       {/* Chart */}
       <div style={{flex:1,overflow:'hidden'}}>
         <div key={`${sym}_${tf}`} style={{width:'100%',height:'100%'}}>
-          <CandleChart sym={sym} tf={tf} livePrice={livePrice}/>
+          <CandleChart sym={sym} tf={tf} livePrice={livePrice} onPriceFromCandle={seedPrice}/>
         </div>
       </div>
 
