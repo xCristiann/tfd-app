@@ -7,161 +7,109 @@ import { DrawdownBar } from '@/components/ui/Card'
 import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/utils'
 
+// Map display symbols to TradingView & Binance WS symbols
 const INSTRUMENTS = [
-  { sym:'EUR/USD', bid:1.08742, spread:0.00020, dec:5, pip:0.0001 },
-  { sym:'GBP/USD', bid:1.26712, spread:0.00020, dec:5, pip:0.0001 },
-  { sym:'XAU/USD', bid:2341.80, spread:0.30,    dec:2, pip:0.10 },
-  { sym:'NAS100',  bid:17842.0, spread:1.0,     dec:1, pip:1.0 },
-  { sym:'BTC/USD', bid:67180.0, spread:10.0,    dec:1, pip:1.0 },
-  { sym:'USD/JPY', bid:151.420, spread:0.020,   dec:3, pip:0.01 },
-  { sym:'WTI/USD', bid:82.140,  spread:0.040,   dec:3, pip:0.01 },
+  { sym:'EUR/USD', tv:'FX:EURUSD',  ws:'ethusdt',    spread:0.00020, dec:5, pip:0.0001,  fallback:1.08742 },
+  { sym:'GBP/USD', tv:'FX:GBPUSD',  ws:'btcusdt',    spread:0.00020, dec:5, pip:0.0001,  fallback:1.26712 },
+  { sym:'XAU/USD', tv:'TVC:GOLD',   ws:'xrpusdt',    spread:0.30,    dec:2, pip:0.10,    fallback:2341.80 },
+  { sym:'NAS100',  tv:'NASDAQ:NDX', ws:'solusdt',     spread:1.0,     dec:1, pip:1.0,     fallback:17842.0 },
+  { sym:'BTC/USD', tv:'BINANCE:BTCUSDT', ws:'btcusdt', spread:10.0,  dec:1, pip:1.0,     fallback:67180.0 },
+  { sym:'USD/JPY', tv:'FX:USDJPY',  ws:'bnbusdt',    spread:0.020,   dec:3, pip:0.01,    fallback:151.420 },
+  { sym:'ETH/USD', tv:'BINANCE:ETHUSDT', ws:'ethusdt', spread:1.0,   dec:2, pip:1.0,     fallback:3180.0  },
 ]
-const TFS = ['M1','M5','M15','M30','H1','H4','D1']
-
-type Candle = { o:number; h:number; l:number; c:number }
-
-function buildCandles(base: number, count: number, volatility: number): Candle[] {
-  const candles: Candle[] = []
-  let price = base
-  for (let i = 0; i < count; i++) {
-    const o = price
-    const move = (Math.random() - 0.48) * volatility
-    const c = o + move
-    const h = Math.max(o, c) + Math.random() * volatility * 0.5
-    const l = Math.min(o, c) - Math.random() * volatility * 0.5
-    candles.push({ o, h, l, c })
-    price = c
-  }
-  return candles
+const TFS: Record<string,string> = {
+  'M1':'1', 'M5':'5', 'M15':'15', 'M30':'30', 'H1':'60', 'H4':'240', 'D1':'D'
 }
 
-function CandleChart({ symbol, tf, livePrice }: { symbol: string; tf: string; livePrice: number }) {
-  const ref = useRef<HTMLCanvasElement>(null)
-  const candlesRef = useRef<Candle[]>([])
-  const animRef = useRef<number>(0)
+// TradingView Advanced Chart Widget
+function TVChart({ tvSymbol, tf }: { tvSymbol: string; tf: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const widgetRef = useRef<any>(null)
 
-  // Build initial candles when symbol/tf changes
   useEffect(() => {
-    const inst = INSTRUMENTS.find(i => i.sym === symbol)!
-    const vol = inst.bid * 0.0008
-    candlesRef.current = buildCandles(inst.bid * 0.995, 80, vol)
-  }, [symbol, tf])
+    if (!ref.current) return
+    ref.current.innerHTML = ''
 
-  // Draw function
-  const draw = useCallback(() => {
-    const c = ref.current
-    if (!c) return
-    const parent = c.parentElement
-    if (!parent) return
-    const W = parent.clientWidth
-    const H = parent.clientHeight
-    if (c.width !== W || c.height !== H) { c.width = W; c.height = H }
-    const ctx = c.getContext('2d')!
-    const inst = INSTRUMENTS.find(i => i.sym === symbol)!
-
-    // Update last candle with live price
-    const candles = candlesRef.current
-    if (candles.length > 0) {
-      const last = candles[candles.length - 1]
-      last.c = livePrice
-      last.h = Math.max(last.h, livePrice)
-      last.l = Math.min(last.l, livePrice)
+    const script = document.createElement('script')
+    script.src = 'https://s3.tradingview.com/tv.js'
+    script.async = true
+    script.onload = () => {
+      if (!(window as any).TradingView) return
+      widgetRef.current = new (window as any).TradingView.widget({
+        container_id: 'tv_chart_container',
+        symbol: tvSymbol,
+        interval: TFS[tf] ?? '60',
+        timezone: 'Etc/UTC',
+        theme: 'dark',
+        style: '1',
+        locale: 'en',
+        toolbar_bg: '#06060F',
+        enable_publishing: false,
+        hide_top_toolbar: false,
+        hide_legend: false,
+        save_image: false,
+        backgroundColor: '#06060F',
+        gridColor: 'rgba(212,168,67,0.05)',
+        width: '100%',
+        height: '100%',
+        allow_symbol_change: false,
+        studies: [],
+        disabled_features: [
+          'use_localstorage_for_settings',
+          'header_symbol_search',
+          'header_compare',
+          'header_undo_redo',
+          'header_screenshot',
+        ],
+        enabled_features: ['hide_left_toolbar_by_default'],
+        overrides: {
+          'paneProperties.background': '#06060F',
+          'paneProperties.backgroundType': 'solid',
+          'scalesProperties.textColor': 'rgba(230,226,248,0.5)',
+          'mainSeriesProperties.candleStyle.upColor': '#00D97E',
+          'mainSeriesProperties.candleStyle.downColor': '#FF3352',
+          'mainSeriesProperties.candleStyle.borderUpColor': '#00D97E',
+          'mainSeriesProperties.candleStyle.borderDownColor': '#FF3352',
+          'mainSeriesProperties.candleStyle.wickUpColor': '#00D97E',
+          'mainSeriesProperties.candleStyle.wickDownColor': '#FF3352',
+        },
+      })
     }
+    document.head.appendChild(script)
 
-    const all = candles.flatMap(cd => [cd.o, cd.h, cd.l, cd.c])
-    const mn = Math.min(...all)
-    const mx = Math.max(...all)
-    const pad = { t: 20, b: 32, l: 4, r: 75 }
-    const cW = W - pad.l - pad.r
-    const cH = H - pad.t - pad.b
-    const toY = (v: number) => pad.t + cH - ((v - mn) / (mx - mn || 1)) * cH
-    const cw = Math.max(4, Math.floor(cW / candles.length) - 1)
-
-    // Background
-    ctx.fillStyle = '#06060F'
-    ctx.fillRect(0, 0, W, H)
-
-    // Grid
-    ctx.strokeStyle = 'rgba(212,168,67,.05)'
-    ctx.lineWidth = 1
-    for (let i = 0; i <= 5; i++) {
-      const y = pad.t + (cH / 5) * i
-      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke()
+    return () => {
+      if (widgetRef.current?.remove) widgetRef.current.remove()
     }
-    for (let i = 0; i <= 6; i++) {
-      const x = pad.l + (cW / 6) * i
-      ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + cH); ctx.stroke()
-    }
+  }, [tvSymbol, tf])
 
-    // Price labels
-    ctx.fillStyle = 'rgba(230,226,248,.25)'
-    ctx.font = '10px monospace'
-    ctx.textAlign = 'left'
-    for (let i = 0; i <= 4; i++) {
-      const v = mn + ((mx - mn) / 4) * (4 - i)
-      ctx.fillText(v.toFixed(inst.dec), W - pad.r + 4, pad.t + (cH / 4) * i + 4)
-    }
+  return <div id="tv_chart_container" ref={ref} style={{ width:'100%', height:'100%' }} />
+}
 
-    // Candles
-    candles.forEach((cd, i) => {
-      const x = pad.l + i * (cw + 1)
-      const bull = cd.c >= cd.o
-      const color = bull ? '#00D97E' : '#FF3352'
-      ctx.strokeStyle = color
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(x + cw / 2, toY(cd.h))
-      ctx.lineTo(x + cw / 2, toY(cd.l))
-      ctx.stroke()
-      ctx.fillStyle = color
-      const top = Math.min(toY(cd.o), toY(cd.c))
-      const ht = Math.max(1, Math.abs(toY(cd.o) - toY(cd.c)))
-      ctx.fillRect(x, top, cw, ht)
-    })
+// Live price via Binance WebSocket
+function useLivePrice(wsSymbol: string, fallback: number) {
+  const [price, setPrice] = useState(fallback)
+  const [prev, setPrev] = useState(fallback)
+  const wsRef = useRef<WebSocket | null>(null)
 
-    // Current price line
-    const cur = livePrice
-    ctx.strokeStyle = 'rgba(212,168,67,.7)'
-    ctx.lineWidth = 1
-    ctx.setLineDash([4, 4])
-    ctx.beginPath()
-    ctx.moveTo(pad.l, toY(cur))
-    ctx.lineTo(W - pad.r, toY(cur))
-    ctx.stroke()
-    ctx.setLineDash([])
-
-    // Price label box
-    ctx.fillStyle = '#D4A843'
-    ctx.fillRect(W - pad.r, toY(cur) - 10, pad.r, 20)
-    ctx.fillStyle = '#06060F'
-    ctx.font = 'bold 10px monospace'
-    ctx.fillText(cur.toFixed(inst.dec), W - pad.r + 3, toY(cur) + 4)
-  }, [symbol, livePrice])
-
-  // Animation loop — new candle every ~10s
   useEffect(() => {
-    let lastCandle = Date.now()
-    const inst = INSTRUMENTS.find(i => i.sym === symbol)!
+    setPrice(fallback)
+    setPrev(fallback)
+    if (wsRef.current) wsRef.current.close()
 
-    const loop = () => {
-      draw()
-      const now = Date.now()
-      if (now - lastCandle > 10000) {
-        const candles = candlesRef.current
-        const lastC = candles[candles.length - 1]?.c ?? inst.bid
-        const vol = inst.bid * 0.0008
-        const o = lastC
-        candles.push({ o, h: o, l: o, c: o })
-        if (candles.length > 80) candles.shift()
-        lastCandle = now
+    const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${wsSymbol}@trade`)
+    wsRef.current = ws
+    ws.onmessage = (e) => {
+      const data = JSON.parse(e.data)
+      const p = parseFloat(data.p)
+      if (!isNaN(p)) {
+        setPrice(prev => { setPrev(prev); return p })
       }
-      animRef.current = requestAnimationFrame(loop)
     }
-    animRef.current = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(animRef.current)
-  }, [symbol, draw])
+    ws.onerror = () => {} // silently ignore errors
+    return () => ws.close()
+  }, [wsSymbol, fallback])
 
-  return <canvas ref={ref} style={{ width:'100%', height:'100%', display:'block' }}/>
+  return { price, prev }
 }
 
 export function PlatformPage() {
@@ -171,7 +119,7 @@ export function PlatformPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string|null>(null)
   const primary = accounts.find(a => a.id === selectedAccountId) ?? defaultPrimary
 
-  const [sym, setSym] = useState('EUR/USD')
+  const [sym, setSym] = useState('BTC/USD')
   const [tf, setTf] = useState('H1')
   const [dir, setDir] = useState<'buy'|'sell'>('buy')
   const [lots, setLots] = useState('0.10')
@@ -184,19 +132,46 @@ export function PlatformPage() {
   const [openTrades, setOpenTrades] = useState<any[]>([])
   const [closedTrades, setClosedTrades] = useState<any[]>([])
 
-  // Live prices state
-  const [prices, setPrices] = useState(INSTRUMENTS.map(i => ({ ...i, prev: i.bid, cur: i.bid })))
+  // Per-instrument prices via Binance WS — only active symbol connects
+  const inst = INSTRUMENTS.find(i => i.sym === sym)!
+  const { price: livePrice, prev: prevPrice } = useLivePrice(inst.ws, inst.fallback)
 
-  // Animate prices
+  // Watchlist prices — poll REST for non-active instruments
+  const [watchPrices, setWatchPrices] = useState<Record<string,number>>(
+    Object.fromEntries(INSTRUMENTS.map(i => [i.sym, i.fallback]))
+  )
+
   useEffect(() => {
-    const iv = setInterval(() => {
-      setPrices(p => p.map(i => {
-        const move = (Math.random() - 0.49) * i.bid * 0.00025
-        return { ...i, prev: i.cur, cur: i.cur + move }
-      }))
-    }, 800)
+    // Update watchlist price for active symbol from WS
+    setWatchPrices(p => ({ ...p, [sym]: livePrice }))
+  }, [livePrice, sym])
+
+  useEffect(() => {
+    // Poll Binance REST for all other symbols every 3s
+    const iv = setInterval(async () => {
+      try {
+        const symbols = INSTRUMENTS.filter(i => i.sym !== sym)
+        const prices = await Promise.all(
+          symbols.map(i =>
+            fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${i.ws.toUpperCase()}`)
+              .then(r => r.json())
+              .then(d => ({ sym: i.sym, price: parseFloat(d.price) }))
+              .catch(() => null)
+          )
+        )
+        const updates: Record<string,number> = {}
+        prices.forEach(p => { if (p && !isNaN(p.price)) updates[p.sym] = p.price })
+        setWatchPrices(prev => ({ ...prev, ...updates }))
+      } catch {}
+    }, 3000)
     return () => clearInterval(iv)
-  }, [])
+  }, [sym])
+
+  const [prevWatchPrices, setPrevWatchPrices] = useState<Record<string,number>>({})
+  useEffect(() => {
+    const timer = setTimeout(() => setPrevWatchPrices(watchPrices), 800)
+    return () => clearTimeout(timer)
+  }, [watchPrices])
 
   // Load trades
   useEffect(() => {
@@ -209,8 +184,7 @@ export function PlatformPage() {
       .then(({ data }) => setClosedTrades(data ?? []))
   }, [primary?.id])
 
-  const inst = prices.find(p => p.sym === sym) ?? prices[0]
-  const execPrice = dir === 'buy' ? inst.cur + inst.spread : inst.cur
+  const execPrice = dir === 'buy' ? livePrice + inst.spread : livePrice
 
   async function placeOrder() {
     if (!primary) { toast('error','❌','No Account','No active trading account found.'); return }
@@ -236,8 +210,9 @@ export function PlatformPage() {
   }
 
   async function closeTrade(trade: any) {
-    const ti = prices.find(p => p.sym === trade.symbol) ?? prices[0]
-    const closePrice = trade.direction === 'buy' ? ti.cur : ti.cur + ti.spread
+    const ti = INSTRUMENTS.find(p => p.sym === trade.symbol) ?? inst
+    const cp = watchPrices[trade.symbol] ?? ti.fallback
+    const closePrice = trade.direction === 'buy' ? cp : cp + ti.spread
     const priceDiff = trade.direction === 'buy' ? closePrice - trade.open_price : trade.open_price - closePrice
     const pips = parseFloat((priceDiff / ti.pip).toFixed(1))
     const netPnl = parseFloat((pips * ti.pip * trade.lots * 100000 * 0.1).toFixed(2))
@@ -250,11 +225,8 @@ export function PlatformPage() {
     if (error) { toast('error','❌','Error', error.message); return }
     setOpenTrades(t => t.filter(x => x.id !== trade.id))
     setClosedTrades(t => [{ ...trade, status:'closed', close_price: closePrice, net_pnl: netPnl, pips }, ...t])
-    toast(netPnl >= 0 ? 'success':'warning','🔴','Closed',
-      `${trade.symbol} ${netPnl >= 0 ? '+' : ''}${fmt(netPnl)}`)
+    toast(netPnl >= 0 ? 'success':'warning','🔴','Closed', `${trade.symbol} ${netPnl>=0?'+':''}${fmt(netPnl)}`)
   }
-
-  const inp = "flex-1 px-2 py-[8px] bg-transparent outline-none text-[var(--text)] font-mono text-[12px] placeholder-[rgba(230,226,248,.25)]"
 
   return (
     <>
@@ -267,22 +239,27 @@ export function PlatformPage() {
           <span style={{ fontFamily:'serif', fontSize:11, fontWeight:'bold', lineHeight:1.3 }}>TFD<br/>Terminal</span>
         </div>
         <div style={{ flex:1, overflowY:'auto' }}>
-          {prices.map(p=>(
-            <div key={p.sym} onClick={()=>setSym(p.sym)}
-              style={{
-                padding:'8px 12px', cursor:'pointer', borderBottom:'1px solid rgba(212,168,67,.04)',
-                background: sym===p.sym ? 'rgba(212,168,67,.07)' : 'transparent',
-                borderLeft: sym===p.sym ? '2px solid var(--gold)' : '2px solid transparent',
-              }}>
-              <div style={{ fontWeight:600, fontSize:11, marginBottom:2 }}>{p.sym}</div>
-              <div style={{ fontFamily:'monospace', fontSize:10, color: p.cur>=p.prev ? 'var(--green)' : 'var(--red)' }}>
-                {p.cur.toFixed(p.dec)}
+          {INSTRUMENTS.map(i => {
+            const cur = sym === i.sym ? livePrice : (watchPrices[i.sym] ?? i.fallback)
+            const prv = sym === i.sym ? prevPrice : (prevWatchPrices[i.sym] ?? i.fallback)
+            const up = cur >= prv
+            return (
+              <div key={i.sym} onClick={() => setSym(i.sym)}
+                style={{
+                  padding:'8px 12px', cursor:'pointer', borderBottom:'1px solid rgba(212,168,67,.04)',
+                  background: sym===i.sym ? 'rgba(212,168,67,.07)' : 'transparent',
+                  borderLeft: sym===i.sym ? '2px solid var(--gold)' : '2px solid transparent',
+                }}>
+                <div style={{ fontWeight:600, fontSize:11, marginBottom:2 }}>{i.sym}</div>
+                <div style={{ fontFamily:'monospace', fontSize:10, color: up ? 'var(--green)' : 'var(--red)' }}>
+                  {cur.toFixed(i.dec)}
+                </div>
+                <div style={{ fontSize:8, color: up ? 'var(--green)' : 'var(--red)' }}>
+                  {up?'▲':'▼'} {Math.abs(cur - prv).toFixed(i.dec)}
+                </div>
               </div>
-              <div style={{ fontSize:8, color: p.cur>=p.prev ? 'var(--green)' : 'var(--red)' }}>
-                {p.cur>=p.prev?'▲':'▼'} {Math.abs(p.cur-p.prev).toFixed(p.dec)}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
         <div style={{ padding:'8px 12px', borderTop:'1px solid var(--bdr)' }}>
           {accounts.length > 1 && (
@@ -303,7 +280,7 @@ export function PlatformPage() {
               {primary?.account_number ?? 'No account'}
             </div>
           )}
-          <button onClick={()=>navigate('/dashboard')}
+          <button onClick={() => navigate('/dashboard')}
             style={{ width:'100%', fontSize:9, letterSpacing:1, textTransform:'uppercase', color:'var(--text3)', background:'none', border:'none', cursor:'pointer', textAlign:'center' }}>
             ← Dashboard
           </button>
@@ -315,12 +292,15 @@ export function PlatformPage() {
         {/* Topbar */}
         <div style={{ height:44, background:'var(--bg2)', borderBottom:'1px solid var(--bdr)', display:'flex', alignItems:'center', padding:'0 16px', gap:12, flexShrink:0 }}>
           <span style={{ fontFamily:'serif', fontSize:16, fontWeight:'bold' }}>{sym}</span>
-          <span style={{ fontFamily:'monospace', fontSize:20, fontWeight:500, color: inst.cur>=inst.prev ? 'var(--green)' : 'var(--red)' }}>
-            {inst.cur.toFixed(inst.dec)}
+          <span style={{ fontFamily:'monospace', fontSize:20, fontWeight:500, color: livePrice >= prevPrice ? 'var(--green)' : 'var(--red)' }}>
+            {livePrice.toFixed(inst.dec)}
+          </span>
+          <span style={{ fontSize:10, color: livePrice >= prevPrice ? 'var(--green)' : 'var(--red)' }}>
+            {livePrice >= prevPrice ? '▲' : '▼'} {Math.abs(livePrice - prevPrice).toFixed(inst.dec)}
           </span>
           <div style={{ marginLeft:'auto', display:'flex', gap:2 }}>
-            {TFS.map(t=>(
-              <button key={t} onClick={()=>setTf(t)}
+            {Object.keys(TFS).map(t => (
+              <button key={t} onClick={() => setTf(t)}
                 style={{
                   padding:'3px 7px', fontSize:9, fontFamily:'monospace', fontWeight:'bold', cursor:'pointer',
                   background: tf===t ? 'rgba(212,168,67,.15)' : 'transparent',
@@ -332,21 +312,21 @@ export function PlatformPage() {
             ))}
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--green)', boxShadow:'0 0 5px var(--green)' }}/>
+            <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--green)', boxShadow:'0 0 5px var(--green)', animation:'pulse 2s infinite' }}/>
             <span style={{ fontSize:9, color:'var(--green)', letterSpacing:1.5, textTransform:'uppercase', fontWeight:600 }}>Live</span>
           </div>
         </div>
 
-        {/* Chart — takes all remaining space above bottom panel */}
+        {/* TradingView Chart */}
         <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-          <CandleChart symbol={sym} tf={tf} livePrice={inst.cur}/>
+          <TVChart tvSymbol={inst.tv} tf={tf} />
         </div>
 
         {/* Bottom panel */}
         <div style={{ height:200, background:'var(--bg2)', borderTop:'1px solid var(--bdr)', display:'flex', flexDirection:'column', flexShrink:0 }}>
           <div style={{ display:'flex', borderBottom:'1px solid var(--bdr)' }}>
             {[['positions',`Positions (${openTrades.length})`],['history',`History (${closedTrades.length})`],['account','Account']].map(([k,l])=>(
-              <button key={k} onClick={()=>setTab(k)}
+              <button key={k} onClick={() => setTab(k)}
                 style={{
                   padding:'7px 14px', fontSize:9, letterSpacing:1, textTransform:'uppercase', fontWeight:600,
                   cursor:'pointer', border:'none', borderBottom: tab===k ? '2px solid var(--gold)' : '2px solid transparent',
@@ -364,28 +344,36 @@ export function PlatformPage() {
                 ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'var(--text3)', fontSize:11 }}>No open positions</div>
                 : <table style={{ width:'100%', borderCollapse:'collapse', fontSize:10 }}>
                     <thead><tr style={{ borderBottom:'1px solid var(--dim)' }}>
-                      {['Symbol','Dir','Lots','Open Price','SL','TP','Opened','Close'].map(h=>(
+                      {['Symbol','Dir','Lots','Open Price','Current','P&L','SL','TP','Opened','Close'].map(h=>(
                         <th key={h} style={{ padding:'5px 10px', fontSize:7, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', textAlign:'left', fontWeight:600 }}>{h}</th>
                       ))}
                     </tr></thead>
                     <tbody>
-                      {openTrades.map(t=>(
-                        <tr key={t.id} style={{ borderBottom:'1px solid rgba(212,168,67,.04)' }}>
-                          <td style={{ padding:'6px 10px', fontWeight:600 }}>{t.symbol}</td>
-                          <td style={{ padding:'6px 10px' }}><span style={{ fontSize:8, fontWeight:'bold', color: t.direction==='buy'?'var(--green)':'var(--red)' }}>{t.direction.toUpperCase()}</span></td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.lots}</td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.open_price}</td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace', color:'var(--red)' }}>{t.sl ?? '—'}</td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace', color:'var(--green)' }}>{t.tp ?? '—'}</td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace', fontSize:9, color:'var(--text3)' }}>{new Date(t.opened_at).toLocaleTimeString()}</td>
-                          <td style={{ padding:'6px 10px' }}>
-                            <button onClick={()=>closeTrade(t)}
-                              style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.1)', color:'var(--red)', border:'1px solid rgba(255,51,82,.2)' }}>
-                              ✕ Close
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {openTrades.map(t => {
+                        const ti = INSTRUMENTS.find(p => p.sym === t.symbol) ?? inst
+                        const cur = t.symbol === sym ? livePrice : (watchPrices[t.symbol] ?? ti.fallback)
+                        const diff = t.direction === 'buy' ? cur - t.open_price : t.open_price - cur
+                        const pnl = parseFloat((diff / ti.pip * ti.pip * t.lots * 100000 * 0.1).toFixed(2))
+                        return (
+                          <tr key={t.id} style={{ borderBottom:'1px solid rgba(212,168,67,.04)' }}>
+                            <td style={{ padding:'6px 10px', fontWeight:600 }}>{t.symbol}</td>
+                            <td style={{ padding:'6px 10px' }}><span style={{ fontSize:8, fontWeight:'bold', color: t.direction==='buy'?'var(--green)':'var(--red)' }}>{t.direction.toUpperCase()}</span></td>
+                            <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.lots}</td>
+                            <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.open_price}</td>
+                            <td style={{ padding:'6px 10px', fontFamily:'monospace', color: cur >= t.open_price ? 'var(--green)' : 'var(--red)' }}>{cur.toFixed(ti.dec)}</td>
+                            <td style={{ padding:'6px 10px', fontFamily:'monospace', fontWeight:600, color: pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>{pnl >= 0 ? '+' : ''}{fmt(pnl)}</td>
+                            <td style={{ padding:'6px 10px', fontFamily:'monospace', color:'var(--red)' }}>{t.sl ?? '—'}</td>
+                            <td style={{ padding:'6px 10px', fontFamily:'monospace', color:'var(--green)' }}>{t.tp ?? '—'}</td>
+                            <td style={{ padding:'6px 10px', fontFamily:'monospace', fontSize:9, color:'var(--text3)' }}>{new Date(t.opened_at).toLocaleTimeString()}</td>
+                            <td style={{ padding:'6px 10px' }}>
+                              <button onClick={() => closeTrade(t)}
+                                style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.1)', color:'var(--red)', border:'1px solid rgba(255,51,82,.2)' }}>
+                                ✕ Close
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
             )}
@@ -416,7 +404,12 @@ export function PlatformPage() {
             )}
             {tab==='account' && (
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, padding:16 }}>
-                {[['Balance',fmt(primary?.balance??0)],['Equity',fmt(primary?.equity??0)],['Open',String(openTrades.length)],['Account',primary?.account_number??'—']].map(([l,v])=>(
+                {[['Balance',fmt(primary?.balance??0)],['Equity',fmt(primary?.equity??0)],['Open P&L',fmt(openTrades.reduce((s,t)=>{
+                  const ti = INSTRUMENTS.find(p=>p.sym===t.symbol)??inst
+                  const cur = watchPrices[t.symbol]??ti.fallback
+                  const diff = t.direction==='buy'?cur-t.open_price:t.open_price-cur
+                  return s + parseFloat((diff/ti.pip*ti.pip*t.lots*100000*0.1).toFixed(2))
+                },0))],['Account',primary?.account_number??'—']].map(([l,v])=>(
                   <div key={l}>
                     <div style={{ fontSize:7, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>{l}</div>
                     <div style={{ fontFamily:'monospace', fontSize:13, color:'var(--gold)' }}>{v}</div>
@@ -435,11 +428,11 @@ export function PlatformPage() {
         <div style={{ padding:'12px', borderBottom:'1px solid var(--bdr)' }}>
           <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:8 }}>Order Panel</div>
           <div style={{ display:'flex' }}>
-            <button onClick={()=>setDir('buy')}
+            <button onClick={() => setDir('buy')}
               style={{ flex:1, padding:'8px 0', fontSize:10, letterSpacing:1, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer', border:'none',
                 background: dir==='buy' ? 'var(--green)' : 'rgba(0,217,126,.08)',
                 color: dir==='buy' ? 'var(--bg)' : 'var(--green)' }}>Buy</button>
-            <button onClick={()=>setDir('sell')}
+            <button onClick={() => setDir('sell')}
               style={{ flex:1, padding:'8px 0', fontSize:10, letterSpacing:1, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer', border:'none',
                 background: dir==='sell' ? 'var(--red)' : 'rgba(255,51,82,.08)',
                 color: dir==='sell' ? 'white' : 'var(--red)' }}>Sell</button>
@@ -448,7 +441,7 @@ export function PlatformPage() {
         <div style={{ flex:1, overflowY:'auto', padding:12, display:'flex', flexDirection:'column', gap:10 }}>
           <div style={{ textAlign:'center', padding:'8px', border:'1px solid var(--bdr)', background:'var(--bg3)' }}>
             <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>{dir==='buy'?'Ask':'Bid'}</div>
-            <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:500, color: inst.cur>=inst.prev?'var(--green)':'var(--red)' }}>
+            <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:500, color: livePrice>=prevPrice?'var(--green)':'var(--red)' }}>
               {execPrice.toFixed(inst.dec)}
             </div>
           </div>
@@ -457,7 +450,7 @@ export function PlatformPage() {
             <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>Order Type</div>
             <div style={{ display:'flex', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
               {['Market','Limit','Stop'].map(t=>(
-                <button key={t} onClick={()=>setOrderType(t)}
+                <button key={t} onClick={() => setOrderType(t)}
                   style={{ flex:1, padding:'6px 0', fontSize:8, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer', border:'none',
                     background: orderType===t ? 'rgba(212,168,67,.12)' : 'transparent',
                     color: orderType===t ? 'var(--gold)' : 'var(--text3)' }}>{t}</button>
@@ -468,11 +461,11 @@ export function PlatformPage() {
           <div>
             <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>Lot Size</div>
             <div style={{ display:'flex', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
-              <button onClick={()=>setLots(l=>String(Math.max(0.01,parseFloat(l)-0.01).toFixed(2)))}
+              <button onClick={() => setLots(l => String(Math.max(0.01, parseFloat(l)-0.01).toFixed(2)))}
                 style={{ padding:'0 8px', background:'transparent', border:'none', borderRight:'1px solid var(--dim)', cursor:'pointer', color:'var(--text3)', fontSize:14, fontWeight:'bold' }}>−</button>
-              <input value={lots} onChange={e=>setLots(e.target.value)} type="number" step="0.01" min="0.01"
+              <input value={lots} onChange={e => setLots(e.target.value)} type="number" step="0.01" min="0.01"
                 style={{ flex:1, textAlign:'center', padding:'8px 0', background:'transparent', border:'none', outline:'none', color:'var(--text)', fontFamily:'monospace', fontSize:13 }}/>
-              <button onClick={()=>setLots(l=>String((parseFloat(l)+0.01).toFixed(2)))}
+              <button onClick={() => setLots(l => String((parseFloat(l)+0.01).toFixed(2)))}
                 style={{ padding:'0 8px', background:'transparent', border:'none', borderLeft:'1px solid var(--dim)', cursor:'pointer', color:'var(--text3)', fontSize:14, fontWeight:'bold' }}>+</button>
             </div>
           </div>
@@ -481,7 +474,7 @@ export function PlatformPage() {
             <div key={l}>
               <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>{l}</div>
               <div style={{ display:'flex', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
-                <input value={v} onChange={e=>set(e.target.value)} placeholder="Optional" type="number"
+                <input value={v} onChange={e => set(e.target.value)} placeholder="Optional" type="number"
                   style={{ flex:1, padding:'8px', background:'transparent', border:'none', outline:'none', color:'var(--text)', fontFamily:'monospace', fontSize:12 }}/>
               </div>
             </div>
@@ -491,7 +484,7 @@ export function PlatformPage() {
             <div style={{ fontSize:9, color:'var(--red)', textAlign:'center', border:'1px solid rgba(255,51,82,.2)', padding:8 }}>No active account</div>
           )}
 
-          <button onClick={()=>setConfirmOpen(true)} disabled={placing||!primary}
+          <button onClick={() => setConfirmOpen(true)} disabled={placing||!primary}
             style={{
               width:'100%', padding:'11px 0', fontSize:11, letterSpacing:2, textTransform:'uppercase', fontWeight:'bold',
               cursor: placing||!primary ? 'not-allowed' : 'pointer', border:'none', opacity: placing||!primary ? 0.4 : 1,
@@ -519,7 +512,7 @@ export function PlatformPage() {
             ))}
           </div>
           <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-            <button onClick={()=>setConfirmOpen(false)}
+            <button onClick={() => setConfirmOpen(false)}
               style={{ padding:'8px 18px', background:'transparent', border:'1px solid var(--bdr2)', color:'var(--text2)', fontSize:9, letterSpacing:2, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer' }}>Cancel</button>
             <button onClick={placeOrder}
               style={{ padding:'8px 22px', border:'none', fontSize:9, letterSpacing:2, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer',
