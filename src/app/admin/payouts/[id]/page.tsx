@@ -49,6 +49,8 @@ export function AdminPayoutDetailPage() {
   async function markPaid() {
     if (!payout) return
     setMarking(true)
+
+    // 1. Update payout to paid
     const { error } = await supabase.from('payouts').update({
       status: 'paid',
       paid_at: new Date().toISOString(),
@@ -56,8 +58,18 @@ export function AdminPayoutDetailPage() {
       admin_notes: adminNote || null,
     }).eq('id', payout.id)
     if (error) { toast('error','❌','Error', error.message); setMarking(false); return }
+
+    // 2. If not yet deducted (status was 'approved', deduction already happened)
+    // Just ensure account is active — balance was already deducted on approve
+    if (payout.account_id) {
+      await supabase.from('accounts').update({
+        status: 'active',
+        payout_locked: false,
+      }).eq('id', payout.account_id)
+    }
+
     setPayout((p: any) => ({ ...p, status: 'paid', tx_hash: txHash, admin_notes: adminNote }))
-    toast('success','💰','Paid','Payout marked as paid successfully.')
+    toast('success','💰','Payment Complete','Payout marked as paid.')
     setMarking(false)
   }
 

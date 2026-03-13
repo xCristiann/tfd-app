@@ -115,7 +115,7 @@ export function DashboardPage() {
   const maxLimit   = prod?.ph1_max_dd   ?? 10
   const targetPct  = account?.phase === 'phase2' ? (prod?.ph2_profit_target ?? 5) : (prod?.ph1_profit_target ?? 8)
   const isFunded   = account?.phase === 'funded'
-  const isLocked    = account?.status === 'breached' || account?.status === 'passed' || account?.status === 'suspended'
+  const isLocked    = account?.status === 'breached' || account?.status === 'passed' || (account?.status === 'suspended' && !account?.payout_locked)
   const isWarning   = account?.status === 'soft_locked'
 
   return (
@@ -171,6 +171,17 @@ export function DashboardPage() {
                 + New Challenge
               </button>
             </div>
+
+            {/* Payout pending banner */}
+            {account?.payout_locked && account?.status === 'suspended' && (
+              <div className="flex items-center gap-3 px-5 py-3 border border-[rgba(212,168,67,.3)] bg-[rgba(212,168,67,.06)] text-[var(--gold)]">
+                <span className="text-[16px]">⏳</span>
+                <div>
+                  <div className="font-semibold text-[12px]">Payout Pending — Account Locked</div>
+                  <div className="text-[10px] opacity-80">Your payout request is under review. Trading is suspended until an admin approves or rejects your request.</div>
+                </div>
+              </div>
+            )}
 
             {/* Warning banner — soft locked */}
             {isWarning && (

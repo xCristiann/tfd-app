@@ -68,15 +68,50 @@ export function AdminPayoutsPage() {
   useEffect(() => { load(filter) }, [filter])
 
   async function updateStatus(id: string, status: string, name: string) {
+    // Find the payout to get amount + account_id
+    const payout = payouts.find(p => p.id === id)
+    if (!payout) return
+
+    // 1. Update payout status
     const { error } = await supabase.from('payouts').update({
       status,
       ...(status === 'paid'     ? { paid_at:     new Date().toISOString() } : {}),
       ...(status === 'approved' ? { approved_at: new Date().toISOString() } : {}),
     }).eq('id', id)
     if (error) { toast('error','❌','Error', error.message); return }
-    setPayouts(ps => ps.map(p => p.id === id ? { ...p, status } : p))
+
+    // 2. Update account based on status
+    if (payout.account_id) {
+      if (status === 'approved' || status === 'rejected') {
+        // Deduct amount from balance on both approve AND reject
+        // Reactivate account (was locked when payout submitted)
+        const currentBalance = payout.account?.balance ?? 0
+        const newBalance = Math.max(0, parseFloat((currentBalance - payout.requested_usd).toFixed(2)))
+
+        await supabase.from('accounts').update({
+          balance: newBalance,
+          equity: newBalance,
+          status: 'active',  // reactivate after admin responds
+          payout_locked: false,
+        }).eq('id', payout.account_id)
+
+        // Update local account data
+        setPayouts(ps => ps.map(p => p.id === id ? {
+          ...p, status,
+          account: p.account ? { ...p.account, balance: newBalance, status: 'active' } : p.account
+        } : p))
+      } else {
+        setPayouts(ps => ps.map(p => p.id === id ? { ...p, status } : p))
+      }
+    } else {
+      setPayouts(ps => ps.map(p => p.id === id ? { ...p, status } : p))
+    }
+
     if (selected?.id === id) setSelected((s: any) => ({ ...s, status }))
-    toast('success','✅','Updated', `${name} → ${status}`)
+    const action = status === 'approved' ? '✓ Approved — balance deducted, account reactivated'
+                 : status === 'rejected' ? '✕ Rejected — balance deducted, account reactivated'
+                 : `Updated → ${status}`
+    toast('success','✅', name, action)
   }
 
   const counts = {

@@ -31,76 +31,38 @@ const SEED: Record<string,number> = {
   'NAS100': 19200.0, 'BTC/USD': 83000.0, 'USD/JPY': 148.50, 'ETH/USD': 1900.0,
 }
 
-// ─── TradingView Widget ───────────────────────────────────────────────────────
+// ─── TradingView Real-Time Chart via iframe ───────────────────────────────────
+// Official TradingView embed URL — always real-time, updates every second
 function TVChart({ tvSym, tf }: { tvSym: string; tf: string }) {
-  const divRef = useRef<HTMLDivElement>(null)
-  // key changes force full remount when symbol/tf changes
-  const keyRef = useRef(0)
+  const interval = TFS[tf] ?? '60'
+  const src = [
+    'https://www.tradingview.com/widgetembed/?frameElementId=tv_chart',
+    `symbol=${encodeURIComponent(tvSym)}`,
+    `interval=${interval}`,
+    'theme=dark',
+    'style=1',
+    'locale=en',
+    'timezone=Europe%2FBucharest',
+    'hidesidetoolbar=0',
+    'hidetoptoolbar=0',
+    'withdateranges=1',
+    'saveimage=0',
+    'toolbarbg=0A0A0F',
+    'studies=[]',
+    'showpopupbutton=0',
+  ].join('&')
 
-  useEffect(() => {
-    if (!divRef.current) return
-    divRef.current.innerHTML = ''
-    keyRef.current++
-    const cid = `tv_${keyRef.current}`
-    const el = document.createElement('div')
-    el.id   = cid
-    el.style.cssText = 'width:100%;height:100%'
-    divRef.current.appendChild(el)
-
-    const build = () => {
-      if (!(window as any).TradingView) return
-      new (window as any).TradingView.widget({
-        container_id: cid,
-        symbol:   tvSym,
-        interval: TFS[tf] ?? '60',
-        timezone: 'Europe/Bucharest',
-        theme: 'dark', style: '1', locale: 'en',
-        toolbar_bg: '#0A0A0F',
-        enable_publishing: false,
-        hide_top_toolbar: false,
-        save_image: false,
-        width: '100%', height: '100%',
-        allow_symbol_change: false,
-        withdateranges: true,
-        hide_side_toolbar: false,
-        disabled_features: [
-          'use_localstorage_for_settings',
-          'header_symbol_search',
-          'header_compare',
-          'header_screenshot',
-        ],
-        overrides: {
-          'paneProperties.background': '#0A0A0F',
-          'paneProperties.backgroundType': 'solid',
-          'scalesProperties.textColor': 'rgba(230,226,248,0.45)',
-          'mainSeriesProperties.candleStyle.upColor': '#00D97E',
-          'mainSeriesProperties.candleStyle.downColor': '#FF3352',
-          'mainSeriesProperties.candleStyle.borderUpColor': '#00D97E',
-          'mainSeriesProperties.candleStyle.borderDownColor': '#FF3352',
-          'mainSeriesProperties.candleStyle.wickUpColor': '#00D97E',
-          'mainSeriesProperties.candleStyle.wickDownColor': '#FF3352',
-        },
-      })
-    }
-
-    if ((window as any).TradingView) {
-      build()
-    } else if (!document.getElementById('tv-script')) {
-      const s = document.createElement('script')
-      s.id  = 'tv-script'
-      s.src = 'https://s3.tradingview.com/tv.js'
-      s.async = true
-      s.onload = build
-      document.head.appendChild(s)
-    } else {
-      const t = setInterval(() => {
-        if ((window as any).TradingView) { clearInterval(t); build() }
-      }, 100)
-      return () => clearInterval(t)
-    }
-  }, [tvSym, tf])  // re-runs on every symbol/tf change
-
-  return <div ref={divRef} style={{ width:'100%', height:'100%' }} />
+  return (
+    <iframe
+      key={src}
+      src={src}
+      style={{ width:'100%', height:'100%', border:'none', display:'block' }}
+      allowTransparency={true}
+      scrolling="no"
+      frameBorder="0"
+      allowFullScreen={true}
+    />
+  )
 }
 
 // ─── Price Feed ───────────────────────────────────────────────────────────────
@@ -322,6 +284,11 @@ export function PlatformPage() {
 
   async function placeOrder() {
     if (!primary) { toast('error','❌','No Account','No active account.'); return }
+    // Block trading if payout is pending
+    if (primary.payout_locked || primary.status === 'suspended') {
+      toast('error','⛔','Account Locked','A payout request is pending. Trading is suspended until admin reviews your payout.')
+      return
+    }
     if (reqMargin > freeMargin) {
       toast('error','⛔','Insufficient Margin',`Need $${reqMargin.toFixed(2)}, free: $${freeMargin.toFixed(2)}`)
       return
@@ -468,6 +435,11 @@ export function PlatformPage() {
             <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--green)', boxShadow:'0 0 6px var(--green)' }}/>
             <span style={{ fontSize:9, color:'var(--green)', letterSpacing:1.5, textTransform:'uppercase' as const, fontWeight:600 }}>Live</span>
           </div>
+          {(primary?.payout_locked || primary?.status === 'suspended') && (
+            <div style={{ padding:'4px 10px', background:'rgba(212,168,67,.12)', border:'1px solid var(--bdr2)', fontSize:9, color:'var(--gold)', letterSpacing:1, display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+              ⏳ <span style={{ fontWeight:600, textTransform:'uppercase' as const }}>Payout Pending — Trading Locked</span>
+            </div>
+          )}
         </div>
 
         {/* TradingView Chart — wrapper key forces full remount on symbol/tf change */}

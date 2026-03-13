@@ -67,11 +67,19 @@ export function PayoutsPage() {
       trader_notes: notes || null,
       status: 'pending'
     }).select().single()
+    if (error) { setLoading(false); toast('error','❌','Error', error.message); return }
+
+    // Lock account — no trading until admin responds (approve or reject)
+    await supabase.from('accounts').update({
+      status: 'suspended',
+      payout_locked: true,
+    }).eq('id', selectedAccount.id)
+
     setLoading(false)
-    if (error) { toast('error','❌','Error', error.message); return }
     setPayouts(p => [data, ...p])
     setAmount(''); setWallet(''); setNotes('')
-    toast('success','💰','Payout Requested', `$${amount} submitted. Processing within 24h.`)
+    toast('success','💰','Payout Requested',
+      `$${amount} submitted. Account locked until admin reviews. Processing within 24h.`)
   }
 
   const totalPaid = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + (p.net_usd ?? p.requested_usd), 0)
