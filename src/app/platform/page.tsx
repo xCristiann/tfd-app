@@ -7,18 +7,45 @@ import { DrawdownBar } from '@/components/ui/Card'
 import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/utils'
 
-// Map display symbols to TradingView & Binance WS symbols
+// Map display symbols to TradingView & price feeds
+// type: 'binance' uses WS stream, 'forex' uses polling REST
 const INSTRUMENTS = [
-  { sym:'EUR/USD', tv:'FX:EURUSD',  ws:'ethusdt',    spread:0.00020, dec:5, pip:0.0001,  fallback:1.08742 },
-  { sym:'GBP/USD', tv:'FX:GBPUSD',  ws:'btcusdt',    spread:0.00020, dec:5, pip:0.0001,  fallback:1.26712 },
-  { sym:'XAU/USD', tv:'TVC:GOLD',   ws:'xrpusdt',    spread:0.30,    dec:2, pip:0.10,    fallback:2341.80 },
-  { sym:'NAS100',  tv:'NASDAQ:NDX', ws:'solusdt',     spread:1.0,     dec:1, pip:1.0,     fallback:17842.0 },
-  { sym:'BTC/USD', tv:'BINANCE:BTCUSDT', ws:'btcusdt', spread:10.0,  dec:1, pip:1.0,     fallback:67180.0 },
-  { sym:'USD/JPY', tv:'FX:USDJPY',  ws:'bnbusdt',    spread:0.020,   dec:3, pip:0.01,    fallback:151.420 },
-  { sym:'ETH/USD', tv:'BINANCE:ETHUSDT', ws:'ethusdt', spread:1.0,   dec:2, pip:1.0,     fallback:3180.0  },
+  { sym:'EUR/USD', tv:'FX:EURUSD',       type:'forex',   apiSym:'EUR/USD',  spread:0.00020, dec:5, pip:0.0001, fallback:1.08742 },
+  { sym:'GBP/USD', tv:'FX:GBPUSD',       type:'forex',   apiSym:'GBP/USD',  spread:0.00020, dec:5, pip:0.0001, fallback:1.26712 },
+  { sym:'XAU/USD', tv:'TVC:GOLD',        type:'forex',   apiSym:'XAU/USD',  spread:0.30,    dec:2, pip:0.10,   fallback:2341.80 },
+  { sym:'NAS100',  tv:'NASDAQ:NDX',      type:'forex',   apiSym:'NDX',      spread:1.0,     dec:1, pip:1.0,    fallback:17842.0 },
+  { sym:'BTC/USD', tv:'BINANCE:BTCUSDT', type:'binance', apiSym:'btcusdt',  spread:10.0,    dec:1, pip:1.0,    fallback:67180.0 },
+  { sym:'USD/JPY', tv:'FX:USDJPY',       type:'forex',   apiSym:'USD/JPY',  spread:0.020,   dec:3, pip:0.01,   fallback:151.420 },
+  { sym:'ETH/USD', tv:'BINANCE:ETHUSDT', type:'binance', apiSym:'ethusdt',  spread:1.0,     dec:2, pip:1.0,    fallback:3180.0  },
 ]
 const TFS: Record<string,string> = {
   'M1':'1', 'M5':'5', 'M15':'15', 'M30':'30', 'H1':'60', 'H4':'240', 'D1':'D'
+}
+
+// Fetch live price for a symbol — Binance for crypto, exchangerate.host for forex/commodities
+async function fetchLivePrice(instrument: typeof INSTRUMENTS[0]): Promise<number | null> {
+  try {
+    if (instrument.type === 'binance') {
+      const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${instrument.apiSym.toUpperCase()}`)
+      const d = await r.json()
+      return parseFloat(d.price)
+    } else {
+      // Use frankfurter for forex pairs, fallback to exchangerate
+      if (instrument.apiSym.includes('/') && !instrument.apiSym.includes('XAU') && instrument.apiSym !== 'NDX') {
+        const [base, quote] = instrument.apiSym.split('/')
+        const r = await fetch(`https://api.frankfurter.app/latest?from=${base}&to=${quote}`)
+        const d = await r.json()
+        return d.rates?.[quote] ?? null
+      }
+      // For XAU/USD and indices use exchangerate.host metals endpoint
+      if (instrument.apiSym === 'XAU/USD') {
+        const r = await fetch('https://api.exchangerate.host/latest?base=XAU&symbols=USD&source=ecb')
+        const d = await r.json()
+        return d.rates?.USD ?? null
+      }
+      return null
+    }
+  } catch { return null }
 }
 
 // TradingView Advanced Chart Widget
@@ -85,29 +112,46 @@ function TVChart({ tvSymbol, tf }: { tvSymbol: string; tf: string }) {
   return <div id="tv_chart_container" ref={ref} style={{ width:'100%', height:'100%' }} />
 }
 
-// Live price via Binance WebSocket
-function useLivePrice(wsSymbol: string, fallback: number) {
-  const [price, setPrice] = useState(fallback)
-  const [prev, setPrev] = useState(fallback)
+// Live price hook — Binance WS for crypto, polling for forex
+function useLivePrice(instrument: typeof INSTRUMENTS[0]) {
+  const [price, setPrice] = useState(instrument.fallback)
+  const [prev, setPrev] = useState(instrument.fallback)
   const wsRef = useRef<WebSocket | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    setPrice(fallback)
-    setPrev(fallback)
-    if (wsRef.current) wsRef.current.close()
+    setPrice(instrument.fallback)
+    setPrev(instrument.fallback)
 
-    const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${wsSymbol}@trade`)
-    wsRef.current = ws
-    ws.onmessage = (e) => {
-      const data = JSON.parse(e.data)
-      const p = parseFloat(data.p)
-      if (!isNaN(p)) {
-        setPrice(prev => { setPrev(prev); return p })
+    // Close previous connections
+    if (wsRef.current) { wsRef.current.close(); wsRef.current = null }
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+
+    if (instrument.type === 'binance') {
+      // WebSocket for crypto — real-time tick
+      const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${instrument.apiSym}@trade`)
+      wsRef.current = ws
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data)
+        const p = parseFloat(data.p)
+        if (!isNaN(p)) setPrice(cur => { setPrev(cur); return p })
       }
+      ws.onerror = () => {}
+    } else {
+      // Poll every 3s for forex/commodities
+      const poll = async () => {
+        const p = await fetchLivePrice(instrument)
+        if (p && !isNaN(p)) setPrice(cur => { setPrev(cur); return p })
+      }
+      poll()
+      pollRef.current = setInterval(poll, 3000)
     }
-    ws.onerror = () => {} // silently ignore errors
-    return () => ws.close()
-  }, [wsSymbol, fallback])
+
+    return () => {
+      if (wsRef.current) wsRef.current.close()
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [instrument.sym])
 
   return { price, prev }
 }
@@ -134,7 +178,7 @@ export function PlatformPage() {
 
   // Per-instrument prices via Binance WS — only active symbol connects
   const inst = INSTRUMENTS.find(i => i.sym === sym)!
-  const { price: livePrice, prev: prevPrice } = useLivePrice(inst.ws, inst.fallback)
+  const { price: livePrice, prev: prevPrice } = useLivePrice(inst)
 
   // Watchlist prices — poll REST for non-active instruments
   const [watchPrices, setWatchPrices] = useState<Record<string,number>>(
@@ -147,22 +191,18 @@ export function PlatformPage() {
   }, [livePrice, sym])
 
   useEffect(() => {
-    // Poll Binance REST for all other symbols every 3s
+    // Poll all other symbols every 3s using correct feed per type
     const iv = setInterval(async () => {
-      try {
-        const symbols = INSTRUMENTS.filter(i => i.sym !== sym)
-        const prices = await Promise.all(
-          symbols.map(i =>
-            fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${i.ws.toUpperCase()}`)
-              .then(r => r.json())
-              .then(d => ({ sym: i.sym, price: parseFloat(d.price) }))
-              .catch(() => null)
-          )
-        )
-        const updates: Record<string,number> = {}
-        prices.forEach(p => { if (p && !isNaN(p.price)) updates[p.sym] = p.price })
-        setWatchPrices(prev => ({ ...prev, ...updates }))
-      } catch {}
+      const others = INSTRUMENTS.filter(i => i.sym !== sym)
+      const results = await Promise.all(
+        others.map(async i => {
+          const p = await fetchLivePrice(i)
+          return p && !isNaN(p) ? { sym: i.sym, price: p } : null
+        })
+      )
+      const updates: Record<string,number> = {}
+      results.forEach(r => { if (r) updates[r.sym] = r.price })
+      setWatchPrices(prev => ({ ...prev, ...updates }))
     }, 3000)
     return () => clearInterval(iv)
   }, [sym])
