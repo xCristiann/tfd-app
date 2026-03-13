@@ -109,9 +109,29 @@ export function AdminRiskPage() {
                             <div className="text-[10px] text-[var(--text3)]">Balance: ${Number(a.balance ?? 0).toLocaleString()}</div>
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={()=>toast('error','🚨','Alert','Breach notification sent to trader.')}
+                            <button onClick={async ()=>{
+                                await supabase.from('notifications').insert({
+                                  user_id: a.user_id,
+                                  type: 'breach_warning',
+                                  title: '⚠️ Drawdown Warning',
+                                  body: `Account ${a.account_number} is approaching drawdown limits. Daily DD: ${a.daily_dd_used}% / Max DD: ${a.max_dd_used}%. Reduce exposure immediately.`,
+                                  is_read: false
+                                })
+                                toast('error','🚨','Alert Sent','Breach warning sent to trader.')
+                              }}
                               className="px-[10px] py-[4px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,51,82,.15)] text-[var(--red)] border border-[rgba(255,51,82,.25)]">Notify</button>
-                            <button onClick={()=>toast('warning','⛔','Suspended','Account suspended.')}
+                            <button onClick={async ()=>{
+                                if (!window.confirm(`Suspend account ${a.account_number}? Trader will not be able to trade.`)) return
+                                await supabase.from('accounts').update({ status: 'suspended' }).eq('id', a.id)
+                                await supabase.from('notifications').insert({
+                                  user_id: a.user_id,
+                                  type: 'suspended',
+                                  title: 'Account Suspended',
+                                  body: `Account ${a.account_number} has been suspended by risk management. Contact support for details.`,
+                                  is_read: false
+                                })
+                                toast('warning','⛔','Suspended',`${a.account_number} suspended.`)
+                              }}
                               className="px-[10px] py-[4px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,140,66,.1)] text-[var(--gold)] border border-[rgba(255,140,66,.25)]">Suspend</button>
                           </div>
                         </div>
