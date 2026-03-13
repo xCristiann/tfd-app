@@ -351,6 +351,7 @@ function useRiskMonitor(
   tradesRef:   {current:any[]},
   pricesRef:   {current:Record<string,number>},
   primaryRef:  {current:any},
+  accountId:   string|null|undefined,
   onBreach:    (reason:string, trades:any[])=>void
 ){
   const firedRef   = useRef(false)
@@ -365,67 +366,96 @@ function useRiskMonitor(
       if(!primary||!trades.length||firedRef.current) return
       if(primary.status==='breached'||primary.status==='passed') return
 
-      const balance   =primary.balance??0
-      const startBal  =primary.starting_balance??balance
-      if(balance<=0||startBal<=0) return
+      const balance   = primary.balance ?? 0
+      // starting_balance = the original account size (e.g. $100,000)
+      // This is the BASE for max DD calculation — never changes
+      const startBal  = primary.starting_balance ?? balance
+      if(balance <= 0 || startBal <= 0) return
 
-      // Get DD limits from challenge_products
-      const cp   =(primary as any).challenge_products
-      const phase=primary.phase??'phase1'
-      const maxDDPct   = phase==='funded'?cp?.funded_max_dd??10  : phase==='phase2'?cp?.ph2_max_dd??10  : cp?.ph1_max_dd??10
-      const dailyDDPct = phase==='funded'?cp?.funded_daily_dd??5 : phase==='phase2'?cp?.ph2_daily_dd??5 : cp?.ph1_daily_dd??5
+      // DD limits from challenge_products
+      const cp    = (primary as any).challenge_products
+      const phase = primary.phase ?? 'phase1'
+      const maxDDPct   = phase==='funded' ? (cp?.funded_max_dd   ?? 10)
+                       : phase==='phase2' ? (cp?.ph2_max_dd      ?? 10)
+                       :                    (cp?.ph1_max_dd      ?? 10)
+      const dailyDDPct = phase==='funded' ? (cp?.funded_daily_dd ?? 5)
+                       : phase==='phase2' ? (cp?.ph2_daily_dd    ?? 5)
+                       :                    (cp?.ph1_daily_dd    ?? 5)
 
-      const maxDDFloor  = startBal*(1-maxDDPct/100)    // equity must stay above this
-      const dailyHigh   = primary.daily_high_balance??balance
-      const dailyFloor  = dailyHigh*(1-dailyDDPct/100) // equity must stay above this today
+      // Max DD floor: equity must stay above (startBal - maxDD amount)
+      // e.g. $100k account with 10% max DD → floor = $90,000
+      const maxDDAmount = startBal * (maxDDPct / 100)
+      const maxDDFloor  = startBal - maxDDAmount
 
-      // Compute current equity
-      const floatPnl=trades.reduce((s,t)=>{
-        const cur=prices[t.symbol]||SEED[t.symbol]||t.open_price
-        return s+calcPnl(t,cur)
-      },0)
-      const equity=balance+floatPnl
+      // Daily DD floor: equity must stay above (daily_high_balance - dailyDD amount)
+      // e.g. daily high $100k, 5% daily DD → daily floor = $95,000
+      const dailyHigh   = primary.daily_high_balance ?? startBal
+      const dailyDDAmount = dailyHigh * (dailyDDPct / 100)
+      const dailyFloor    = dailyHigh - dailyDDAmount
 
-      // Check 1: absolute max drawdown (equity below floor from starting balance)
-      if(equity<=maxDDFloor){
-        firedRef.current=true
+      // Current equity = current balance + all open trade floating P&L
+      const floatPnl = trades.reduce((s: number, t: any) => {
+        const cur = prices[t.symbol] || SEED[t.symbol] || t.open_price
+        return s + calcPnl(t, cur)
+      }, 0)
+      const equity = balance + floatPnl
+
+      // Debug log every 5s (remove in production)
+      if(Math.floor(Date.now()/1000) % 5 === 0){
+        console.log('[RiskMonitor]', {
+          balance, startBal, equity: equity.toFixed(2),
+          floatPnl: floatPnl.toFixed(2),
+          maxDDFloor: maxDDFloor.toFixed(2),
+          dailyFloor: dailyFloor.toFixed(2),
+          dailyHigh, maxDDPct, dailyDDPct,
+          tradesCount: trades.length,
+          status: primary.status,
+        })
+      }
+
+      // ── Check 1: Max drawdown ───────────────────────────────────────────
+      // equity dropped more than maxDDPct% from starting balance
+      if(equity <= maxDDFloor){
+        firedRef.current = true
         callbackRef.current(
-          `Max drawdown breached — equity $${equity.toFixed(2)} below floor $${maxDDFloor.toFixed(2)} (${maxDDPct}% max DD)`,
+          `Max drawdown breached — equity $${equity.toFixed(2)} ≤ floor $${maxDDFloor.toFixed(2)} (${maxDDPct}% of $${startBal.toFixed(0)})`,
           trades
         )
         return
       }
 
-      // Check 2: daily drawdown (equity below daily floor)
-      if(equity<dailyFloor){
-        firedRef.current=true
+      // ── Check 2: Daily drawdown ─────────────────────────────────────────
+      // equity dropped more than dailyDDPct% from today's high
+      if(equity <= dailyFloor){
+        firedRef.current = true
         callbackRef.current(
-          `Daily drawdown breached — equity $${equity.toFixed(2)} below daily floor $${dailyFloor.toFixed(2)} (${dailyDDPct}% daily DD)`,
+          `Daily drawdown breached — equity $${equity.toFixed(2)} ≤ daily floor $${dailyFloor.toFixed(2)} (${dailyDDPct}% of daily high $${dailyHigh.toFixed(0)})`,
           trades
         )
         return
       }
 
-      // Check 3: single trade -5% of balance
+      // ── Check 3: Single trade -5% of STARTING balance ──────────────────
+      // Any single open trade losing ≥5% of starting balance → breach
       for(const t of trades){
-        const cur   =prices[t.symbol]||SEED[t.symbol]||t.open_price
-        const pnl   =calcPnl(t,cur)
-        const pct   =(pnl/balance)*100
-        if(pct<=-5){
-          firedRef.current=true
+        const cur = prices[t.symbol] || SEED[t.symbol] || t.open_price
+        const pnl = calcPnl(t, cur)
+        const pct = (pnl / startBal) * 100   // % of starting balance, not current
+        if(pct <= -5){
+          firedRef.current = true
           callbackRef.current(
-            `Single trade ${t.symbol} hit ${pct.toFixed(2)}% loss (max -5% per trade)`,
+            `Single trade ${t.symbol} loss ${pct.toFixed(2)}% of account (limit -5% of $${startBal.toFixed(0)})`,
             trades
           )
           return
         }
       }
-    },500)
-    return ()=>clearInterval(iv)
-  },[])  // empty deps — interval runs forever, reads from refs
+    }, 500)
+    return () => clearInterval(iv)
+  }, [])  // empty deps — interval reads everything from refs
 
-  // Reset when account changes
-  useEffect(()=>{firedRef.current=false},[primaryRef.current?.id])
+  // Reset fired flag when switching accounts
+  useEffect(() => { firedRef.current = false }, [accountId])
 }
 
 /* ─── Platform Page ──────────────────────────────────────────────────────── */
@@ -524,7 +554,7 @@ export function PlatformPage(){
     setClosedTrades(p=>[...closed,...p])
   },[primary,refPrices,balance])
 
-  useRiskMonitor(tradesRef,refPrices,primaryRef,handleBreach)
+  useRiskMonitor(tradesRef,refPrices,primaryRef,primary?.id,handleBreach)
 
   async function placeOrder(){
     if(!primary)                                                          {toast('error','❌','No Account','No active account');return}
