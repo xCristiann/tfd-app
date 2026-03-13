@@ -76,6 +76,7 @@ export interface Account {
   purchased_at: string
   created_at: string
   updated_at: string
+  status: 'active' | 'passed' | 'breached' | 'suspended' | 'soft_locked' | 'inactive' | null
   // joined
   challenge_products?: ChallengeProduct
   users?: Pick<User, 'first_name' | 'last_name' | 'email' | 'country'>
