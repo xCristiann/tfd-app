@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/useToast'
 import { useAccount } from '@/hooks/useAccount'
@@ -9,24 +9,28 @@ import { fmt } from '@/lib/utils'
 
 // ─── Instruments ───────────────────────────────────────────────────────────
 // binanceWs: Binance WebSocket stream name (crypto only)
-// finnhubSym: Finnhub symbol for forex/gold/indices (free, no key needed for WS)
-// oandaSym: OANDA REST symbol as fallback
+// finnhub: Finnhub symbol for forex/gold/indices
 const INSTRUMENTS = [
-  { sym:'EUR/USD', tv:'FX:EURUSD',       binanceWs:null,      finnhub:'OANDA:EUR_USD', spread:0.00020, dec:5, pip:0.0001, fallback:1.08742 },
-  { sym:'GBP/USD', tv:'FX:GBPUSD',       binanceWs:null,      finnhub:'OANDA:GBP_USD', spread:0.00020, dec:5, pip:0.0001, fallback:1.26712 },
-  { sym:'XAU/USD', tv:'TVC:GOLD',        binanceWs:null,      finnhub:'OANDA:XAU_USD', spread:0.30,    dec:2, pip:0.10,   fallback:2650.00 },
-  { sym:'NAS100',  tv:'NASDAQ:NDX',      binanceWs:null,      finnhub:'OANDA:NAS100_USD', spread:1.0,  dec:1, pip:1.0,    fallback:19200.0 },
-  { sym:'BTC/USD', tv:'BINANCE:BTCUSDT', binanceWs:'btcusdt', finnhub:null,             spread:10.0,   dec:1, pip:1.0,    fallback:84000.0 },
-  { sym:'USD/JPY', tv:'FX:USDJPY',       binanceWs:null,      finnhub:'OANDA:USD_JPY',  spread:0.020,  dec:3, pip:0.01,   fallback:149.500 },
-  { sym:'ETH/USD', tv:'BINANCE:ETHUSDT', binanceWs:'ethusdt', finnhub:null,             spread:1.0,    dec:2, pip:1.0,    fallback:1900.0  },
-]
-const TFS: Record<string,string> = {
-  'M1':'1', 'M5':'5', 'M15':'15', 'M30':'30', 'H1':'60', 'H4':'240', 'D1':'D'
+  { sym: 'EUR/USD', tv: 'FX:EURUSD',       binanceWs: null,      finnhub: 'OANDA:EUR_USD',   spread: 0.00020, dec: 5, pip: 0.0001, fallback: 1.08742 },
+  { sym: 'GBP/USD', tv: 'FX:GBPUSD',       binanceWs: null,      finnhub: 'OANDA:GBP_USD',   spread: 0.00020, dec: 5, pip: 0.0001, fallback: 1.26712 },
+  { sym: 'XAU/USD', tv: 'TVC:GOLD',        binanceWs: null,      finnhub: 'OANDA:XAU_USD',   spread: 0.30,    dec: 2, pip: 0.10,   fallback: 2650.00 },
+  { sym: 'NAS100',  tv: 'NASDAQ:NDX',      binanceWs: null,      finnhub: 'OANDA:NAS100_USD',spread: 1.0,     dec: 1, pip: 1.0,    fallback: 19200.0 },
+  { sym: 'BTC/USD', tv: 'BINANCE:BTCUSDT', binanceWs: 'btcusdt', finnhub: null,               spread: 10.0,    dec: 1, pip: 1.0,    fallback: 84000.0 },
+  { sym: 'USD/JPY', tv: 'FX:USDJPY',       binanceWs: null,      finnhub: 'OANDA:USD_JPY',   spread: 0.020,   dec: 3, pip: 0.01,   fallback: 149.500 },
+  { sym: 'ETH/USD', tv: 'BINANCE:ETHUSDT', binanceWs: 'ethusdt', finnhub: null,               spread: 1.0,     dec: 2, pip: 1.0,    fallback: 1900.0 },
+] as const
+
+const TFS: Record<string, string> = {
+  M1: '1',
+  M5: '5',
+  M15: '15',
+  M30: '30',
+  H1: '60',
+  H4: '240',
+  D1: 'D',
 }
 
-// ─── Finnhub WebSocket (free, no API key for forex/gold/indices) ─────────────
-// Uses public Finnhub WS — 60 symbols/connection, real-time forex
-const FINNHUB_API_KEY = 'd0lbgopr01ql4s0b4cu0d0lbgopr01ql4s0b4cug' // free public demo key
+const FINNHUB_API_KEY = 'd0lbgopr01ql4s0b4cu0d0lbgopr01ql4s0b4cug'
 
 class FinnhubPriceFeed {
   private ws: WebSocket | null = null
@@ -35,12 +39,15 @@ class FinnhubPriceFeed {
 
   connect() {
     if (this.ws?.readyState === WebSocket.OPEN) return
+
     this.ws = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_API_KEY}`)
+
     this.ws.onopen = () => {
       this.subscribers.forEach((_, sym) => {
         this.ws?.send(JSON.stringify({ type: 'subscribe', symbol: sym }))
       })
     }
+
     this.ws.onmessage = (e) => {
       const msg = JSON.parse(e.data)
       if (msg.type === 'trade' && msg.data) {
@@ -50,10 +57,14 @@ class FinnhubPriceFeed {
         })
       }
     }
+
     this.ws.onclose = () => {
       this.reconnectTimer = setTimeout(() => this.connect(), 3000)
     }
-    this.ws.onerror = () => this.ws?.close()
+
+    this.ws.onerror = () => {
+      this.ws?.close()
+    }
   }
 
   subscribe(symbol: string, cb: (price: number) => void) {
@@ -80,7 +91,6 @@ class FinnhubPriceFeed {
 
 const finnhubFeed = new FinnhubPriceFeed()
 
-// TradingView Advanced Chart Widget
 function TVChart({ tvSymbol, tf }: { tvSymbol: string; tf: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<any>(null)
@@ -94,6 +104,7 @@ function TVChart({ tvSymbol, tf }: { tvSymbol: string; tf: string }) {
     script.async = true
     script.onload = () => {
       if (!(window as any).TradingView) return
+
       widgetRef.current = new (window as any).TradingView.widget({
         container_id: 'tv_chart_container',
         symbol: tvSymbol,
@@ -134,6 +145,7 @@ function TVChart({ tvSymbol, tf }: { tvSymbol: string; tf: string }) {
         },
       })
     }
+
     document.head.appendChild(script)
 
     return () => {
@@ -141,83 +153,60 @@ function TVChart({ tvSymbol, tf }: { tvSymbol: string; tf: string }) {
     }
   }, [tvSymbol, tf])
 
-  return <div id="tv_chart_container" ref={ref} style={{ width:'100%', height:'100%' }} />
+  return <div id="tv_chart_container" ref={ref} style={{ width: '100%', height: '100%' }} />
 }
 
-// Live price hook — Binance WS for crypto, Finnhub WS for forex/gold/indices
-function useLivePrice(instrument: typeof INSTRUMENTS[0]) {
-  const [price, setPrice] = useState(instrument.fallback)
-  const [prev, setPrev] = useState(instrument.fallback)
-  const binanceWsRef = useRef<WebSocket | null>(null)
-
-  useEffect(() => {
-    setPrice(instrument.fallback)
-    setPrev(instrument.fallback)
-
-    if (instrument.binanceWs) {
-      // Binance WebSocket for crypto
-      if (binanceWsRef.current) binanceWsRef.current.close()
-      const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${instrument.binanceWs}@trade`)
-      binanceWsRef.current = ws
-      ws.onmessage = (e) => {
-        const d = JSON.parse(e.data)
-        const p = parseFloat(d.p)
-        if (!isNaN(p)) setPrice(cur => { setPrev(cur); return p })
-      }
-      ws.onerror = () => {}
-      return () => ws.close()
-    } else if (instrument.finnhub) {
-      // Finnhub WebSocket for forex/gold/indices
-      finnhubFeed.subscribe(instrument.finnhub, (p) => {
-        setPrice(cur => { setPrev(cur); return p })
-      })
-      return () => { if (instrument.finnhub) finnhubFeed.unsubscribe(instrument.finnhub) }
-    }
-  }, [instrument.sym])
-
-  return { price, prev }
-}
-
-// All-instruments price feed for watchlist
 function useAllPrices() {
   const [prices, setPrices] = useState<Record<string, number>>(
-    Object.fromEntries(INSTRUMENTS.map(i => [i.sym, i.fallback]))
+    Object.fromEntries(INSTRUMENTS.map((i) => [i.sym, i.fallback])),
   )
   const [prevPrices, setPrevPrices] = useState<Record<string, number>>(
-    Object.fromEntries(INSTRUMENTS.map(i => [i.sym, i.fallback]))
+    Object.fromEntries(INSTRUMENTS.map((i) => [i.sym, i.fallback])),
   )
 
   useEffect(() => {
-    // Binance WS for crypto instruments
-    const binanceInsts = INSTRUMENTS.filter(i => i.binanceWs)
-    const binanceSyms = binanceInsts.map(i => `${i.binanceWs}@trade`).join('/')
-    const bws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${binanceSyms}`)
-    bws.onmessage = (e) => {
-      const msg = JSON.parse(e.data)
-      const d = msg.data
-      if (!d?.p) return
-      const p = parseFloat(d.p)
-      const inst = binanceInsts.find(i => i.binanceWs && d.s === i.binanceWs.toUpperCase())
-      if (inst && !isNaN(p)) {
-        setPrevPrices(prev => ({ ...prev, [inst.sym]: prices[inst.sym] ?? inst.fallback }))
-        setPrices(prev => ({ ...prev, [inst.sym]: p }))
-      }
-    }
-    bws.onerror = () => {}
+    const binanceInsts = INSTRUMENTS.filter((i) => i.binanceWs)
+    const binanceSyms = binanceInsts.map((i) => `${i.binanceWs}@trade`).join('/')
+    const bws = binanceSyms
+      ? new WebSocket(`wss://stream.binance.com:9443/stream?streams=${binanceSyms}`)
+      : null
 
-    // Finnhub WS for forex/gold/indices
-    const finnhubInsts = INSTRUMENTS.filter(i => i.finnhub)
-    finnhubInsts.forEach(inst => {
+    if (bws) {
+      bws.onmessage = (e) => {
+        const msg = JSON.parse(e.data)
+        const d = msg.data
+        if (!d?.p) return
+
+        const p = parseFloat(d.p)
+        const inst = binanceInsts.find((i) => i.binanceWs && d.s === i.binanceWs.toUpperCase())
+        if (inst && !Number.isNaN(p)) {
+          setPrices((prev) => {
+            const old = prev[inst.sym] ?? inst.fallback
+            setPrevPrices((prevPrev) => ({ ...prevPrev, [inst.sym]: old }))
+            return { ...prev, [inst.sym]: p }
+          })
+        }
+      }
+      bws.onerror = () => {}
+    }
+
+    const finnhubInsts = INSTRUMENTS.filter((i) => i.finnhub)
+    finnhubInsts.forEach((inst) => {
       if (!inst.finnhub) return
       finnhubFeed.subscribe(inst.finnhub, (p) => {
-        setPrevPrices(prev => ({ ...prev, [inst.sym]: prev[inst.sym] ?? inst.fallback }))
-        setPrices(prev => ({ ...prev, [inst.sym]: p }))
+        setPrices((prev) => {
+          const old = prev[inst.sym] ?? inst.fallback
+          setPrevPrices((prevPrev) => ({ ...prevPrev, [inst.sym]: old }))
+          return { ...prev, [inst.sym]: p }
+        })
       })
     })
 
     return () => {
-      bws.close()
-      finnhubInsts.forEach(i => { if (i.finnhub) finnhubFeed.unsubscribe(i.finnhub) })
+      bws?.close()
+      finnhubInsts.forEach((i) => {
+        if (i.finnhub) finnhubFeed.unsubscribe(i.finnhub)
+      })
     }
   }, [])
 
@@ -228,14 +217,14 @@ export function PlatformPage() {
   const navigate = useNavigate()
   const { toasts, toast, dismiss } = useToast()
   const { accounts, primary: defaultPrimary } = useAccount()
-  const [selectedAccountId, setSelectedAccountId] = useState<string|null>(null)
-  const primary = accounts.find(a => a.id === selectedAccountId) ?? defaultPrimary
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
+  const primary = accounts.find((a) => a.id === selectedAccountId) ?? defaultPrimary
 
-  const LEVERAGE = 50 // 1:50 default leverage
+  const LEVERAGE = 50
 
   const [sym, setSym] = useState('BTC/USD')
   const [tf, setTf] = useState('H1')
-  const [dir, setDir] = useState<'buy'|'sell'>('buy')
+  const [dir, setDir] = useState<'buy' | 'sell'>('buy')
   const [lots, setLots] = useState('0.10')
   const [sl, setSl] = useState('')
   const [tp, setTp] = useState('')
@@ -246,254 +235,326 @@ export function PlatformPage() {
   const [openTrades, setOpenTrades] = useState<any[]>([])
   const [closedTrades, setClosedTrades] = useState<any[]>([])
 
-  // All live prices from Finnhub + Binance
   const { prices: allPrices, prevPrices: allPrevPrices } = useAllPrices()
-  const inst = INSTRUMENTS.find(i => i.sym === sym)!
+  const inst = INSTRUMENTS.find((i) => i.sym === sym)!
   const livePrice = allPrices[sym] ?? inst.fallback
   const prevPrice = allPrevPrices[sym] ?? inst.fallback
 
-  // Live equity = balance + sum of open P&L
   const calcPnl = (trade: any) => {
-    const ti = INSTRUMENTS.find(p => p.sym === trade.symbol) ?? inst
+    const ti = INSTRUMENTS.find((p) => p.sym === trade.symbol) ?? inst
     const cur = allPrices[trade.symbol] ?? ti.fallback
     const diff = trade.direction === 'buy' ? cur - trade.open_price : trade.open_price - cur
-    const lotSize = 100000 // standard lot
-    return parseFloat((diff * lotSize * trade.lots).toFixed(2))
+    return parseFloat((diff * 100000 * trade.lots).toFixed(2))
   }
+
   const openPnl = openTrades.reduce((s, t) => s + calcPnl(t), 0)
   const balance = primary?.balance ?? 0
   const equity = balance + openPnl
 
-  // Margin calculations
   const usedMargin = openTrades.reduce((s, t) => {
-    const ti = INSTRUMENTS.find(p => p.sym === t.symbol) ?? inst
+    const ti = INSTRUMENTS.find((p) => p.sym === t.symbol) ?? inst
     const price = allPrices[t.symbol] ?? ti.fallback
     return s + (price * t.lots * 100000) / LEVERAGE
   }, 0)
+
   const freeMargin = equity - usedMargin
   const marginLevel = usedMargin > 0 ? (equity / usedMargin) * 100 : 0
 
-  // Margin for current order
   const execPrice = dir === 'buy' ? livePrice + inst.spread : livePrice
   const lotsNum = parseFloat(lots) || 0.01
   const requiredMargin = (execPrice * lotsNum * 100000) / LEVERAGE
-  const maxLots = Math.floor((freeMargin * LEVERAGE) / (execPrice * 100000) * 100) / 100
+  const maxLots = Math.floor(((freeMargin * LEVERAGE) / (execPrice * 100000)) * 100) / 100
 
-  // Load trades
   useEffect(() => {
     if (!primary) return
-    supabase.from('trades').select('*').eq('account_id', primary.id).eq('status','open')
+
+    supabase
+      .from('trades')
+      .select('*')
+      .eq('account_id', primary.id)
+      .eq('status', 'open')
       .order('opened_at', { ascending: false })
       .then(({ data }) => setOpenTrades(data ?? []))
-    supabase.from('trades').select('*').eq('account_id', primary.id).eq('status','closed')
-      .order('closed_at', { ascending: false }).limit(50)
+
+    supabase
+      .from('trades')
+      .select('*')
+      .eq('account_id', primary.id)
+      .eq('status', 'closed')
+      .order('closed_at', { ascending: false })
+      .limit(50)
       .then(({ data }) => setClosedTrades(data ?? []))
   }, [primary?.id])
 
   async function placeOrder() {
-    if (!primary) { toast('error','❌','No Account','No active trading account found.'); return }
-    // Margin check
-    if (requiredMargin > freeMargin) {
-      toast('error','⛔','Insufficient Margin',
-        `Need $${requiredMargin.toFixed(2)} margin. Free: $${freeMargin.toFixed(2)}. Max lots: ${maxLots}`)
+    if (!primary) {
+      toast('error', '❌', 'No Account', 'No active trading account found.')
       return
     }
+
+    if (requiredMargin > freeMargin) {
+      toast(
+        'error',
+        '⛔',
+        'Insufficient Margin',
+        `Need $${requiredMargin.toFixed(2)} margin. Free: $${freeMargin.toFixed(2)}. Max lots: ${maxLots}`,
+      )
+      return
+    }
+
     if (lotsNum > maxLots && maxLots > 0) {
-      toast('warning','⚠️','Reducing Lots',`Max lots with current margin: ${maxLots}`)
+      toast('warning', '⚠️', 'Reducing Lots', `Max lots with current margin: ${maxLots}`)
       setLots(String(maxLots))
       return
     }
-    setPlacing(true); setConfirmOpen(false)
-    const { data, error } = await supabase.from('trades').insert({
-      account_id: primary.id,
-      user_id: primary.user_id,
-      symbol: sym,
-      direction: dir,
-      lots: lotsNum,
-      order_type: orderType.toLowerCase(),
-      open_price: parseFloat(execPrice.toFixed(inst.dec)),
-      sl: sl ? parseFloat(sl) : null,
-      tp: tp ? parseFloat(tp) : null,
-      status: 'open',
-      opened_at: new Date().toISOString(),
-    }).select().single()
+
+    setPlacing(true)
+    setConfirmOpen(false)
+
+    const { data, error } = await supabase
+      .from('trades')
+      .insert({
+        account_id: primary.id,
+        user_id: primary.user_id,
+        symbol: sym,
+        direction: dir,
+        lots: lotsNum,
+        order_type: orderType.toLowerCase(),
+        open_price: parseFloat(execPrice.toFixed(inst.dec)),
+        sl: sl ? parseFloat(sl) : null,
+        tp: tp ? parseFloat(tp) : null,
+        status: 'open',
+        opened_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
     setPlacing(false)
-    if (error) { toast('error','❌','Error', error.message); return }
-    setOpenTrades(t => [data, ...t])
-    toast('success','⚡','Order Placed', `${dir.toUpperCase()} ${lots} ${sym} @ ${execPrice.toFixed(inst.dec)}`)
-    setSl(''); setTp('')
+
+    if (error) {
+      toast('error', '❌', 'Error', error.message)
+      return
+    }
+
+    setOpenTrades((t) => [data, ...t])
+    toast('success', '⚡', 'Order Placed', `${dir.toUpperCase()} ${lots} ${sym} @ ${execPrice.toFixed(inst.dec)}`)
+    setSl('')
+    setTp('')
   }
 
   async function closeTrade(trade: any) {
-    const ti = INSTRUMENTS.find(p => p.sym === trade.symbol) ?? inst
+    const ti = INSTRUMENTS.find((p) => p.sym === trade.symbol) ?? inst
     const cp = allPrices[trade.symbol] ?? ti.fallback
     const closePrice = parseFloat((trade.direction === 'buy' ? cp : cp + ti.spread).toFixed(ti.dec))
     const priceDiff = trade.direction === 'buy' ? closePrice - trade.open_price : trade.open_price - closePrice
     const pips = parseFloat((priceDiff / ti.pip).toFixed(1))
     const netPnl = parseFloat((priceDiff * 100000 * trade.lots).toFixed(2))
 
-    // Update trade as closed
-    const { error } = await supabase.from('trades').update({
-      status: 'closed',
-      close_price: closePrice,
-      closed_at: new Date().toISOString(),
-      pips, net_pnl: netPnl, gross_pnl: netPnl,
-    }).eq('id', trade.id)
-    if (error) { toast('error','❌','Error', error.message); return }
+    const { error } = await supabase
+      .from('trades')
+      .update({
+        status: 'closed',
+        close_price: closePrice,
+        closed_at: new Date().toISOString(),
+        pips,
+        net_pnl: netPnl,
+        gross_pnl: netPnl,
+      })
+      .eq('id', trade.id)
 
-    // Update account balance = old balance + pnl
+    if (error) {
+      toast('error', '❌', 'Error', error.message)
+      return
+    }
+
     const newBalance = parseFloat((balance + netPnl).toFixed(2))
-    await supabase.from('accounts').update({
-      balance: newBalance,
-      equity: newBalance,
-    }).eq('id', primary!.id)
+    await supabase
+      .from('accounts')
+      .update({
+        balance: newBalance,
+        equity: newBalance,
+      })
+      .eq('id', primary!.id)
 
-    setOpenTrades(t => t.filter(x => x.id !== trade.id))
-    setClosedTrades(t => [{ ...trade, status:'closed', close_price: closePrice, net_pnl: netPnl, pips }, ...t])
-    toast(netPnl >= 0 ? 'success':'warning', netPnl >= 0 ? '💰':'🔴', 'Trade Closed',
-      `${trade.symbol} ${netPnl>=0?'+':''}${fmt(netPnl)}`)
+    setOpenTrades((t) => t.filter((x) => x.id !== trade.id))
+    setClosedTrades((t) => [{ ...trade, status: 'closed', close_price: closePrice, net_pnl: netPnl, pips }, ...t])
+    toast(
+      netPnl >= 0 ? 'success' : 'warning',
+      netPnl >= 0 ? '💰' : '🔴',
+      'Trade Closed',
+      `${trade.symbol} ${netPnl >= 0 ? '+' : ''}${fmt(netPnl)}`,
+    )
   }
 
   return (
     <>
-    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'var(--bg)', fontFamily:'var(--font-sans,sans-serif)' }}>
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)', fontFamily: 'var(--font-sans,sans-serif)' }}>
+        <div style={{ width: 158, flexShrink: 0, background: 'var(--bg2)', borderRight: '1px solid var(--bdr)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--bdr)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 20, height: 20, border: '1px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'var(--gold)' }}>✦</div>
+            <span style={{ fontFamily: 'serif', fontSize: 11, fontWeight: 'bold', lineHeight: 1.3 }}>TFD<br />Terminal</span>
+          </div>
 
-      {/* Watchlist */}
-      <div style={{ width:158, flexShrink:0, background:'var(--bg2)', borderRight:'1px solid var(--bdr)', display:'flex', flexDirection:'column' }}>
-        <div style={{ padding:'10px 12px', borderBottom:'1px solid var(--bdr)', display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:20, height:20, border:'1px solid var(--gold)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'var(--gold)' }}>✦</div>
-          <span style={{ fontFamily:'serif', fontSize:11, fontWeight:'bold', lineHeight:1.3 }}>TFD<br/>Terminal</span>
-        </div>
-        <div style={{ flex:1, overflowY:'auto' }}>
-          {INSTRUMENTS.map(i => {
-            const cur = allPrices[i.sym] ?? i.fallback
-            const prv = allPrevPrices[i.sym] ?? i.fallback
-            const up = cur >= prv
-            return (
-              <div key={i.sym} onClick={() => setSym(i.sym)}
-                style={{
-                  padding:'8px 12px', cursor:'pointer', borderBottom:'1px solid rgba(212,168,67,.04)',
-                  background: sym===i.sym ? 'rgba(212,168,67,.07)' : 'transparent',
-                  borderLeft: sym===i.sym ? '2px solid var(--gold)' : '2px solid transparent',
-                }}>
-                <div style={{ fontWeight:600, fontSize:11, marginBottom:2 }}>{i.sym}</div>
-                <div style={{ fontFamily:'monospace', fontSize:10, color: up ? 'var(--green)' : 'var(--red)' }}>
-                  {cur.toFixed(i.dec)}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {INSTRUMENTS.map((i) => {
+              const cur = allPrices[i.sym] ?? i.fallback
+              const prv = allPrevPrices[i.sym] ?? i.fallback
+              const up = cur >= prv
+
+              return (
+                <div
+                  key={i.sym}
+                  onClick={() => setSym(i.sym)}
+                  style={{
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid rgba(212,168,67,.04)',
+                    background: sym === i.sym ? 'rgba(212,168,67,.07)' : 'transparent',
+                    borderLeft: sym === i.sym ? '2px solid var(--gold)' : '2px solid transparent',
+                  }}
+                >
+                  <div style={{ fontWeight: 600, fontSize: 11, marginBottom: 2 }}>{i.sym}</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 10, color: up ? 'var(--green)' : 'var(--red)' }}>
+                    {cur.toFixed(i.dec)}
+                  </div>
+                  <div style={{ fontSize: 8, color: up ? 'var(--green)' : 'var(--red)' }}>
+                    {up ? '▲' : '▼'} {Math.abs(cur - prv).toFixed(i.dec)}
+                  </div>
                 </div>
-                <div style={{ fontSize:8, color: up ? 'var(--green)' : 'var(--red)' }}>
-                  {up?'▲':'▼'} {Math.abs(cur - prv).toFixed(i.dec)}
-                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ padding: '8px 12px', borderTop: '1px solid var(--bdr)' }}>
+            {accounts.length > 1 && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 600, marginBottom: 4 }}>Account</div>
+                <select
+                  value={selectedAccountId ?? primary?.id ?? ''}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  style={{ width: '100%', padding: '5px 6px', background: 'var(--bg3)', border: '1px solid var(--dim)', color: 'var(--text)', fontSize: 9, fontFamily: 'monospace', outline: 'none', cursor: 'pointer' }}
+                >
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.account_number}</option>
+                  ))}
+                </select>
               </div>
-            )
-          })}
+            )}
+
+            {accounts.length === 1 && (
+              <div style={{ marginBottom: 8, padding: '5px 6px', background: 'var(--bg3)', border: '1px solid var(--dim)', fontSize: 9, fontFamily: 'monospace', color: 'var(--gold)' }}>
+                {primary?.account_number ?? 'No account'}
+              </div>
+            )}
+
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{ width: '100%', fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
+            >
+              ← Dashboard
+            </button>
+          </div>
         </div>
-        <div style={{ padding:'8px 12px', borderTop:'1px solid var(--bdr)' }}>
-          {accounts.length > 1 && (
-            <div style={{ marginBottom:8 }}>
-              <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>Account</div>
-              <select
-                value={selectedAccountId ?? primary?.id ?? ''}
-                onChange={e => setSelectedAccountId(e.target.value)}
-                style={{ width:'100%', padding:'5px 6px', background:'var(--bg3)', border:'1px solid var(--dim)', color:'var(--text)', fontSize:9, fontFamily:'monospace', outline:'none', cursor:'pointer' }}>
-                {accounts.map(a => (
-                  <option key={a.id} value={a.id}>{a.account_number}</option>
-                ))}
-              </select>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ height: 44, background: 'var(--bg2)', borderBottom: '1px solid var(--bdr)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, flexShrink: 0 }}>
+            <span style={{ fontFamily: 'serif', fontSize: 16, fontWeight: 'bold' }}>{sym}</span>
+            <span style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 500, color: livePrice >= prevPrice ? 'var(--green)' : 'var(--red)' }}>
+              {livePrice.toFixed(inst.dec)}
+            </span>
+            <span style={{ fontSize: 10, color: livePrice >= prevPrice ? 'var(--green)' : 'var(--red)' }}>
+              {livePrice >= prevPrice ? '▲' : '▼'} {Math.abs(livePrice - prevPrice).toFixed(inst.dec)}
+            </span>
+
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
+              {Object.keys(TFS).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTf(t)}
+                  style={{
+                    padding: '3px 7px',
+                    fontSize: 9,
+                    fontFamily: 'monospace',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    background: tf === t ? 'rgba(212,168,67,.15)' : 'transparent',
+                    border: tf === t ? '1px solid var(--bdr2)' : '1px solid transparent',
+                    color: tf === t ? 'var(--gold)' : 'var(--text3)',
+                  }}
+                >
+                  {t}
+                </button>
+              ))}
             </div>
-          )}
-          {accounts.length === 1 && (
-            <div style={{ marginBottom:8, padding:'5px 6px', background:'var(--bg3)', border:'1px solid var(--dim)', fontSize:9, fontFamily:'monospace', color:'var(--gold)' }}>
-              {primary?.account_number ?? 'No account'}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 5px var(--green)', animation: 'pulse 2s infinite' }} />
+              <span style={{ fontSize: 9, color: 'var(--green)', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 600 }}>Live</span>
             </div>
-          )}
-          <button onClick={() => navigate('/dashboard')}
-            style={{ width:'100%', fontSize:9, letterSpacing:1, textTransform:'uppercase', color:'var(--text3)', background:'none', border:'none', cursor:'pointer', textAlign:'center' }}>
-            ← Dashboard
-          </button>
-        </div>
-      </div>
-
-      {/* Main area */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        {/* Topbar */}
-        <div style={{ height:44, background:'var(--bg2)', borderBottom:'1px solid var(--bdr)', display:'flex', alignItems:'center', padding:'0 16px', gap:12, flexShrink:0 }}>
-          <span style={{ fontFamily:'serif', fontSize:16, fontWeight:'bold' }}>{sym}</span>
-          <span style={{ fontFamily:'monospace', fontSize:20, fontWeight:500, color: livePrice >= prevPrice ? 'var(--green)' : 'var(--red)' }}>
-            {livePrice.toFixed(inst.dec)}
-          </span>
-          <span style={{ fontSize:10, color: livePrice >= prevPrice ? 'var(--green)' : 'var(--red)' }}>
-            {livePrice >= prevPrice ? '▲' : '▼'} {Math.abs(livePrice - prevPrice).toFixed(inst.dec)}
-          </span>
-          <div style={{ marginLeft:'auto', display:'flex', gap:2 }}>
-            {Object.keys(TFS).map(t => (
-              <button key={t} onClick={() => setTf(t)}
-                style={{
-                  padding:'3px 7px', fontSize:9, fontFamily:'monospace', fontWeight:'bold', cursor:'pointer',
-                  background: tf===t ? 'rgba(212,168,67,.15)' : 'transparent',
-                  border: tf===t ? '1px solid var(--bdr2)' : '1px solid transparent',
-                  color: tf===t ? 'var(--gold)' : 'var(--text3)',
-                }}>
-                {t}
-              </button>
-            ))}
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--green)', boxShadow:'0 0 5px var(--green)', animation:'pulse 2s infinite' }}/>
-            <span style={{ fontSize:9, color:'var(--green)', letterSpacing:1.5, textTransform:'uppercase', fontWeight:600 }}>Live</span>
-          </div>
-        </div>
 
-        {/* TradingView Chart */}
-        <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-          <TVChart tvSymbol={inst.tv} tf={tf} />
-        </div>
-
-        {/* Bottom panel */}
-        <div style={{ height:200, background:'var(--bg2)', borderTop:'1px solid var(--bdr)', display:'flex', flexDirection:'column', flexShrink:0 }}>
-          <div style={{ display:'flex', borderBottom:'1px solid var(--bdr)' }}>
-            {[['positions',`Positions (${openTrades.length})`],['history',`History (${closedTrades.length})`],['account','Account']].map(([k,l])=>(
-              <button key={k} onClick={() => setTab(k)}
-                style={{
-                  padding:'7px 14px', fontSize:9, letterSpacing:1, textTransform:'uppercase', fontWeight:600,
-                  cursor:'pointer', border:'none', borderBottom: tab===k ? '2px solid var(--gold)' : '2px solid transparent',
-                  background: tab===k ? 'rgba(212,168,67,.04)' : 'transparent',
-                  color: tab===k ? 'var(--gold)' : 'var(--text3)',
-                  marginBottom:-1,
-                }}>
-                {l}
-              </button>
-            ))}
+          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+            <TVChart tvSymbol={inst.tv} tf={tf} />
           </div>
-          <div style={{ flex:1, overflow:'auto' }}>
-            {tab==='positions' && (
-              openTrades.length === 0
-                ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'var(--text3)', fontSize:11 }}>No open positions</div>
-                : <table style={{ width:'100%', borderCollapse:'collapse', fontSize:10 }}>
-                    <thead><tr style={{ borderBottom:'1px solid var(--dim)' }}>
-                      {['Symbol','Dir','Lots','Open Price','Current','P&L','SL','TP','Opened','Close'].map(h=>(
-                        <th key={h} style={{ padding:'5px 10px', fontSize:7, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', textAlign:'left', fontWeight:600 }}>{h}</th>
-                      ))}
-                    </tr></thead>
+
+          <div style={{ height: 200, background: 'var(--bg2)', borderTop: '1px solid var(--bdr)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--bdr)' }}>
+              {[['positions', `Positions (${openTrades.length})`], ['history', `History (${closedTrades.length})`], ['account', 'Account']].map(([k, l]) => (
+                <button
+                  key={k}
+                  onClick={() => setTab(k)}
+                  style={{
+                    padding: '7px 14px',
+                    fontSize: 9,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: 'none',
+                    borderBottom: tab === k ? '2px solid var(--gold)' : '2px solid transparent',
+                    background: tab === k ? 'rgba(212,168,67,.04)' : 'transparent',
+                    color: tab === k ? 'var(--gold)' : 'var(--text3)',
+                    marginBottom: -1,
+                  }}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              {tab === 'positions' && (
+                openTrades.length === 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text3)', fontSize: 11 }}>No open positions</div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--dim)' }}>
+                        {['Symbol', 'Dir', 'Lots', 'Open Price', 'Current', 'P&L', 'SL', 'TP', 'Opened', 'Close'].map((h) => (
+                          <th key={h} style={{ padding: '5px 10px', fontSize: 7, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', textAlign: 'left', fontWeight: 600 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
                     <tbody>
-                      {openTrades.map(t => {
-                        const ti = INSTRUMENTS.find(p => p.sym === t.symbol) ?? inst
+                      {openTrades.map((t) => {
+                        const ti = INSTRUMENTS.find((p) => p.sym === t.symbol) ?? inst
                         const cur = allPrices[t.symbol] ?? ti.fallback
                         const diff = t.direction === 'buy' ? cur - t.open_price : t.open_price - cur
                         const pnl = parseFloat((diff * 100000 * t.lots).toFixed(2))
+
                         return (
-                          <tr key={t.id} style={{ borderBottom:'1px solid rgba(212,168,67,.04)' }}>
-                            <td style={{ padding:'6px 10px', fontWeight:600 }}>{t.symbol}</td>
-                            <td style={{ padding:'6px 10px' }}><span style={{ fontSize:8, fontWeight:'bold', color: t.direction==='buy'?'var(--green)':'var(--red)' }}>{t.direction.toUpperCase()}</span></td>
-                            <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.lots}</td>
-                            <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.open_price}</td>
-                            <td style={{ padding:'6px 10px', fontFamily:'monospace', color: cur >= t.open_price ? 'var(--green)' : 'var(--red)' }}>{cur.toFixed(ti.dec)}</td>
-                            <td style={{ padding:'6px 10px', fontFamily:'monospace', fontWeight:600, color: pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>{pnl >= 0 ? '+' : ''}{fmt(pnl)}</td>
-                            <td style={{ padding:'6px 10px', fontFamily:'monospace', color:'var(--red)' }}>{t.sl ?? '—'}</td>
-                            <td style={{ padding:'6px 10px', fontFamily:'monospace', color:'var(--green)' }}>{t.tp ?? '—'}</td>
-                            <td style={{ padding:'6px 10px', fontFamily:'monospace', fontSize:9, color:'var(--text3)' }}>{new Date(t.opened_at).toLocaleTimeString()}</td>
-                            <td style={{ padding:'6px 10px' }}>
-                              <button onClick={() => closeTrade(t)}
-                                style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.1)', color:'var(--red)', border:'1px solid rgba(255,51,82,.2)' }}>
+                          <tr key={t.id} style={{ borderBottom: '1px solid rgba(212,168,67,.04)' }}>
+                            <td style={{ padding: '6px 10px', fontWeight: 600 }}>{t.symbol}</td>
+                            <td style={{ padding: '6px 10px' }}><span style={{ fontSize: 8, fontWeight: 'bold', color: t.direction === 'buy' ? 'var(--green)' : 'var(--red)' }}>{t.direction.toUpperCase()}</span></td>
+                            <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{t.lots}</td>
+                            <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{t.open_price}</td>
+                            <td style={{ padding: '6px 10px', fontFamily: 'monospace', color: cur >= t.open_price ? 'var(--green)' : 'var(--red)' }}>{cur.toFixed(ti.dec)}</td>
+                            <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontWeight: 600, color: pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>{pnl >= 0 ? '+' : ''}{fmt(pnl)}</td>
+                            <td style={{ padding: '6px 10px', fontFamily: 'monospace', color: 'var(--red)' }}>{t.sl ?? '—'}</td>
+                            <td style={{ padding: '6px 10px', fontFamily: 'monospace', color: 'var(--green)' }}>{t.tp ?? '—'}</td>
+                            <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontSize: 9, color: 'var(--text3)' }}>{new Date(t.opened_at).toLocaleTimeString()}</td>
+                            <td style={{ padding: '6px 10px' }}>
+                              <button onClick={() => closeTrade(t)} style={{ padding: '3px 8px', fontSize: 8, textTransform: 'uppercase', fontWeight: 'bold', cursor: 'pointer', background: 'rgba(255,51,82,.1)', color: 'var(--red)', border: '1px solid rgba(255,51,82,.2)' }}>
                                 ✕ Close
                               </button>
                             </td>
@@ -502,177 +563,162 @@ export function PlatformPage() {
                       })}
                     </tbody>
                   </table>
-            )}
-            {tab==='history' && (
-              closedTrades.length === 0
-                ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'var(--text3)', fontSize:11 }}>No history</div>
-                : <table style={{ width:'100%', borderCollapse:'collapse', fontSize:10 }}>
-                    <thead><tr style={{ borderBottom:'1px solid var(--dim)' }}>
-                      {['Symbol','Dir','Lots','Open','Close','Pips','Net P&L','Date'].map(h=>(
-                        <th key={h} style={{ padding:'5px 10px', fontSize:7, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', textAlign:'left', fontWeight:600 }}>{h}</th>
-                      ))}
-                    </tr></thead>
+                )
+              )}
+
+              {tab === 'history' && (
+                closedTrades.length === 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text3)', fontSize: 11 }}>No history</div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--dim)' }}>
+                        {['Symbol', 'Dir', 'Lots', 'Open', 'Close', 'Pips', 'Net P&L', 'Date'].map((h) => (
+                          <th key={h} style={{ padding: '5px 10px', fontSize: 7, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', textAlign: 'left', fontWeight: 600 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
                     <tbody>
-                      {closedTrades.map(t=>(
-                        <tr key={t.id} style={{ borderBottom:'1px solid rgba(212,168,67,.04)' }}>
-                          <td style={{ padding:'6px 10px', fontWeight:600 }}>{t.symbol}</td>
-                          <td style={{ padding:'6px 10px' }}><span style={{ fontSize:8, fontWeight:'bold', color: t.direction==='buy'?'var(--green)':'var(--red)' }}>{t.direction.toUpperCase()}</span></td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.lots}</td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.open_price}</td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace' }}>{t.close_price ?? '—'}</td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace', color:(t.pips??0)>=0?'var(--green)':'var(--red)' }}>{t.pips != null ? `${t.pips>0?'+':''}${t.pips}` : '—'}</td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace', fontWeight:600, color:(t.net_pnl??0)>=0?'var(--green)':'var(--red)' }}>{t.net_pnl != null ? `${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}` : '—'}</td>
-                          <td style={{ padding:'6px 10px', fontFamily:'monospace', fontSize:9, color:'var(--text3)' }}>{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
+                      {closedTrades.map((t) => (
+                        <tr key={t.id} style={{ borderBottom: '1px solid rgba(212,168,67,.04)' }}>
+                          <td style={{ padding: '6px 10px', fontWeight: 600 }}>{t.symbol}</td>
+                          <td style={{ padding: '6px 10px' }}><span style={{ fontSize: 8, fontWeight: 'bold', color: t.direction === 'buy' ? 'var(--green)' : 'var(--red)' }}>{t.direction.toUpperCase()}</span></td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{t.lots}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{t.open_price}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{t.close_price ?? '—'}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'monospace', color: (t.pips ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>{t.pips != null ? `${t.pips > 0 ? '+' : ''}${t.pips}` : '—'}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontWeight: 600, color: (t.net_pnl ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>{t.net_pnl != null ? `${t.net_pnl >= 0 ? '+' : ''}${fmt(t.net_pnl)}` : '—'}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontSize: 9, color: 'var(--text3)' }}>{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-            )}
-            {tab==='account' && (
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, padding:16 }}>
-                {[
-                  ['Balance', fmt(balance), 'var(--gold)'],
-                  ['Equity', fmt(equity), openPnl >= 0 ? 'var(--green)' : 'var(--red)'],
-                  ['Open P&L', `${openPnl>=0?'+':''}${fmt(openPnl)}`, openPnl >= 0 ? 'var(--green)' : 'var(--red)'],
-                  ['Free Margin', fmt(freeMargin), freeMargin < 0 ? 'var(--red)' : 'var(--text)'],
-                  ['Used Margin', fmt(usedMargin), 'var(--text)'],
-                  ['Margin Level', usedMargin > 0 ? `${marginLevel.toFixed(0)}%` : '∞', marginLevel < 100 && usedMargin > 0 ? 'var(--red)' : 'var(--green)'],
-                  ['Leverage', `1:${LEVERAGE}`, 'var(--text)'],
-                  ['Account', primary?.account_number??'—', 'var(--gold)'],
-                ].map(([l,v,c])=>(
-                  <div key={l}>
-                    <div style={{ fontSize:7, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>{l}</div>
-                    <div style={{ fontFamily:'monospace', fontSize:12, color: c ?? 'var(--gold)' }}>{v}</div>
-                  </div>
-                ))}
-                <div style={{ gridColumn:'span 2' }}><DrawdownBar label="Daily DD" value={primary?.daily_dd_used??0} max={5}/></div>
-                <div style={{ gridColumn:'span 2' }}><DrawdownBar label="Max DD" value={primary?.max_dd_used??0} max={10} warn={60} danger={80}/></div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+                )
+              )}
 
-      {/* Order panel */}
-      <div style={{ width:200, flexShrink:0, background:'var(--bg2)', borderLeft:'1px solid var(--bdr)', display:'flex', flexDirection:'column' }}>
-        <div style={{ padding:'12px', borderBottom:'1px solid var(--bdr)' }}>
-          <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:8 }}>Order Panel</div>
-          <div style={{ display:'flex' }}>
-            <button onClick={() => setDir('buy')}
-              style={{ flex:1, padding:'8px 0', fontSize:10, letterSpacing:1, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer', border:'none',
-                background: dir==='buy' ? 'var(--green)' : 'rgba(0,217,126,.08)',
-                color: dir==='buy' ? 'var(--bg)' : 'var(--green)' }}>Buy</button>
-            <button onClick={() => setDir('sell')}
-              style={{ flex:1, padding:'8px 0', fontSize:10, letterSpacing:1, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer', border:'none',
-                background: dir==='sell' ? 'var(--red)' : 'rgba(255,51,82,.08)',
-                color: dir==='sell' ? 'white' : 'var(--red)' }}>Sell</button>
+              {tab === 'account' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, padding: 16 }}>
+                  {[
+                    ['Balance', fmt(balance), 'var(--gold)'],
+                    ['Equity', fmt(equity), openPnl >= 0 ? 'var(--green)' : 'var(--red)'],
+                    ['Open P&L', `${openPnl >= 0 ? '+' : ''}${fmt(openPnl)}`, openPnl >= 0 ? 'var(--green)' : 'var(--red)'],
+                    ['Free Margin', fmt(freeMargin), freeMargin < 0 ? 'var(--red)' : 'var(--text)'],
+                    ['Used Margin', fmt(usedMargin), 'var(--text)'],
+                    ['Margin Level', usedMargin > 0 ? `${marginLevel.toFixed(0)}%` : '∞', marginLevel < 100 && usedMargin > 0 ? 'var(--red)' : 'var(--green)'],
+                    ['Leverage', `1:${LEVERAGE}`, 'var(--text)'],
+                    ['Account', primary?.account_number ?? '—', 'var(--gold)'],
+                  ].map(([l, v, c]) => (
+                    <div key={l}>
+                      <div style={{ fontSize: 7, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 600, marginBottom: 4 }}>{l}</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: 12, color: c ?? 'var(--gold)' }}>{v}</div>
+                    </div>
+                  ))}
+                  <div style={{ gridColumn: 'span 2' }}><DrawdownBar label="Daily DD" value={primary?.daily_dd_used ?? 0} max={5} /></div>
+                  <div style={{ gridColumn: 'span 2' }}><DrawdownBar label="Max DD" value={primary?.max_dd_used ?? 0} max={10} warn={60} danger={80} /></div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        <div style={{ flex:1, overflowY:'auto', padding:12, display:'flex', flexDirection:'column', gap:10 }}>
-          <div style={{ textAlign:'center', padding:'8px', border:'1px solid var(--bdr)', background:'var(--bg3)' }}>
-            <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:2 }}>{dir==='buy'?'Ask':'Bid'}</div>
-            <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:500, color: livePrice>=prevPrice?'var(--green)':'var(--red)' }}>
-              {execPrice.toFixed(inst.dec)}
-            </div>
-            <div style={{ fontSize:8, color:'var(--text3)', marginTop:2 }}>
-              Spread: {inst.spread.toFixed(inst.dec)}
+
+        <div style={{ width: 200, flexShrink: 0, background: 'var(--bg2)', borderLeft: '1px solid var(--bdr)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '12px', borderBottom: '1px solid var(--bdr)' }}>
+            <div style={{ fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 600, marginBottom: 8 }}>Order Panel</div>
+            <div style={{ display: 'flex' }}>
+              <button onClick={() => setDir('buy')} style={{ flex: 1, padding: '8px 0', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 'bold', cursor: 'pointer', border: 'none', background: dir === 'buy' ? 'var(--green)' : 'rgba(0,217,126,.08)', color: dir === 'buy' ? 'var(--bg)' : 'var(--green)' }}>Buy</button>
+              <button onClick={() => setDir('sell')} style={{ flex: 1, padding: '8px 0', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 'bold', cursor: 'pointer', border: 'none', background: dir === 'sell' ? 'var(--red)' : 'rgba(255,51,82,.08)', color: dir === 'sell' ? 'white' : 'var(--red)' }}>Sell</button>
             </div>
           </div>
 
-          {/* Margin info */}
-          <div style={{ background:'var(--bg3)', border:'1px solid var(--dim)', padding:'8px 10px', display:'flex', flexDirection:'column', gap:4 }}>
-            {[
-              ['Margin Req.', `$${requiredMargin.toFixed(2)}`],
-              ['Free Margin', `$${freeMargin.toFixed(2)}`, freeMargin < requiredMargin ? 'var(--red)' : 'var(--green)'],
-              ['Max Lots', String(maxLots)],
-              ['Leverage', `1:${LEVERAGE}`],
-            ].map(([l,v,c]:any) => (
-              <div key={l} style={{ display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:8, color:'var(--text3)' }}>{l}</span>
-                <span style={{ fontSize:9, fontFamily:'monospace', color: c ?? 'var(--text)' }}>{v}</span>
+          <div style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ textAlign: 'center', padding: '8px', border: '1px solid var(--bdr)', background: 'var(--bg3)' }}>
+              <div style={{ fontSize: 8, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 600, marginBottom: 2 }}>{dir === 'buy' ? 'Ask' : 'Bid'}</div>
+              <div style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 500, color: livePrice >= prevPrice ? 'var(--green)' : 'var(--red)' }}>
+                {execPrice.toFixed(inst.dec)}
               </div>
-            ))}
-          </div>
+              <div style={{ fontSize: 8, color: 'var(--text3)', marginTop: 2 }}>
+                Spread: {inst.spread.toFixed(inst.dec)}
+              </div>
+            </div>
 
-          <div>
-            <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>Order Type</div>
-            <div style={{ display:'flex', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
-              {['Market','Limit','Stop'].map(t=>(
-                <button key={t} onClick={() => setOrderType(t)}
-                  style={{ flex:1, padding:'6px 0', fontSize:8, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer', border:'none',
-                    background: orderType===t ? 'rgba(212,168,67,.12)' : 'transparent',
-                    color: orderType===t ? 'var(--gold)' : 'var(--text3)' }}>{t}</button>
+            <div style={{ background: 'var(--bg3)', border: '1px solid var(--dim)', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[
+                ['Margin Req.', `$${requiredMargin.toFixed(2)}`],
+                ['Free Margin', `$${freeMargin.toFixed(2)}`, freeMargin < requiredMargin ? 'var(--red)' : 'var(--green)'],
+                ['Max Lots', String(maxLots)],
+                ['Leverage', `1:${LEVERAGE}`],
+              ].map(([l, v, c]: any) => (
+                <div key={l} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 8, color: 'var(--text3)' }}>{l}</span>
+                  <span style={{ fontSize: 9, fontFamily: 'monospace', color: c ?? 'var(--text)' }}>{v}</span>
+                </div>
               ))}
             </div>
-          </div>
 
-          <div>
-            <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>Lot Size</div>
-            <div style={{ display:'flex', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
-              <button onClick={() => setLots(l => String(Math.max(0.01, parseFloat(l)-0.01).toFixed(2)))}
-                style={{ padding:'0 8px', background:'transparent', border:'none', borderRight:'1px solid var(--dim)', cursor:'pointer', color:'var(--text3)', fontSize:14, fontWeight:'bold' }}>−</button>
-              <input value={lots} onChange={e => setLots(e.target.value)} type="number" step="0.01" min="0.01"
-                style={{ flex:1, textAlign:'center', padding:'8px 0', background:'transparent', border:'none', outline:'none', color:'var(--text)', fontFamily:'monospace', fontSize:13 }}/>
-              <button onClick={() => setLots(l => String((parseFloat(l)+0.01).toFixed(2)))}
-                style={{ padding:'0 8px', background:'transparent', border:'none', borderLeft:'1px solid var(--dim)', cursor:'pointer', color:'var(--text3)', fontSize:14, fontWeight:'bold' }}>+</button>
-            </div>
-          </div>
-
-          {[['Stop Loss',sl,setSl],['Take Profit',tp,setTp]].map(([l,v,set]:any)=>(
-            <div key={l}>
-              <div style={{ fontSize:7, letterSpacing:2, textTransform:'uppercase', color:'var(--text3)', fontWeight:600, marginBottom:4 }}>{l}</div>
-              <div style={{ display:'flex', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
-                <input value={v} onChange={e => set(e.target.value)} placeholder="Optional" type="number"
-                  style={{ flex:1, padding:'8px', background:'transparent', border:'none', outline:'none', color:'var(--text)', fontFamily:'monospace', fontSize:12 }}/>
+            <div>
+              <div style={{ fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 600, marginBottom: 4 }}>Order Type</div>
+              <div style={{ display: 'flex', background: 'var(--bg3)', border: '1px solid var(--dim)' }}>
+                {['Market', 'Limit', 'Stop'].map((t) => (
+                  <button key={t} onClick={() => setOrderType(t)} style={{ flex: 1, padding: '6px 0', fontSize: 8, textTransform: 'uppercase', fontWeight: 'bold', cursor: 'pointer', border: 'none', background: orderType === t ? 'rgba(212,168,67,.12)' : 'transparent', color: orderType === t ? 'var(--gold)' : 'var(--text3)' }}>{t}</button>
+                ))}
               </div>
             </div>
-          ))}
 
-          {!primary && (
-            <div style={{ fontSize:9, color:'var(--red)', textAlign:'center', border:'1px solid rgba(255,51,82,.2)', padding:8 }}>No active account</div>
-          )}
+            <div>
+              <div style={{ fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 600, marginBottom: 4 }}>Lot Size</div>
+              <div style={{ display: 'flex', background: 'var(--bg3)', border: '1px solid var(--dim)' }}>
+                <button onClick={() => setLots((l) => String(Math.max(0.01, parseFloat(l) - 0.01).toFixed(2)))} style={{ padding: '0 8px', background: 'transparent', border: 'none', borderRight: '1px solid var(--dim)', cursor: 'pointer', color: 'var(--text3)', fontSize: 14, fontWeight: 'bold' }}>−</button>
+                <input value={lots} onChange={(e) => setLots(e.target.value)} type="number" step="0.01" min="0.01" style={{ flex: 1, textAlign: 'center', padding: '8px 0', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontFamily: 'monospace', fontSize: 13 }} />
+                <button onClick={() => setLots((l) => String((parseFloat(l) + 0.01).toFixed(2)))} style={{ padding: '0 8px', background: 'transparent', border: 'none', borderLeft: '1px solid var(--dim)', cursor: 'pointer', color: 'var(--text3)', fontSize: 14, fontWeight: 'bold' }}>+</button>
+              </div>
+            </div>
 
-          <button onClick={() => setConfirmOpen(true)} disabled={placing||!primary}
-            style={{
-              width:'100%', padding:'11px 0', fontSize:11, letterSpacing:2, textTransform:'uppercase', fontWeight:'bold',
-              cursor: placing||!primary ? 'not-allowed' : 'pointer', border:'none', opacity: placing||!primary ? 0.4 : 1,
-              background: dir==='buy' ? 'var(--green)' : 'var(--red)',
-              color: dir==='buy' ? 'var(--bg)' : 'white',
-            }}>
-            {placing ? 'Placing…' : `${dir.toUpperCase()} ${lots} ${sym}`}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    {/* Confirm modal */}
-    {confirmOpen && (
-      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.75)', backdropFilter:'blur(4px)', zIndex:8000, display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div style={{ background:'var(--bg2)', border:'1px solid var(--bdr2)', padding:24, minWidth:320 }}>
-          <div style={{ fontFamily:'serif', fontSize:19, fontWeight:'bold', marginBottom:4 }}>Confirm Order</div>
-          <div style={{ fontSize:11, color:'var(--text2)', marginBottom:16 }}>Review before executing</div>
-          <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
-            {[['Symbol',sym],['Direction',dir.toUpperCase()],['Type',orderType],['Lots',lots],['Price',execPrice.toFixed(inst.dec)],['Account',primary?.account_number??'—']].map(([l,v])=>(
-              <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
-                <span style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text3)', fontWeight:600 }}>{l}</span>
-                <span style={{ fontFamily:'monospace', fontSize:12, color: v==='BUY'?'var(--green)':v==='SELL'?'var(--red)':'var(--text)' }}>{v}</span>
+            {[['Stop Loss', sl, setSl], ['Take Profit', tp, setTp]].map(([l, v, set]: any) => (
+              <div key={l}>
+                <div style={{ fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 600, marginBottom: 4 }}>{l}</div>
+                <div style={{ display: 'flex', background: 'var(--bg3)', border: '1px solid var(--dim)' }}>
+                  <input value={v} onChange={(e) => set(e.target.value)} placeholder="Optional" type="number" style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontFamily: 'monospace', fontSize: 12 }} />
+                </div>
               </div>
             ))}
-          </div>
-          <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-            <button onClick={() => setConfirmOpen(false)}
-              style={{ padding:'8px 18px', background:'transparent', border:'1px solid var(--bdr2)', color:'var(--text2)', fontSize:9, letterSpacing:2, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer' }}>Cancel</button>
-            <button onClick={placeOrder}
-              style={{ padding:'8px 22px', border:'none', fontSize:9, letterSpacing:2, textTransform:'uppercase', fontWeight:'bold', cursor:'pointer',
-                background: dir==='buy' ? 'var(--green)' : 'var(--red)',
-                color: dir==='buy' ? 'var(--bg)' : 'white' }}>
-              Confirm {dir.toUpperCase()}
+
+            {!primary && (
+              <div style={{ fontSize: 9, color: 'var(--red)', textAlign: 'center', border: '1px solid rgba(255,51,82,.2)', padding: 8 }}>No active account</div>
+            )}
+
+            <button onClick={() => setConfirmOpen(true)} disabled={placing || !primary} style={{ width: '100%', padding: '11px 0', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 'bold', cursor: placing || !primary ? 'not-allowed' : 'pointer', border: 'none', opacity: placing || !primary ? 0.4 : 1, background: dir === 'buy' ? 'var(--green)' : 'var(--red)', color: dir === 'buy' ? 'var(--bg)' : 'white' }}>
+              {placing ? 'Placing…' : `${dir.toUpperCase()} ${lots} ${sym}`}
             </button>
           </div>
         </div>
       </div>
-    )}
-    <ToastContainer toasts={toasts} dismiss={dismiss}/>
+
+      {confirmOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', backdropFilter: 'blur(4px)', zIndex: 8000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--bdr2)', padding: 24, minWidth: 320 }}>
+            <div style={{ fontFamily: 'serif', fontSize: 19, fontWeight: 'bold', marginBottom: 4 }}>Confirm Order</div>
+            <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 16 }}>Review before executing</div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              {[['Symbol', sym], ['Direction', dir.toUpperCase()], ['Type', orderType], ['Lots', lots], ['Price', execPrice.toFixed(inst.dec)], ['Account', primary?.account_number ?? '—']].map(([l, v]) => (
+                <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: 'var(--bg3)', border: '1px solid var(--dim)' }}>
+                  <span style={{ fontSize: 8, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 600 }}>{l}</span>
+                  <span style={{ fontFamily: 'monospace', fontSize: 12, color: v === 'BUY' ? 'var(--green)' : v === 'SELL' ? 'var(--red)' : 'var(--text)' }}>{v}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button onClick={() => setConfirmOpen(false)} style={{ padding: '8px 18px', background: 'transparent', border: '1px solid var(--bdr2)', color: 'var(--text2)', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 'bold', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={placeOrder} style={{ padding: '8px 22px', border: 'none', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 'bold', cursor: 'pointer', background: dir === 'buy' ? 'var(--green)' : 'var(--red)', color: dir === 'buy' ? 'var(--bg)' : 'white' }}>
+                Confirm {dir.toUpperCase()}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer toasts={toasts} dismiss={dismiss} />
     </>
   )
 }
