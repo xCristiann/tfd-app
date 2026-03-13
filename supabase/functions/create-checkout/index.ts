@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     params.append('line_items[0][price_data][currency]', 'usd')
     params.append('line_items[0][price_data][unit_amount]', String(Math.round(Number(priceUsd) * 100)))
     params.append('line_items[0][price_data][product_data][name]', `${productName} Challenge`)
-    params.append('line_items[0][price_data][product_data][description]', 'The Funded Diaries — Prop Trading Challenge')
+    params.append('line_items[0][price_data][product_data][description]', 'The Funded Diaries - Prop Trading Challenge')
     params.append('metadata[productId]', productId)
     params.append('metadata[userId]', userId)
 

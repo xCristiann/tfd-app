@@ -49,6 +49,28 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Marketing Navbar */}
+        <nav className="bg-[rgba(10,10,15,.95)] border-b border-[var(--bdr)] flex-shrink-0">
+          <div className="mx-auto px-6 h-[64px] flex items-center justify-between">
+            <div className="font-serif text-[18px] font-bold tracking-tight cursor-pointer" onClick={() => navigate('/')}>
+              The Funded <span className="text-[var(--gold)]">Diaries</span>
+            </div>
+            <div className="hidden md:flex items-center gap-8">
+              {[['How It Works','/#how'],['Challenge Plans','/#plans'],['Payouts','/#payouts'],['Features','/#features'],['FAQ','/#faq']].map(([l,h])=>(
+                <a key={l} href={h} className="text-[11px] tracking-[1px] uppercase text-[var(--text2)] hover:text-[var(--gold)] transition-colors no-underline">{l}</a>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => navigate('/dashboard')} className="px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all">
+                Dashboard →
+              </button>
+              <button onClick={handleLogout} className="px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-transparent border border-[var(--bdr2)] text-[var(--text2)] hover:text-[var(--gold)] hover:border-[var(--gold)] cursor-pointer transition-all">
+                Log Out
+              </button>
+            </div>
+          </div>
+        </nav>
+
         {/* Topbar */}
         <div className="h-[48px] bg-[var(--bg2)] border-b border-[var(--bdr)] flex items-center px-[22px] gap-[14px] flex-shrink-0">
           <h1 className="serif text-[17px] font-bold">{title}</h1>
