@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAccount } from '@/hooks/useAccount'
+import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardHeader, KPICard, Input, Select } from '@/components/ui/Card'
@@ -20,6 +21,7 @@ const STATUS_COLORS: Record<string,string> = {
 
 export function PayoutsPage() {
   const { accounts } = useAccount()
+  const { profile, session } = useAuth()
   const { toasts, toast, dismiss } = useToast()
   const [payouts, setPayouts] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -58,6 +60,7 @@ export function PayoutsPage() {
     setLoading(true)
     const { data, error } = await supabase.from('payouts').insert({
       account_id: selectedAccount.id,
+      user_id: profile?.id ?? session?.user?.id,
       requested_usd: amt,
       method,
       wallet_address: wallet,
