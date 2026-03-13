@@ -30,7 +30,7 @@ function AdminNotifications() {
   async function fetchNotifs() {
     const { data } = await supabase.from('notifications')
       .select('*')
-      .eq('user_id', '00000000-0000-0000-0000-000000000000')
+      .is('user_id', null)
       .order('created_at', { ascending: false })
       .limit(20)
     setNotifs(data ?? [])
@@ -44,7 +44,7 @@ function AdminNotifications() {
   async function markAllRead() {
     await supabase.from('notifications')
       .update({ read: true })
-      .eq('user_id', '00000000-0000-0000-0000-000000000000')
+      .is('user_id', null)
       .eq('read', false)
     setNotifs(n => n.map(x => ({ ...x, read: true })))
   }

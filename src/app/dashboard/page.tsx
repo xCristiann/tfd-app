@@ -71,7 +71,7 @@ export function DashboardPage() {
             read: false,
           },
           {
-            user_id: '00000000-0000-0000-0000-000000000000',
+            user_id: null,
             type: 'admin_breach',
             title: `Account Breached — ${acc.account_number}`,
             message: `${profile?.first_name} ${profile?.last_name} breached account ${acc.account_number}. Daily DD: ${acc.daily_dd_used}% / Max DD: ${acc.max_dd_used}%.`,
@@ -97,7 +97,7 @@ export function DashboardPage() {
         },
         // Admin notification — we store with a special marker
         {
-          user_id: '00000000-0000-0000-0000-000000000000', // admin sentinel
+          user_id: null, // admin sentinel
           type: 'admin_target_reached',
           title: `Trader Target Reached — ${acc.account_number}`,
           message: `${profile?.first_name} ${profile?.last_name} reached ${profitPct.toFixed(2)}% on ${acc.account_number}. Review and advance phase.`,
