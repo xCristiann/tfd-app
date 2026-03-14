@@ -47,15 +47,18 @@ const ALL_INSTRUMENTS = [
   { sym:'XAU/USD', poly:'C:XAUUSD', market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals',lotUSD:(p:number)=>p*100   },
   { sym:'XAG/USD', poly:'C:XAGUSD', market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals',lotUSD:(p:number)=>p*5000  },
   // ── US Indices ────────────────────────────────────────────────────
-  { sym:'NAS100',  poly:'I:NDX',    market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index', lotUSD:(p:number)=>p*10   },
-  { sym:'US500',   poly:'I:SPX',    market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index', lotUSD:(p:number)=>p*50   },
-  { sym:'US30',    poly:'I:DJI',    market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index', lotUSD:(p:number)=>p*5    },
-  { sym:'US2000',  poly:'I:RUT',    market:'us',    spread:1.0,     dec:2, pip:0.10,   cat:'index', lotUSD:(p:number)=>p*20   },
-  { sym:'VIX',     poly:'I:VIX',    market:'us',    spread:0.10,    dec:2, pip:0.01,   cat:'index', lotUSD:(p:number)=>p*100  },
+  // Indices: Polygon free supports stocks not indices
+  // Use ETF proxies: QQQ=NDX/40, SPY=SPX/10, DIA=DJI/100, IWM=RUT/10
+  // EWG=DAX/740, EWU=FTSE/240, EWQ=CAC/70
+  { sym:'NAS100',  poly:'QQQ',   idxMult:40,   market:'us',  spread:1.5,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*400  },
+  { sym:'US500',   poly:'SPY',   idxMult:10,   market:'us',  spread:0.50, dec:2, pip:0.10, cat:'index', lotUSD:(p:number)=>p*500  },
+  { sym:'US30',    poly:'DIA',   idxMult:100,  market:'us',  spread:2.0,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*5000 },
+  { sym:'US2000',  poly:'IWM',   idxMult:10,   market:'us',  spread:1.0,  dec:2, pip:0.10, cat:'index', lotUSD:(p:number)=>p*500  },
+  { sym:'VIX',     poly:'VIXY',  idxMult:1,    market:'us',  spread:0.10, dec:2, pip:0.01, cat:'index', lotUSD:(p:number)=>p*100  },
   // ── EU Indices ────────────────────────────────────────────────────
-  { sym:'GER40',   poly:'I:DAX',    market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index', lotUSD:(p:number)=>p*25   },
-  { sym:'UK100',   poly:'I:FTSE',   market:'uk',    spread:1.0,     dec:1, pip:1.0,    cat:'index', lotUSD:(p:number)=>p*10   },
-  { sym:'FRA40',   poly:'I:CAC',    market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index', lotUSD:(p:number)=>p*20   },
+  { sym:'GER40',   poly:'EWG',   idxMult:740,  market:'eu',  spread:1.0,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*18500},
+  { sym:'UK100',   poly:'EWU',   idxMult:240,  market:'uk',  spread:1.0,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*2400 },
+  { sym:'FRA40',   poly:'EWQ',   idxMult:70,   market:'eu',  spread:1.0,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*1400 },
 ]
 
 const SEED: Record<string,number> = {
@@ -138,20 +141,30 @@ function loadLWC():Promise<void>{
 }
 
 /* ── Polygon candles ─────────────────────────────────────────────── */
-async function fetchCandles(polyTicker:string,tf:string):Promise<Candle[]>{
+async function fetchCandles(polyTicker:string, tf:string, idxMult=1):Promise<Candle[]>{
   const {mult,span,daysBack}=TF_CONFIG[tf]??TF_CONFIG.H1
-  const to=new Date(),from=new Date(Date.now()-daysBack*86400*1000)
+  const to=new Date(), from=new Date(Date.now()-daysBack*86400*1000)
   const fmtDate=(d:Date)=>d.toISOString().split('T')[0]
   const url=`https://api.polygon.io/v2/aggs/ticker/${polyTicker}/range/${mult}/${span}/${fmtDate(from)}/${fmtDate(to)}?adjusted=true&sort=asc&limit=50000&apiKey=${POLY}`
   try{
     const r=await fetch(url)
     if(!r.ok) throw new Error(`HTTP ${r.status}`)
     const d=await r.json()
-    if(!d.results?.length) return []
+    if(!d.results?.length){
+      console.warn('[Polygon candles] no results for',polyTicker,tf,'status:',d.status,'message:',d.message)
+      return []
+    }
     return (d.results as any[]).map((b:any)=>({
-      time:Math.floor(b.t/1000),open:b.o,high:b.h,low:b.l,close:b.c,
+      time:  Math.floor(b.t/1000),
+      open:  +(b.o*idxMult).toFixed(idxMult>1?1:6),
+      high:  +(b.h*idxMult).toFixed(idxMult>1?1:6),
+      low:   +(b.l*idxMult).toFixed(idxMult>1?1:6),
+      close: +(b.c*idxMult).toFixed(idxMult>1?1:6),
     }))
-  }catch(e){console.warn('[Polygon candles]',polyTicker,tf,e);return []}
+  }catch(e){
+    console.warn('[Polygon candles]',polyTicker,tf,e)
+    return []
+  }
 }
 
 /* ── Chart with SL/TP lines ─────────────────────────────────────── */
@@ -194,8 +207,8 @@ function CandleChart({sym,tf,livePrice,onLastClose,openTrades,onUpdateSLTP}:Char
       chartRef.current=chart;serRef.current=series
       const ro=new ResizeObserver(()=>{if(chartRef.current&&divRef.current)chartRef.current.resize(divRef.current.clientWidth,divRef.current.clientHeight)})
       ro.observe(el)
-      const inst=ALL_INSTRUMENTS.find(i=>i.sym===sym)!
-      const candles=await fetchCandles(inst.poly,tf)
+      const inst=ALL_INSTRUMENTS.find(i=>i.sym===sym)! as any
+      const candles=await fetchCandles(inst.poly, tf, inst.idxMult??1)
       if(dead){ro.disconnect();return}
       if(candles.length>0){
         series.setData(candles)
@@ -351,7 +364,8 @@ function usePriceFeed(){
     // REST poll — indices (Polygon prev day) + all instruments as backup
     const pollAll=async()=>{
       if(dead)return
-      // Forex snapshot batch
+
+      // 1. Forex + Metals snapshot (C: tickers)
       const forexTickers=ALL_INSTRUMENTS.filter(i=>i.poly.startsWith('C:')).map(i=>i.poly).join(',')
       try{
         const r=await fetch(`https://api.polygon.io/v2/snapshot/locale/global/markets/forex/tickers?tickers=${forexTickers}&apiKey=${POLY}`)
@@ -359,20 +373,27 @@ function usePriceFeed(){
         if(d.tickers){for(const t of d.tickers){
           const inst=ALL_INSTRUMENTS.find(i=>i.poly===t.ticker)
           if(!inst)continue
-          const price=t.day?.c||t.lastQuote?.ap||t.lastTrade?.p||0
+          // Try multiple price fields in order of preference
+          const price=t.lastQuote?.mp // midpoint
+            ||((t.lastQuote?.ap||0)+(t.lastQuote?.bp||0))/2
+            ||t.day?.c||t.lastTrade?.p||0
           if(price>0)push(inst.sym,price)
         }}
       }catch{}
 
-      // Index prev day close
-      await Promise.allSettled(ALL_INSTRUMENTS.filter(i=>i.poly.startsWith('I:')).map(async inst=>{
-        try{
-          const r=await fetch(`https://api.polygon.io/v2/aggs/ticker/${inst.poly}/prev?adjusted=true&apiKey=${POLY}`)
-          const d=await r.json()
-          const p=d.results?.[0]?.c||0
-          if(p>0)push(inst.sym,p)
-        }catch{}
-      }))
+      // 2. ETF stocks snapshot for indices (Polygon free supports stocks)
+      const idxInsts=(ALL_INSTRUMENTS as any[]).filter(i=>i.idxMult)
+      const etfTickers=idxInsts.map((i:any)=>i.poly).join(',')
+      try{
+        const r=await fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${etfTickers}&apiKey=${POLY}`)
+        const d=await r.json()
+        if(d.tickers){for(const t of d.tickers){
+          const inst=idxInsts.find((i:any)=>i.poly===t.ticker)
+          if(!inst)continue
+          const etfPrice=t.day?.c||t.lastTrade?.p||t.prevDay?.c||0
+          if(etfPrice>0)push(inst.sym, Math.round(etfPrice*(inst as any).idxMult*10)/10)
+        }}
+      }catch{}
     }
 
     connectWS()
@@ -491,9 +512,10 @@ export function PlatformPage(){
   const watchlist=useMemo(()=>{
     const q=search.toLowerCase()
     const filtered=ALL_INSTRUMENTS.filter(i=>!q||i.sym.toLowerCase().includes(q)||i.cat.includes(q))
+    // Favorites always on top, regardless of category
     const favs=filtered.filter(i=>favorites.has(i.sym))
     const rest=filtered.filter(i=>!favorites.has(i.sym))
-    return [...favs,...rest]
+    return {favs, rest}
   },[search,favorites])
 
   const toggleFav=(s:string)=>{
@@ -597,7 +619,7 @@ export function PlatformPage(){
   <div style={{display:'flex',height:'100vh',overflow:'hidden',background:'#0A0A0F',color:'var(--text)',fontSize:12}}>
 
     {/* ── Watchlist ── */}
-    <div style={{width:170,flexShrink:0,background:'var(--bg2)',borderRight:'1px solid var(--bdr)',display:'flex',flexDirection:'column'}}>
+    <div style={{width:192,flexShrink:0,background:'var(--bg2)',borderRight:'1px solid var(--bdr)',display:'flex',flexDirection:'column'}}>
       <div style={{padding:'10px 12px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:8}}>
         <div style={{width:20,height:20,border:'1px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'var(--gold)'}}>✦</div>
         <span style={{fontFamily:'serif',fontSize:11,fontWeight:'bold',lineHeight:1.3}}>TFD<br/>Terminal</span>
@@ -612,49 +634,66 @@ export function PlatformPage(){
       </div>
       {/* Instrument list */}
       <div style={{flex:1,overflowY:'auto'}}>
-        {['forex','metals','index'].map(cat=>{
-          const items=watchlist.filter(i=>i.cat===cat)
-          if(!items.length)return null
-          return(
-            <div key={cat}>
-              <div style={{padding:'4px 10px',fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:700,background:'rgba(0,0,0,.3)',borderBottom:'1px solid var(--bdr)'}}>
-                {CAT_LABELS[cat]}
+        {(()=>{
+          const renderItem=(i:typeof ALL_INSTRUMENTS[0])=>{
+            const cur=prices[i.sym]||SEED[i.sym]
+            const prv=refPrev.current[i.sym]||cur
+            const isUp=cur>=prv
+            const isFav=favorites.has(i.sym)
+            const iMs=getMarketStatus(i.market)
+            return(
+              <div key={i.sym} onClick={()=>setSym(i.sym)} style={{
+                padding:'6px 10px 5px',cursor:'pointer',borderBottom:'1px solid rgba(212,168,67,.03)',
+                background:sym===i.sym?'rgba(212,168,67,.07)':'transparent',
+                borderLeft:sym===i.sym?'2px solid var(--gold)':'2px solid transparent',
+              }}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontWeight:600,fontSize:10}}>{i.sym}</span>
+                  <div style={{display:'flex',gap:5,alignItems:'center'}}>
+                    <span
+                      onClick={e=>{e.stopPropagation();toggleFav(i.sym)}}
+                      style={{fontSize:15,cursor:'pointer',color:isFav?'var(--gold)':'rgba(255,255,255,.2)',lineHeight:1,userSelect:'none' as const}}
+                      title={isFav?'Remove from favorites':'Add to favorites'}
+                    >{isFav?'★':'☆'}</span>
+                    <span style={{width:5,height:5,borderRadius:'50%',background:!iMs.open?'var(--red)':prices[i.sym]>0?'var(--green)':'#444'}}/>
+                  </div>
+                </div>
+                <div style={{fontFamily:'monospace',fontSize:12,marginTop:1,fontWeight:700,color:isUp?'var(--green)':'var(--red)',opacity:iMs.open?1:0.55}}>
+                  {cur.toFixed(i.dec)}
+                </div>
+                <div style={{fontSize:8,color:iMs.open?(isUp?'var(--green)':'var(--red)'):'var(--text3)'}}>
+                  {iMs.open?`${isUp?'▲':'▼'} ${Math.abs(cur-prv).toFixed(i.dec)}`:'CLOSED'}
+                </div>
               </div>
-              {items.map(i=>{
-                const cur=prices[i.sym]||SEED[i.sym]
-                const prv=refPrev.current[i.sym]||cur
-                const isUp=cur>=prv
-                const isFav=favorites.has(i.sym)
-                const iMs=getMarketStatus(i.market)
+            )
+          }
+          return(
+            <>
+              {/* Favorites section — always first, any category */}
+              {watchlist.favs.length>0&&(
+                <div>
+                  <div style={{padding:'4px 10px',fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--gold)',fontWeight:700,background:'rgba(212,168,67,.06)',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:5}}>
+                    <span>★</span> Favorites
+                  </div>
+                  {watchlist.favs.map(renderItem)}
+                </div>
+              )}
+              {/* Rest grouped by category */}
+              {['forex','metals','index'].map(cat=>{
+                const items=watchlist.rest.filter(i=>i.cat===cat)
+                if(!items.length)return null
                 return(
-                  <div key={i.sym} onClick={()=>setSym(i.sym)} style={{
-                    padding:'6px 10px 5px',cursor:'pointer',borderBottom:'1px solid rgba(212,168,67,.03)',
-                    background:sym===i.sym?'rgba(212,168,67,.07)':'transparent',
-                    borderLeft:sym===i.sym?'2px solid var(--gold)':'2px solid transparent',
-                  }}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span style={{fontWeight:600,fontSize:10}}>{i.sym}</span>
-                      <div style={{display:'flex',gap:4,alignItems:'center'}}>
-                        <span
-                          onClick={e=>{e.stopPropagation();toggleFav(i.sym)}}
-                          style={{fontSize:10,cursor:'pointer',color:isFav?'var(--gold)':'var(--text3)',lineHeight:1}}
-                          title={isFav?'Remove from favorites':'Add to favorites'}
-                        >{isFav?'★':'☆'}</span>
-                        <span style={{width:5,height:5,borderRadius:'50%',background:!iMs.open?'var(--red)':prices[i.sym]>0?'var(--green)':'#444'}}/>
-                      </div>
+                  <div key={cat}>
+                    <div style={{padding:'4px 10px',fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:700,background:'rgba(0,0,0,.3)',borderBottom:'1px solid var(--bdr)'}}>
+                      {CAT_LABELS[cat]}
                     </div>
-                    <div style={{fontFamily:'monospace',fontSize:12,marginTop:1,fontWeight:700,color:isUp?'var(--green)':'var(--red)',opacity:iMs.open?1:0.55}}>
-                      {cur.toFixed(i.dec)}
-                    </div>
-                    <div style={{fontSize:8,color:iMs.open?(isUp?'var(--green)':'var(--red)'):'var(--text3)'}}>
-                      {iMs.open?`${isUp?'▲':'▼'} ${Math.abs(cur-prv).toFixed(i.dec)}`:'CLOSED'}
-                    </div>
+                    {items.map(renderItem)}
                   </div>
                 )
               })}
-            </div>
+            </>
           )
-        })}
+        })()}
       </div>
       <div style={{padding:'8px 10px',borderTop:'1px solid var(--bdr)'}}>
         {accounts.length>1
