@@ -6,160 +6,124 @@ import { ToastContainer } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/utils'
 
-const LEVERAGE = 50
-const LOT_SIZE = 100_000
-const POLY_KEY = 'G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO'
+const LEVERAGE  = 50
+const LOT_SIZE  = 100_000
+const TD_KEY    = 'c6158908260647989323da44b23f5f97'
 
 /* ═══════════════════════════════════════════════════════════════════
-   INSTRUMENTS
-   poly   = Polygon ticker  (forex/metals candles + WebSocket live)
-   yahoo  = Yahoo Finance   (indices candles + live price polling)
-   market = which market session controls open/close
+   ALL DATA: Twelve Data (free tier, real OHLC, CORS enabled)
+   Live prices : wss://ws.twelvedata.com/v1/quotes/price  (WebSocket)
+   Candle hist : /time_series  (REST, 5000 bars per request)
+   Price now   : /price        (REST, latest price)
+
+   Twelve Data symbols:
+     EUR/USD → EUR/USD    GBP/USD → GBP/USD
+     XAU/USD → XAU/USD   USD/JPY → USD/JPY
+     GBP/JPY → GBP/JPY   EUR/JPY → EUR/JPY
+     NAS100  → NDX        US500   → SPX500
+     GER40   → DAX        UK100   → FTSE100
+
+   Market hours source: tradermade.com/cfd-opening-times
    ═══════════════════════════════════════════════════════════════════ */
+
 const INSTRUMENTS = [
-  { sym:'EUR/USD', poly:'C:EURUSD', yahoo:null,       market:'forex',  spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', poly:'C:GBPUSD', yahoo:null,       market:'forex',  spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'XAU/USD', poly:'C:XAUUSD', yahoo:null,       market:'forex',  spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
-  { sym:'USD/JPY', poly:'C:USDJPY', yahoo:null,       market:'forex',  spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'GBP/JPY', poly:'C:GBPJPY', yahoo:null,       market:'forex',  spread:0.030,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'EUR/JPY', poly:'C:EURJPY', yahoo:null,       market:'forex',  spread:0.025,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
-  // Indices: use Polygon index tickers (I:NDX etc) - falls back to ETF if needed
-  // ETF multipliers calibrated: QQQ≈516→NDX≈21700(÷42), SPY≈580→SPX≈5800(÷10)
-  // EWG≈30→DAX≈22500(÷750), EWU≈36→FTSE≈8700(÷240)
-  { sym:'NAS100',  poly:'I:NDX',  etf:'QQQ', etfMult:42,  market:'us', spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*10 },
-  { sym:'US500',   poly:'I:SPX',  etf:'SPY', etfMult:10,  market:'us', spread:0.50, dec:2, pip:0.10, lotUSD:(p:number)=>p*50 },
-  { sym:'GER40',   poly:'I:DAX',  etf:'EWG', etfMult:750, market:'eu', spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*25 },
-  { sym:'UK100',   poly:'I:FTSE', etf:'EWU', etfMult:240, market:'uk', spread:1.0,  dec:1, pip:1.0,  lotUSD:(p:number)=>p*10 },
+  { sym:'EUR/USD', td:'EUR/USD',  market:'forex', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', td:'GBP/USD',  market:'forex', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'XAU/USD', td:'XAU/USD',  market:'forex', spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
+  { sym:'USD/JPY', td:'USD/JPY',  market:'forex', spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
+  { sym:'GBP/JPY', td:'GBP/JPY',  market:'forex', spread:0.030,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'EUR/JPY', td:'EUR/JPY',  market:'forex', spread:0.025,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'NAS100',  td:'NDX',      market:'us',    spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
+  { sym:'US500',   td:'SPX500',   market:'us',    spread:0.50,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*50       },
+  { sym:'GER40',   td:'DAX',      market:'eu',    spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*25       },
+  { sym:'UK100',   td:'FTSE100',  market:'uk',    spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
 ]
 
 const SEED: Record<string,number> = {
-  'EUR/USD':1.1464,'GBP/USD':1.2940,'XAU/USD':2980,
+  'EUR/USD':1.0853,'GBP/USD':1.2940,'XAU/USD':2980,
   'USD/JPY':148.50,'GBP/JPY':192.50,'EUR/JPY':170.20,
-  'NAS100':21700,'US500':5800,'GER40':22500,'UK100':8700,
+  'NAS100':21700,'US500':5750,'GER40':22500,'UK100':8700,
 }
 
-const TF_POLY: Record<string,{mult:number;span:string;daysBack:number}> = {
-  M1: {mult:1, span:'minute',daysBack:5},   M5: {mult:5, span:'minute',daysBack:30},
-  M15:{mult:15,span:'minute',daysBack:60},  M30:{mult:30,span:'minute',daysBack:90},
-  H1: {mult:1, span:'hour',  daysBack:365}, H4: {mult:4, span:'hour',  daysBack:730},
-  D1: {mult:1, span:'day',   daysBack:3650},
-}
-const YAHOO_TF: Record<string,{interval:string;range:string}> = {
-  M1: {interval:'1m', range:'5d'},   M5: {interval:'5m', range:'60d'},
-  M15:{interval:'15m',range:'60d'},  M30:{interval:'30m',range:'60d'},
-  H1: {interval:'1h', range:'730d'}, H4: {interval:'1h', range:'730d'},
-  D1: {interval:'1d', range:'3650d'},
+/* Twelve Data interval mapping */
+const TD_INTERVAL: Record<string,string> = {
+  M1:'1min', M5:'5min', M15:'15min', M30:'30min',
+  H1:'1h', H4:'4h', D1:'1day',
 }
 const TF_SEC: Record<string,number> = {
-  M1:60,M5:300,M15:900,M30:1800,H1:3600,H4:14400,D1:86400,
+  M1:60, M5:300, M15:900, M30:1800, H1:3600, H4:14400, D1:86400,
 }
 
 type Candle = {time:number;open:number;high:number;low:number;close:number}
 
 /* ══════════════════════════════════════════════════════════════════
-   MARKET HOURS — Source: TraderMade CFD Opening Times
-   ══════════════════════════════════════════════════════════════════
-   CFD indices trade nearly 24/5 like forex, NOT just exchange hours.
-   Major prop firms use CFD hours, not exchange hours.
-
-   FOREX/XAU/XAG: Sun 22:00 → Fri 21:45 UTC (daily 22:00-23:00 break)
-   US30/NAS100/US500 CFD:
-     Summer (Mar–Nov): Sun 22:00 → Fri 20:15 UTC  break 20:15-20:30, 21:00-22:00
-     Winter (Nov–Mar): Sun 23:00 → Fri 21:15 UTC  break 21:15-21:30, 22:00-23:00
-   GER40/UK100 CFD: Mon 07:00 → Fri 21:00 UTC (daily 21:00-07:00 break)
-
-   Source: tradermade.com/cfd-opening-times
+   MARKET HOURS — Source: tradermade.com/cfd-opening-times
+   All times UTC. DST-aware (Summer = Mar–Nov).
    ══════════════════════════════════════════════════════════════════ */
-function getMarketStatus(market: string): {open:boolean; label:string; nextOpen:string} {
-  const now  = new Date()
-  const day  = now.getUTCDay()
-  const hour = now.getUTCHours()
-  const min  = now.getUTCMinutes()
-  const hm   = hour * 60 + min
-  const month= now.getUTCMonth() + 1  // 1-12
+function getMarketStatus(market:string):{open:boolean;label:string;nextOpen:string} {
+  const now   = new Date()
+  const day   = now.getUTCDay()
+  const hm    = now.getUTCHours()*60+now.getUTCMinutes()
+  const month = now.getUTCMonth()+1
+  const summer= month>=3&&month<=10
 
-  // DST: Summer = March(3) through November(10) inclusive
-  const isSummer = month >= 3 && month <= 10
-
-  const fmtNext=(d:Date)=>d.toLocaleString(undefined,{
+  const fmtD=(d:Date)=>d.toLocaleString(undefined,{
     weekday:'short',month:'short',day:'numeric',
     hour:'2-digit',minute:'2-digit',timeZone:'UTC',timeZoneName:'short'
   })
-
-  const nextSunday=(hh:number,mm:number)=>{
+  const nextDay=(dd:number,hh:number,mm:number)=>{
     const d=new Date(now)
-    // find next Sunday
-    const daysUntilSun=(7-day)%7||7
-    d.setUTCDate(d.getUTCDate()+daysUntilSun)
-    d.setUTCHours(hh,mm,0,0)
-    return fmtNext(d)
+    let add=(dd-day+7)%7; if(add===0&&hm>=hh*60+mm) add=7
+    d.setUTCDate(d.getUTCDate()+add); d.setUTCHours(hh,mm,0,0); return fmtD(d)
   }
 
-  const nextMonday=(hh:number,mm:number)=>{
+  /* FOREX + XAU/XAG: Sun 22:00 → Fri 21:45, break 21:45-22:00 */
+  if(market==='forex'){
+    const closed=day===6||(day===0&&hm<22*60)||(day===5&&hm>=21*60+45)
+    const brk=!closed&&(hm>=21*60+45&&hm<22*60)
+    if(!closed&&!brk) return {open:true,label:'Forex Open (24/5)',nextOpen:''}
+    if(brk) return {open:false,label:'Forex Daily Break',nextOpen:'Reopens 22:00 UTC'}
     const d=new Date(now)
-    const daysUntilMon=day===0?1:day===6?2:8-day
-    d.setUTCDate(d.getUTCDate()+(daysUntilMon%7||7))
-    d.setUTCHours(hh,mm,0,0)
-    return fmtNext(d)
+    if(day===6){d.setUTCDate(d.getUTCDate()+1);d.setUTCHours(22,0,0,0)}
+    else if(day===0) d.setUTCHours(22,0,0,0)
+    else{d.setUTCDate(d.getUTCDate()+2);d.setUTCHours(22,0,0,0)}
+    return {open:false,label:'Forex Closed — Weekend',nextOpen:fmtD(d)}
   }
 
-  /* ── FOREX + XAU (metals) ─────────────────────────────────────── */
-  /* Sun 22:00 → Fri 21:45 UTC, daily break 21:45-22:00 (1 min break) */
-  if(market === 'forex'){
-    const dailyBreak = hm >= 21*60+45 && hm < 22*60
-    const isWeekendClosed = day===6 || (day===0 && hm<22*60) || (day===5 && hm>=21*60+45)
-    if(!isWeekendClosed && !dailyBreak) return {open:true, label:'Forex Open (24/5)', nextOpen:''}
-    if(isWeekendClosed){
-      return {open:false, label:'Forex Closed — Weekend', nextOpen:nextSunday(22,0)}
+  /* US INDICES CFD (NAS100/US500): near 24/5
+     Summer: Sun 22:00 → Fri 20:15, breaks 20:15-20:30 & 21:00-22:00
+     Winter: Sun 23:00 → Fri 21:15, breaks 21:15-21:30 & 22:00-23:00 */
+  if(market==='us'){
+    const openH  = summer?22:23
+    const b1s    = summer?20*60+15:21*60+15
+    const b1e    = summer?20*60+30:21*60+30
+    const b2s    = summer?21*60:22*60
+    const b2e    = summer?22*60:23*60
+    const wkClosed=day===6||(day===0&&hm<openH*60)||(day===5&&hm>=b1s)
+    if(wkClosed) return {open:false,label:'US Indices Closed — Weekend',nextOpen:nextDay(0,openH,0)}
+    if(hm>=b1s&&hm<b1e) return {open:false,label:'US Indices — Daily Break',nextOpen:`Reopens ${summer?'20:30':'21:30'} UTC`}
+    if(hm>=b2s&&hm<b2e) return {open:false,label:'US Indices — Daily Break',nextOpen:`Reopens ${summer?'22:00':'23:00'} UTC`}
+    return {open:true,label:'US Indices Open (CFD 24/5)',nextOpen:''}
+  }
+
+  /* EU/UK INDICES CFD: Mon 07:00 → Fri 21:00 */
+  if(market==='eu'||market==='uk'){
+    const name=market==='eu'?'GER40':'UK100'
+    if(day===0||day===6) return {open:false,label:`${name} Closed — Weekend`,nextOpen:nextDay(1,7,0)}
+    if(hm>=7*60&&hm<21*60) return {open:true,label:`${name} Open (CFD)`,nextOpen:''}
+    const d=new Date(now)
+    if(hm>=21*60){
+      d.setUTCDate(d.getUTCDate()+1)
+      if(d.getUTCDay()===6) d.setUTCDate(d.getUTCDate()+2)
+      else if(d.getUTCDay()===0) d.setUTCDate(d.getUTCDate()+1)
     }
-    return {open:false, label:'Forex Daily Break (2 min)', nextOpen:'Reopens 22:00 UTC'}
+    d.setUTCHours(7,0,0,0)
+    return {open:false,label:hm<7*60?`${name} Pre-Market`:`${name} After Hours`,nextOpen:fmtD(d)}
   }
-
-  /* ── US INDICES CFD (NAS100, US500, GER40 proxy for US) ───────── */
-  /* Summer: Sun 22:00 → Fri 20:15 UTC, breaks: 20:15-20:30, 21:00-22:00 */
-  /* Winter: Sun 23:00 → Fri 21:15 UTC, breaks: 21:15-21:30, 22:00-23:00 */
-  if(market === 'us'){
-    const openH  = isSummer ? 22 : 23
-    const closeH = isSummer ? 20*60+15 : 21*60+15
-    const break1S= isSummer ? 20*60+15 : 21*60+15  // break start
-    const break1E= isSummer ? 20*60+30 : 21*60+30  // break end
-    const break2S= isSummer ? 21*60    : 22*60      // break 2 start
-    const break2E= isSummer ? 22*60    : 23*60      // break 2 end (= next open)
-
-    const inBreak1 = hm >= break1S && hm < break1E
-    const inBreak2 = hm >= break2S && hm < break2E
-
-    // Weekend closed
-    if(day===6 || (day===0 && hm < openH*60) || (day===5 && hm >= break1S)){
-      return {open:false, label:'US Indices Closed — Weekend', nextOpen:nextSunday(openH,0)}
-    }
-    if(inBreak1) return {open:false, label:'US Indices — Daily Break', nextOpen:`Reopens ${isSummer?'20:30':'21:30'} UTC`}
-    if(inBreak2) return {open:false, label:'US Indices — Daily Break', nextOpen:`Reopens ${isSummer?'22:00':'23:00'} UTC`}
-    return {open:true, label:'US Indices Open (CFD)', nextOpen:''}
-  }
-
-  /* ── EU/UK INDICES CFD ────────────────────────────────────────── */
-  /* Mon 07:00 → Fri 21:00 UTC, closed 21:00-07:00 daily */
-  if(market === 'eu' || market === 'uk'){
-    const name = market==='eu' ? 'GER40 (XETRA)' : 'UK100 (LSE)'
-    if(day===0||day===6) return {open:false, label:`${name} Closed — Weekend`, nextOpen:nextMonday(7,0)}
-    if(hm >= 7*60 && hm < 21*60) return {open:true, label:`${name} Open`, nextOpen:''}
-    // Overnight break
-    const next = new Date(now)
-    if(hm >= 21*60){
-      next.setUTCDate(next.getUTCDate()+1)
-      if(next.getUTCDay()===6) next.setUTCDate(next.getUTCDate()+2)
-      else if(next.getUTCDay()===0) next.setUTCDate(next.getUTCDate()+1)
-    }
-    next.setUTCHours(7,0,0,0)
-    const label = hm < 7*60 ? `${name} Pre-Market` : `${name} Closed (After Hours)`
-    return {open:false, label, nextOpen:fmtNext(next)}
-  }
-
-  return {open:true, label:'Open', nextOpen:''}
+  return {open:true,label:'Open',nextOpen:''}
 }
 
-/* ── LWC loader ──────────────────────────────────────────────────── */
+/* ── LWC loader ───────────────────────────────────────────────── */
 let _lwcReady=false; const _lwcQ:Array<()=>void>=[]
 function loadLWC():Promise<void>{
   return new Promise(res=>{
@@ -174,56 +138,33 @@ function loadLWC():Promise<void>{
   })
 }
 
-/* ── Polygon candles — forex, metals, AND indices ───────────────── */
-async function fetchPolyCandles(polyTicker:string, tf:string, etfFallback?:string, etfMult?:number):Promise<Candle[]>{
-  const {mult,span,daysBack}=TF_POLY[tf]??TF_POLY.H1
-  const to   = new Date()
-  const from = new Date(Date.now()-daysBack*86400*1000)
-  const fmtD = (d:Date)=>d.toISOString().split('T')[0]
-
-  const tryTicker=async(ticker:string, multiplier=1):Promise<Candle[]>=>{
-    const url=`https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${mult}/${span}/${fmtD(from)}/${fmtD(to)}?adjusted=true&sort=asc&limit=50000&apiKey=${POLY_KEY}`
+/* ── Twelve Data REST candles ─────────────────────────────────── */
+async function fetchTDCandles(tdSym:string, tf:string):Promise<Candle[]>{
+  const interval=TD_INTERVAL[tf]??'1h'
+  // outputsize max = 5000 on free plan
+  const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(tdSym)}&interval=${interval}&outputsize=5000&apikey=${TD_KEY}&format=JSON`
+  try{
     const r=await fetch(url)
     if(!r.ok) throw new Error(`HTTP ${r.status}`)
     const d=await r.json()
-    if(!d.results?.length) throw new Error('no results')
-    return (d.results as any[]).map((b:any)=>({
-      time:Math.floor(b.t/1000),
-      open:b.o*multiplier, high:b.h*multiplier, low:b.l*multiplier, close:b.c*multiplier,
-    }))
-  }
-
-  // Try primary ticker first
-  try{
-    const candles=await tryTicker(polyTicker)
-    if(candles.length>0) return candles
+    if(d.status==='error') throw new Error(d.message)
+    if(!d.values?.length) return []
+    // Twelve Data returns newest first — reverse to oldest first
+    return (d.values as any[]).reverse().map((v:any)=>({
+      time:  Math.floor(new Date(v.datetime).getTime()/1000),
+      open:  parseFloat(v.open),
+      high:  parseFloat(v.high),
+      low:   parseFloat(v.low),
+      close: parseFloat(v.close),
+    })).filter((c:Candle)=>c.open>0&&c.close>0)
   }catch(e){
-    console.warn('[Polygon] Primary failed:',polyTicker,e)
+    console.warn('[TD Candles]',tdSym,tf,e)
+    return []
   }
-
-  // Fallback to ETF if provided (for indices on free tier)
-  if(etfFallback && etfMult){
-    try{
-      const candles=await tryTicker(etfFallback, etfMult)
-      if(candles.length>0){
-        console.log('[Polygon] Using ETF fallback:',etfFallback,'×',etfMult)
-        return candles
-      }
-    }catch(e){
-      console.warn('[Polygon] ETF fallback failed:',etfFallback,e)
-    }
-  }
-  return []
 }
 
-/* ── Main candle fetcher ─────────────────────────────────────────── */
-async function fetchCandles(sym:string, tf:string):Promise<Candle[]>{
-  const inst=INSTRUMENTS.find(i=>i.sym===sym)! as any
-  return fetchPolyCandles(inst.poly, tf, inst.etf, inst.etfMult)
-}
-
-/* ── Chart component ─────────────────────────────────────────────── */
-function CandleChart({sym,tf,livePrice,onPriceFromCandle}:{sym:string;tf:string;livePrice:number;onPriceFromCandle?:(p:number)=>void}){
+/* ── Chart component ──────────────────────────────────────────── */
+function CandleChart({sym,tf,livePrice,onLastClose}:{sym:string;tf:string;livePrice:number;onLastClose:(p:number)=>void}){
   const divRef =useRef<HTMLDivElement>(null)
   const chartRef=useRef<any>(null)
   const serRef =useRef<any>(null)
@@ -251,17 +192,20 @@ function CandleChart({sym,tf,livePrice,onPriceFromCandle}:{sym:string;tf:string;
       })
       chartRef.current=chart; serRef.current=series
       const ro=new ResizeObserver(()=>{
-        if(chartRef.current&&divRef.current) chartRef.current.resize(divRef.current.clientWidth,divRef.current.clientHeight)
+        if(chartRef.current&&divRef.current)
+          chartRef.current.resize(divRef.current.clientWidth,divRef.current.clientHeight)
       })
       ro.observe(el)
-      const candles=await fetchCandles(sym,tf)
+
+      const inst=INSTRUMENTS.find(i=>i.sym===sym)!
+      const candles=await fetchTDCandles(inst.td,tf)
       if(dead){ro.disconnect();return}
       if(candles.length>0){
         series.setData(candles)
         lastRef.current=candles[candles.length-1]
         chart.timeScale().fitContent()
-        // Seed the live price from last candle close so ask matches chart immediately
-        if(onPriceFromCandle) onPriceFromCandle(candles[candles.length-1].close)
+        // Seed live price from last candle so ask/bid is correct immediately
+        onLastClose(candles[candles.length-1].close)
       } else {
         const seed:Candle={time:Math.floor(Date.now()/1000),open:livePrice,high:livePrice,low:livePrice,close:livePrice}
         lastRef.current=seed; series.setData([seed])
@@ -287,7 +231,7 @@ function CandleChart({sym,tf,livePrice,onPriceFromCandle}:{sym:string;tf:string;
   return <div ref={divRef} style={{width:'100%',height:'100%'}}/>
 }
 
-/* ── Price feed ──────────────────────────────────────────────────── */
+/* ── Price feed — Twelve Data WebSocket + REST ────────────────── */
 function usePriceFeed(){
   const [prices,setPrices]=useState<Record<string,number>>({...SEED})
   const refPrev  =useRef<Record<string,number>>({...SEED})
@@ -301,28 +245,25 @@ function usePriceFeed(){
   },[])
 
   useEffect(()=>{
-    let dead=false,ws:WebSocket,wsTimer:ReturnType<typeof setTimeout>
+    let dead=false, ws:WebSocket, wsTimer:ReturnType<typeof setTimeout>
     let pollTimer:ReturnType<typeof setInterval>
 
-    /* Polygon WebSocket — forex + metals */
+    /* ── Twelve Data WebSocket ─────────────────────────────────── */
+    const allSymbols=INSTRUMENTS.map(i=>i.td).join(',')
     const connectWS=()=>{
       if(dead) return
       try{
-        ws=new WebSocket('wss://socket.polygon.io/forex')
-        ws.onopen=()=>ws.send(JSON.stringify({action:'auth',params:POLY_KEY}))
+        ws=new WebSocket(`wss://ws.twelvedata.com/v1/quotes/price?apikey=${TD_KEY}`)
+        ws.onopen=()=>{
+          ws.send(JSON.stringify({action:'subscribe',params:{symbols:allSymbols}}))
+        }
         ws.onmessage=({data})=>{
           try{
-            const msgs:any[]=JSON.parse(data)
-            for(const msg of msgs){
-              if(msg.ev==='status'&&msg.status==='auth_success'){
-                const subs=INSTRUMENTS.filter(i=>i.poly?.startsWith('C:')).map(i=>`C.${i.sym}`).join(',')
-                ws.send(JSON.stringify({action:'subscribe',params:subs}))
-              }
-              if(msg.ev==='C'){
-                const mid=((msg.bp||0)+(msg.ap||0))/2||msg.l||0
-                const inst=INSTRUMENTS.find(i=>i.sym===msg.p||`C.${i.sym}`===msg.s)
-                if(inst&&mid>0) push(inst.sym,mid)
-              }
+            const msg=JSON.parse(data)
+            // TD sends: {event:'price', symbol:'EUR/USD', price:'1.0853', ...}
+            if(msg.event==='price'&&msg.symbol&&msg.price){
+              const inst=INSTRUMENTS.find(i=>i.td===msg.symbol)
+              if(inst) push(inst.sym,parseFloat(msg.price))
             }
           }catch{}
         }
@@ -331,61 +272,38 @@ function usePriceFeed(){
       }catch{if(!dead)wsTimer=setTimeout(connectWS,3000)}
     }
 
-    /* Poll Polygon REST for forex/metals snapshot + Yahoo for indices */
-    const pollAll=async()=>{
+    /* ── Twelve Data REST price poll (backup + gap fill) ────────── */
+    const pollPrices=async()=>{
       if(dead) return
-      // Polygon forex snapshot
-      const forexTickers=INSTRUMENTS.filter(i=>i.poly?.startsWith('C:')).map(i=>i.poly).join(',')
+      // Batch all symbols in one request
+      const syms=INSTRUMENTS.map(i=>i.td).join(',')
       try{
-        const r=await fetch(`https://api.polygon.io/v2/snapshot/locale/global/markets/forex/tickers?tickers=${forexTickers}&apiKey=${POLY_KEY}`)
+        const r=await fetch(`https://api.twelvedata.com/price?symbol=${encodeURIComponent(syms)}&apikey=${TD_KEY}`)
         const d=await r.json()
-        if(d.tickers) for(const t of d.tickers){
-          const inst=INSTRUMENTS.find(i=>i.poly===t.ticker)
-          if(!inst) continue
-          const price=t.day?.c||t.lastQuote?.mp||t.lastTrade?.p||0
-          if(price>0) push(inst.sym,price)
-        }
-      }catch{}
-
-      // Live price for indices: try Polygon index snapshot, fallback to ETF×mult
-      await Promise.allSettled(
-        (INSTRUMENTS as any[]).filter(i=>i.etf).map(async (inst:any)=>{
-          try{
-            // 1. Try direct index price from Polygon (works on some plans)
-            const r0=await fetch(`https://api.polygon.io/v2/aggs/ticker/${inst.poly}/prev?adjusted=true&apiKey=${POLY_KEY}`)
-            const d0=await r0.json()
-            const idxPrice=d0?.results?.[0]?.c||0
-            if(idxPrice>0){ push(inst.sym,idxPrice); return }
-          }catch{}
-          try{
-            // 2. ETF snapshot × multiplier
-            const r1=await fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${inst.etf}?apiKey=${POLY_KEY}`)
-            const d1=await r1.json()
-            // Polygon snapshot: ticker.day.c = today's close, ticker.lastTrade.p = last trade
-            const etfPrice=d1?.ticker?.day?.c||d1?.ticker?.prevDay?.c||d1?.ticker?.lastTrade?.p||0
-            if(etfPrice>0) push(inst.sym, Math.round(etfPrice*inst.etfMult*10)/10)
-          }catch{}
+        // Response: { 'EUR/USD': { price: '1.0853' }, 'NDX': { price: '21700.0' }, ... }
+        // OR single: { price: '1.0853' } if only 1 symbol
+        INSTRUMENTS.forEach(inst=>{
+          const entry=d[inst.td]
+          const p=parseFloat(entry?.price||'0')
+          if(p>0) push(inst.sym,p)
         })
-      )
+      }catch{}
     }
 
     connectWS()
-    pollAll()
-    pollTimer=setInterval(pollAll,3000)
+    pollPrices()
+    pollTimer=setInterval(pollPrices,5000)  // TD free: ~8 req/min so 5s is safe
+
     return ()=>{
       dead=true; clearTimeout(wsTimer); clearInterval(pollTimer)
       try{ws?.close()}catch{}
     }
   },[push])
 
-  const seedPrice=useCallback((sym:string,price:number)=>{
-    if(price>0) push(sym,price)
-  },[push])
-
-  return {prices,refPrev,refPrices,seedPrice}
+  return {prices,refPrev,refPrices,push}
 }
 
-/* ── P&L ─────────────────────────────────────────────────────────── */
+/* ── P&L ──────────────────────────────────────────────────────── */
 function calcPnl(trade:any,price:number):number{
   const inst=INSTRUMENTS.find(i=>i.sym===trade.symbol)
   const diff=trade.direction==='buy'?price-trade.open_price:trade.open_price-price
@@ -394,7 +312,7 @@ function calcPnl(trade:any,price:number):number{
   return diff*units*trade.lots
 }
 
-/* ── Risk Monitor ────────────────────────────────────────────────── */
+/* ── Risk Monitor ─────────────────────────────────────────────── */
 function useRiskMonitor(
   tradesRef:{current:any[]},pricesRef:{current:Record<string,number>},
   primaryRef:{current:any},accountId:string|null|undefined,
@@ -430,7 +348,7 @@ function useRiskMonitor(
   useEffect(()=>{firedRef.current=false},[accountId])
 }
 
-/* ── Platform Page ───────────────────────────────────────────────── */
+/* ── Platform Page ────────────────────────────────────────────── */
 export function PlatformPage(){
   const navigate=useNavigate()
   const {toasts,toast,dismiss}=useToast()
@@ -450,37 +368,32 @@ export function PlatformPage(){
   const [placing,setPlacing]=useState(false)
   const [openTrades,   setOpenTrades]  =useState<any[]>([])
   const [closedTrades, setClosedTrades]=useState<any[]>([])
-  const [now, setNow]=useState(new Date())
 
-  // Update clock every minute for market status
-  useEffect(()=>{const iv=setInterval(()=>setNow(new Date()),60000);return ()=>clearInterval(iv)},[])
+  const {prices,refPrev,refPrices,push}=usePriceFeed()
+  const tradesRef =useRef(openTrades);  tradesRef.current=openTrades
+  const primaryRef=useRef(primary);     primaryRef.current=primary
 
-  const {prices,refPrev,refPrices,seedPrice}=usePriceFeed()
-  const tradesRef=useRef(openTrades);  tradesRef.current=openTrades
-  const primaryRef=useRef(primary);   primaryRef.current=primary
-
-  const inst=INSTRUMENTS.find(i=>i.sym===sym)!
+  const inst        =INSTRUMENTS.find(i=>i.sym===sym)!
   const marketStatus=getMarketStatus(inst.market)
-  const livePrice=prices[sym]||SEED[sym]
-  const prevPrice=refPrev.current[sym]||livePrice
-  const up=livePrice>=prevPrice
-  const execPrice=+(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
-  const lotsNum=Math.max(0.01,parseFloat(lots)||0.01)
+  const livePrice   =prices[sym]||SEED[sym]
+  const prevPrice   =refPrev.current[sym]||livePrice
+  const up          =livePrice>=prevPrice
+  const execPrice   =+(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
+  const lotsNum     =Math.max(0.01,parseFloat(lots)||0.01)
 
-  const balance   =primary?.balance??0
-  const openPnl   =openTrades.reduce((s,t)=>s+calcPnl(t,prices[t.symbol]||SEED[t.symbol]),0)
-  const equity    =balance+openPnl
-  const usedMargin=openTrades.reduce((s,t)=>{
+  const balance    =primary?.balance??0
+  const openPnl    =openTrades.reduce((s,t)=>s+calcPnl(t,prices[t.symbol]||SEED[t.symbol]),0)
+  const equity     =balance+openPnl
+  const usedMargin =openTrades.reduce((s,t)=>{
     const cur=prices[t.symbol]||SEED[t.symbol]
     const i=INSTRUMENTS.find(x=>x.sym===t.symbol)
     return s+(i?.lotUSD(cur)??LOT_SIZE)*t.lots/LEVERAGE
   },0)
-  const freeMargin=equity-usedMargin
-  const marginLvl =usedMargin>0?(equity/usedMargin)*100:Infinity
-  const reqMargin =inst.lotUSD(execPrice)*lotsNum/LEVERAGE
-  const maxLots   =Math.max(0,Math.floor(freeMargin*LEVERAGE/inst.lotUSD(execPrice)*100)/100)
-
-  const canTrade  =marketStatus.open&&!((primary as any)?.payout_locked)&&primary?.status==='active'
+  const freeMargin =equity-usedMargin
+  const marginLvl  =usedMargin>0?(equity/usedMargin)*100:Infinity
+  const reqMargin  =inst.lotUSD(execPrice)*lotsNum/LEVERAGE
+  const maxLots    =Math.max(0,Math.floor(freeMargin*LEVERAGE/inst.lotUSD(execPrice)*100)/100)
+  const canTrade   =marketStatus.open&&!((primary as any)?.payout_locked)&&primary?.status==='active'
 
   useEffect(()=>{
     if(!primary?.id) return
@@ -511,18 +424,17 @@ export function PlatformPage(){
       {user_id:primary.user_id,type:'breach',title:'🚨 Account Breached',body:`Account ${primary.account_number} auto-breached. ${reason}`,is_read:false,metadata:{account_id:primary.id,reason,balance:newBal}},
       {user_id:null,type:'breach',title:`🚨 Breach — ${primary.account_number}`,body:`Auto-breached. ${reason}. Final balance: $${newBal}`,is_read:false,metadata:{account_id:primary.id,account_number:primary.account_number,reason}},
     ])
-    setOpenTrades([])
-    setClosedTrades(p=>[...closed,...p])
+    setOpenTrades([]); setClosedTrades(p=>[...closed,...p])
   },[primary,refPrices,balance])
 
   useRiskMonitor(tradesRef,refPrices,primaryRef,primary?.id,handleBreach)
 
   async function placeOrder(){
-    if(!primary)                                                      {toast('error','❌','No Account','No active account');return}
-    if(!marketStatus.open)                                            {toast('error','🔴','Market Closed',`${marketStatus.label}. Next open: ${marketStatus.nextOpen}`);return}
-    if((primary as any).payout_locked||primary.status==='suspended') {toast('error','⛔','Locked','Payout pending');return}
-    if(primary.status==='breached'||primary.status==='passed')       {toast('error','⛔','Locked','Account not active');return}
-    if(reqMargin>freeMargin)                                          {toast('error','⛔','Margin',`Need $${reqMargin.toFixed(2)}`);return}
+    if(!primary)                                                        {toast('error','❌','No Account','No active account');return}
+    if(!marketStatus.open)                                              {toast('error','🔴','Market Closed',`${marketStatus.label}. Next: ${marketStatus.nextOpen}`);return}
+    if((primary as any).payout_locked||primary.status==='suspended')   {toast('error','⛔','Locked','Payout pending');return}
+    if(primary.status==='breached'||primary.status==='passed')         {toast('error','⛔','Locked','Account not active');return}
+    if(reqMargin>freeMargin)                                            {toast('error','⛔','Margin',`Need $${reqMargin.toFixed(2)}`);return}
     setPlacing(true);setConfirm(false)
     const {data,error}=await supabase.from('trades').insert({
       account_id:primary.id,user_id:primary.user_id,symbol:sym,direction:dir,lots:lotsNum,
@@ -569,7 +481,7 @@ export function PlatformPage(){
           const prv=refPrev.current[i.sym]||cur
           const isUp=cur>=prv
           const live=prices[i.sym]>0&&Math.abs(prices[i.sym]-SEED[i.sym])>0.00001
-          const mStatus=getMarketStatus(i.market)
+          const ms=getMarketStatus(i.market)
           return(
             <div key={i.sym} onClick={()=>setSym(i.sym)} style={{
               padding:'8px 12px',cursor:'pointer',borderBottom:'1px solid rgba(212,168,67,.04)',
@@ -578,15 +490,11 @@ export function PlatformPage(){
             }}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <span style={{fontWeight:600,fontSize:11}}>{i.sym}</span>
-                <span style={{width:5,height:5,borderRadius:'50%',
-                  background:!mStatus.open?'var(--red)':live?'var(--green)':'#444',
-                  transition:'background .5s'}}
-                  title={mStatus.label}
-                />
+                <span style={{width:5,height:5,borderRadius:'50%',background:!ms.open?'var(--red)':live?'var(--green)':'#444'}} title={ms.label}/>
               </div>
-              <div style={{fontFamily:'monospace',fontSize:13,marginTop:2,fontWeight:700,color:isUp?'var(--green)':'var(--red)',opacity:mStatus.open?1:0.5}}>{cur.toFixed(i.dec)}</div>
-              <div style={{fontSize:8,color:mStatus.open?(isUp?'var(--green)':'var(--red)'):'var(--text3)',marginTop:1}}>
-                {mStatus.open?`${isUp?'▲':'▼'} ${Math.abs(cur-prv).toFixed(i.dec)}`:'CLOSED'}
+              <div style={{fontFamily:'monospace',fontSize:13,marginTop:2,fontWeight:700,color:isUp?'var(--green)':'var(--red)',opacity:ms.open?1:0.5}}>{cur.toFixed(i.dec)}</div>
+              <div style={{fontSize:8,color:ms.open?(isUp?'var(--green)':'var(--red)'):'var(--text3)',marginTop:1}}>
+                {ms.open?`${isUp?'▲':'▼'} ${Math.abs(cur-prv).toFixed(i.dec)}`:'CLOSED'}
               </div>
             </div>
           )
@@ -605,10 +513,8 @@ export function PlatformPage(){
 
     {/* Main */}
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-
-      {/* Market closed banner */}
       {!marketStatus.open&&(
-        <div style={{background:'rgba(255,51,82,.12)',borderBottom:'1px solid rgba(255,51,82,.3)',padding:'8px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+        <div style={{background:'rgba(255,51,82,.1)',borderBottom:'1px solid rgba(255,51,82,.25)',padding:'7px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
           <span style={{fontSize:11,color:'var(--red)',fontWeight:600}}>🔴 {marketStatus.label}</span>
           {marketStatus.nextOpen&&<span style={{fontSize:10,color:'var(--text3)'}}>Next open: {marketStatus.nextOpen}</span>}
         </div>
@@ -635,22 +541,20 @@ export function PlatformPage(){
         </div>
         {(primary as any)?.payout_locked&&<div style={{padding:'4px 10px',background:'rgba(212,168,67,.1)',border:'1px solid var(--bdr2)',fontSize:9,color:'var(--gold)',letterSpacing:1,fontWeight:600,textTransform:'uppercase' as const,flexShrink:0}}>⏳ Payout Pending</div>}
         <div style={{marginLeft:'auto',display:'flex',gap:2}}>
-          {Object.keys(TF_POLY).map(t=>(
+          {Object.keys(TD_INTERVAL).map(t=>(
             <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 7px',fontSize:9,fontFamily:'monospace',fontWeight:'bold',cursor:'pointer',background:tf===t?'rgba(212,168,67,.15)':'transparent',border:tf===t?'1px solid var(--bdr2)':'1px solid transparent',color:tf===t?'var(--gold)':'var(--text3)'}}>{t}</button>
           ))}
         </div>
         <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
           <div style={{width:5,height:5,borderRadius:'50%',background:marketStatus.open?'var(--green)':'var(--red)',boxShadow:marketStatus.open?'0 0 6px var(--green)':'none'}}/>
-          <span style={{fontSize:9,color:marketStatus.open?'var(--green)':'var(--red)',letterSpacing:1.5,textTransform:'uppercase' as const,fontWeight:600}}>
-            {marketStatus.open?'Live':'Closed'}
-          </span>
+          <span style={{fontSize:9,color:marketStatus.open?'var(--green)':'var(--red)',letterSpacing:1.5,textTransform:'uppercase' as const,fontWeight:600}}>{marketStatus.open?'Live':'Closed'}</span>
         </div>
       </div>
 
       {/* Chart */}
       <div style={{flex:1,overflow:'hidden'}}>
         <div key={`${sym}_${tf}`} style={{width:'100%',height:'100%'}}>
-          <CandleChart sym={sym} tf={tf} livePrice={livePrice} onPriceFromCandle={seedPrice}/>
+          <CandleChart sym={sym} tf={tf} livePrice={livePrice} onLastClose={(p)=>push(sym,p)}/>
         </div>
       </div>
 
@@ -746,8 +650,7 @@ export function PlatformPage(){
     <div style={{width:210,flexShrink:0,background:'var(--bg2)',borderLeft:'1px solid var(--bdr)',display:'flex',flexDirection:'column'}}>
       <div style={{padding:'10px 12px',borderBottom:'1px solid var(--bdr)'}}>
         <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:8}}>Order Panel</div>
-        {/* Market status badge */}
-        <div style={{marginBottom:8,padding:'5px 8px',background:marketStatus.open?'rgba(0,217,126,.08)':'rgba(255,51,82,.08)',border:`1px solid ${marketStatus.open?'rgba(0,217,126,.2)':'rgba(255,51,82,.2)'}`,display:'flex',alignItems:'center',gap:6}}>
+        <div style={{marginBottom:8,padding:'5px 8px',background:marketStatus.open?'rgba(0,217,126,.07)':'rgba(255,51,82,.07)',border:`1px solid ${marketStatus.open?'rgba(0,217,126,.2)':'rgba(255,51,82,.2)'}`,display:'flex',alignItems:'center',gap:6}}>
           <div style={{width:5,height:5,borderRadius:'50%',background:marketStatus.open?'var(--green)':'var(--red)',flexShrink:0}}/>
           <span style={{fontSize:8,color:marketStatus.open?'var(--green)':'var(--red)',fontWeight:600,lineHeight:1.3}}>{marketStatus.label}</span>
         </div>
