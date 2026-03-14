@@ -27,16 +27,18 @@ const TD_KEY    = 'c6158908260647989323da44b23f5f97'
    ═══════════════════════════════════════════════════════════════════ */
 
 const INSTRUMENTS = [
-  { sym:'EUR/USD', td:'EUR/USD',  market:'forex', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', td:'GBP/USD',  market:'forex', spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'XAU/USD', td:'XAU/USD',  market:'forex', spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
-  { sym:'USD/JPY', td:'USD/JPY',  market:'forex', spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'GBP/JPY', td:'GBP/JPY',  market:'forex', spread:0.030,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'EUR/JPY', td:'EUR/JPY',  market:'forex', spread:0.025,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'NAS100',  td:'NDX',      market:'us',    spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
-  { sym:'US500',   td:'SPX500',   market:'us',    spread:0.50,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*50       },
-  { sym:'GER40',   td:'DAX',      market:'eu',    spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*25       },
-  { sym:'UK100',   td:'FTSE100',  market:'uk',    spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
+  // tzOffset: hours to add to convert TD datetime string to UTC
+  // Forex: TD uses UTC (0), US indices: EST=-5 (winter)/-4 (summer), EU: CET=+1/+2
+  { sym:'EUR/USD', td:'EUR/USD',  market:'forex', tzOff:0,  spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', td:'GBP/USD',  market:'forex', tzOff:0,  spread:0.00020, dec:5, pip:0.0001, lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'XAU/USD', td:'XAU/USD',  market:'forex', tzOff:0,  spread:0.30,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*100      },
+  { sym:'USD/JPY', td:'USD/JPY',  market:'forex', tzOff:0,  spread:0.020,   dec:3, pip:0.01,   lotUSD:(_:number)=>LOT_SIZE   },
+  { sym:'GBP/JPY', td:'GBP/JPY',  market:'forex', tzOff:0,  spread:0.030,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'EUR/JPY', td:'EUR/JPY',  market:'forex', tzOff:0,  spread:0.025,   dec:3, pip:0.01,   lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'NAS100',  td:'NDX',      market:'us',    tzOff:5,  spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
+  { sym:'US500',   td:'SPX500',   market:'us',    tzOff:5,  spread:0.50,    dec:2, pip:0.10,   lotUSD:(p:number)=>p*50       },
+  { sym:'GER40',   td:'DAX',      market:'eu',    tzOff:-1, spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*25       },
+  { sym:'UK100',   td:'FTSE100',  market:'uk',    tzOff:0,  spread:1.0,     dec:1, pip:1.0,    lotUSD:(p:number)=>p*10       },
 ]
 
 const SEED: Record<string,number> = {
@@ -139,24 +141,44 @@ function loadLWC():Promise<void>{
 }
 
 /* ── Twelve Data REST candles ─────────────────────────────────── */
-async function fetchTDCandles(tdSym:string, tf:string):Promise<Candle[]>{
+async function fetchTDCandles(tdSym:string, tf:string, tzOff=0):Promise<Candle[]>{
   const interval=TD_INTERVAL[tf]??'1h'
-  // outputsize max = 5000 on free plan
-  const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(tdSym)}&interval=${interval}&outputsize=5000&apikey=${TD_KEY}&format=JSON`
+  // Use timezone=UTC so TD returns UTC timestamps — avoids ambiguity
+  const url=`https://api.twelvedata.com/time_series` +
+    `?symbol=${encodeURIComponent(tdSym)}` +
+    `&interval=${interval}` +
+    `&outputsize=5000` +
+    `&timezone=UTC` +
+    `&apikey=${TD_KEY}` +
+    `&format=JSON`
   try{
     const r=await fetch(url)
     if(!r.ok) throw new Error(`HTTP ${r.status}`)
     const d=await r.json()
-    if(d.status==='error') throw new Error(d.message)
-    if(!d.values?.length) return []
-    // Twelve Data returns newest first — reverse to oldest first
-    return (d.values as any[]).reverse().map((v:any)=>({
-      time:  Math.floor(new Date(v.datetime).getTime()/1000),
-      open:  parseFloat(v.open),
-      high:  parseFloat(v.high),
-      low:   parseFloat(v.low),
-      close: parseFloat(v.close),
-    })).filter((c:Candle)=>c.open>0&&c.close>0)
+    if(d.status==='error'){
+      console.warn('[TD]',tdSym,'error:',d.message)
+      return []
+    }
+    if(!Array.isArray(d.values)||d.values.length===0){
+      console.warn('[TD]',tdSym,'no values, response:',JSON.stringify(d).slice(0,200))
+      return []
+    }
+    // TD returns newest first — reverse to get oldest first for LWC
+    const candles=(d.values as any[]).reverse().map((v:any)=>{
+      // Parse "YYYY-MM-DD HH:MM:SS" as UTC
+      const dt=v.datetime.replace(' ','T')+'Z'
+      return {
+        time:  Math.floor(new Date(dt).getTime()/1000),
+        open:  parseFloat(v.open),
+        high:  parseFloat(v.high),
+        low:   parseFloat(v.low),
+        close: parseFloat(v.close),
+      }
+    }).filter((c:Candle)=>c.open>0&&c.close>0&&c.time>0)
+
+    // Remove duplicates
+    const seen=new Set<number>()
+    return candles.filter((c:Candle)=>{if(seen.has(c.time))return false;seen.add(c.time);return true})
   }catch(e){
     console.warn('[TD Candles]',tdSym,tf,e)
     return []
@@ -197,8 +219,8 @@ function CandleChart({sym,tf,livePrice,onLastClose}:{sym:string;tf:string;livePr
       })
       ro.observe(el)
 
-      const inst=INSTRUMENTS.find(i=>i.sym===sym)!
-      const candles=await fetchTDCandles(inst.td,tf)
+      const inst=INSTRUMENTS.find(i=>i.sym===sym)! as any
+      const candles=await fetchTDCandles(inst.td,tf,inst.tzOff??0)
       if(dead){ro.disconnect();return}
       if(candles.length>0){
         series.setData(candles)
