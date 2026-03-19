@@ -41,6 +41,7 @@ export const ADMIN_NAV: { section?: string; items: NavItem[] }[] = [
   ]},
   { section: 'Operations', items: [
     { label: 'Support Tickets',    icon: '💬', path: '/admin/support' },
+    { label: 'Email Center',        icon: '📧', path: '/admin/email' },
     { label: 'Challenge Products', icon: '🎯', path: '/admin/challenges' },
     { label: 'Coupon Codes',       icon: '🏷️', path: '/admin/coupons' },
     { label: 'KYC Verification',   icon: '🪪', path: '/admin/kyc' },

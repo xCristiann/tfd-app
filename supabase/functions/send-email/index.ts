@@ -58,6 +58,7 @@ function buildEmail(type: string, to: string, d: any) {
     case 'phase_advanced':      return phaseAdvanced(to, d)
     case 'ticket_reply':        return ticketReply(to, d)
     case 'password_reset':      return passwordReset(to, d)
+    case 'custom':              return customEmail(to, d)
     default: return null
   }
 }
@@ -345,6 +346,19 @@ function ticketReply(to: string, d: { first_name: string; ticket_number: string;
       <a href="https://tfd-app.vercel.app/dashboard/support" class="btn">View Full Conversation →</a>
       <p class="p" style="font-size:11px">You can reply directly to this email or visit your dashboard to respond.</p>
     `, `New reply on ticket #${d.ticket_number}: ${d.subject}`),
+  }
+}
+
+function customEmail(to: string, d: { subject: string; body: string; first_name?: string }) {
+  return {
+    from: FROM_SUPPORT, to, reply_to: 'support@thefundeddiaries.com',
+    subject: d.subject || 'Message from The Funded Diaries',
+    html: base(`
+      ${d.first_name ? `<p class="p">Hi ${d.first_name},</p>` : ''}
+      <div style="font-size:13px;line-height:1.75;color:#B8B4C8">${(d.body || '').replace(/\n/g, '<br>')}</div>
+      <div class="divider"></div>
+      <p class="p" style="font-size:11px">Questions? Reply to this email or visit <a href="https://tfd-app.vercel.app/dashboard/support" style="color:#D4A843">our support centre</a>.</p>
+    `),
   }
 }
 

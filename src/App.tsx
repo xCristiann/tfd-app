@@ -31,6 +31,7 @@ import { BillingPage }        from './app/dashboard/billing/page'
 import { KycPage }            from './app/dashboard/kyc/page'
 import { AdminCouponsPage }   from './app/admin/coupons/page'
 import { AdminKycPage }       from './app/admin/kyc/page'
+import { AdminEmailPage }     from './app/admin/email/page'
 import { SupportCRMPage }     from './app/support-crm/page'
 import { SupportAnalyticsPage } from './app/support-crm/analytics/page'
 import { CannedResponsesPage }  from './app/support-crm/canned/page'
@@ -89,6 +90,7 @@ export default function App() {
       <Route path="/admin/affiliates"     element={<ProtectedRoute roles={['admin']}><AdminAffiliatePage /></ProtectedRoute>} />
       <Route path="/admin/coupons"        element={<ProtectedRoute roles={['admin']}><AdminCouponsPage /></ProtectedRoute>} />
       <Route path="/admin/kyc"            element={<ProtectedRoute roles={['admin','support']}><AdminKycPage /></ProtectedRoute>} />
+      <Route path="/admin/email"          element={<ProtectedRoute roles={['admin','support']}><AdminEmailPage /></ProtectedRoute>} />
       <Route path="/admin/accounts"       element={<ProtectedRoute roles={['admin']}><AdminAccountsPage /></ProtectedRoute>} />
       <Route path="/admin/revenue"        element={<ProtectedRoute roles={['admin']}><AdminRevenuePage /></ProtectedRoute>} />
       <Route path="/dashboard/affiliates" element={<ProtectedRoute roles={['trader']}><AffiliatesPage /></ProtectedRoute>} />

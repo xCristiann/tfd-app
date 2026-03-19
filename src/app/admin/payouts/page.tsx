@@ -125,24 +125,34 @@ export function AdminPayoutsPage() {
     toast('success','✅', name, action)
 
     // Email notification to trader
+    // Use the payout var captured at top of function (before state updates)
     try {
-      const payout = payouts.find(p => p.id === id)
-      if (payout) {
-        const { data: trader } = await supabase
-          .from('users').select('email, first_name').eq('id', payout.user_id).single()
-        if (trader?.email) {
-          const amt = `$${payout.requested_usd}`
-          const accNum = payout.accounts?.account_number ?? ''
-          if (status === 'approved') {
-            await sendEmail('payout_approved', trader.email, { first_name: trader.first_name ?? 'Trader', amount: amt, account_number: accNum, method: payout.method ?? 'crypto' })
-          } else if (status === 'paid') {
-            await sendEmail('payout_paid', trader.email, { first_name: trader.first_name ?? 'Trader', amount: amt, method: payout.method ?? 'crypto', tx_hash: payout.tx_hash, tx_reference: payout.tx_reference })
-          } else if (status === 'rejected') {
-            await sendEmail('payout_rejected', trader.email, { first_name: trader.first_name ?? 'Trader', amount: amt, reason: payout.rejection_reason })
-          }
+      const { data: trader } = await supabase
+        .from('users').select('email, first_name').eq('id', payout.user_id).single()
+      if (trader?.email) {
+        const amt = `$${payout.requested_usd}`
+        const accNum = payout.account?.account_number ?? payout.accounts?.account_number ?? ''
+        const method = payout.method ?? 'crypto'
+        if (status === 'approved') {
+          await sendEmail('payout_approved', trader.email, {
+            first_name: trader.first_name ?? 'Trader',
+            amount: amt, account_number: accNum, method,
+          })
+        } else if (status === 'paid') {
+          await sendEmail('payout_paid', trader.email, {
+            first_name: trader.first_name ?? 'Trader',
+            amount: amt, method,
+            tx_hash: payout.tx_hash ?? '',
+            tx_reference: payout.tx_reference ?? '',
+          })
+        } else if (status === 'rejected') {
+          await sendEmail('payout_rejected', trader.email, {
+            first_name: trader.first_name ?? 'Trader',
+            amount: amt, reason: payout.rejection_reason ?? '',
+          })
         }
       }
-    } catch (e) { console.error('[email]', e) }
+    } catch (e) { console.error('[email payout]', e) }
   }
 
   const counts = {
