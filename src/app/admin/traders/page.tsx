@@ -181,7 +181,7 @@ export function AdminTradersPage() {
           { user_id: account.user_id, type: 'target_reached', title: 'Profit Target Reached!',
             body: `Account ${account.account_number} hit the ${targetPct}% target. Awaiting review.`, is_read: false },
           { user_id: null, type: 'admin_target_reached', title: `Trader Target Reached — ${account.account_number}`,
-            body: `${selectedTrader?.first_name} ${selectedTrader?.last_name} reached ${profitPct.toFixed(2)}% on ${account.account_number}. Review and advance phase.`, is_read: false }
+            body: `${selectedTrader?.first_name} ${selectedTrader?.last_name} reached ${(Number(profitPct) || 0).toFixed(2)}% on ${account.account_number}. Review and advance phase.`, is_read: false }
         ])
         toast('success', '🎯', 'Target Reached', `${account.account_number} hit profit target.`)
         // Email trader
@@ -426,7 +426,7 @@ export function AdminTradersPage() {
                           </div>
                           <div className="text-[10px] text-[#8FA3BF] mb-3">
                             Login: <span className=" text-[#1A3A6B]">{acc.platform_login}</span>
-                            &nbsp;·&nbsp;P&L: <span className={profitPct >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}>{profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%</span>
+                            &nbsp;·&nbsp;P&L: <span className={profitPct >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}>{profitPct >= 0 ? '+' : ''}{(Number(profitPct) || 0).toFixed(2)}%</span>
                           </div>
                           <div className="flex gap-2 flex-wrap">
                             {canAdvance && acc.status !== 'inactive' && acc.phase !== 'breached' && (

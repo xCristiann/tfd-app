@@ -96,7 +96,7 @@ export function AdminAccountsPage() {
                       <td className="px-[11px] py-[8px]">
                         <div className="">${Number(a.balance).toLocaleString()}</div>
                         <div className={`text-[9px] ${profitPct >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
-                          {profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%
+                          {profitPct >= 0 ? '+' : ''}{(Number(profitPct) || 0).toFixed(2)}%
                         </div>
                       </td>
                       <td className={`px-[11px] py-[8px]  ${riskColor[risk]}`}>{(a.daily_dd_used ?? 0).toFixed(2)}%</td>
