@@ -11,34 +11,24 @@ interface SidebarProps {
   accentColor?: 'gold' | 'red' | 'blue'
 }
 
-const accents = {
-  gold: { active: 'bg-[rgba(212,168,67,.07)] text-[var(--gold)] border-l-[var(--gold)]', hover: 'hover:bg-[rgba(212,168,67,.04)]', icon: 'border-[var(--gold)] text-[var(--gold)]', role: 'bg-[rgba(212,168,67,.08)] border-[var(--bdr2)] text-[var(--gold)]' },
-  red:  { active: 'bg-[rgba(255,51,82,.07)] text-[var(--red)] border-l-[var(--red)]',   hover: 'hover:bg-[rgba(255,51,82,.04)]', icon: 'border-[var(--red)] text-[var(--red)]',  role: 'bg-[rgba(255,51,82,.08)] border-[rgba(255,51,82,.2)] text-[var(--red)]' },
-  blue: { active: 'bg-[rgba(59,158,255,.07)] text-[var(--blue)] border-l-[var(--blue)]', hover: 'hover:bg-[rgba(59,158,255,.04)]', icon: 'border-[var(--blue)] text-[var(--blue)]', role: 'bg-[rgba(59,158,255,.08)] border-[rgba(59,158,255,.2)] text-[var(--blue)]' },
-}
-
 export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = 'gold' }: SidebarProps) {
-  const a = accents[accentColor]
+  const isAdmin = accentColor === 'red'
+  const isSupport = accentColor === 'blue'
+
   return (
-    <aside className="w-[224px] bg-[var(--bg2)] border-r border-[var(--bdr)] flex flex-col flex-shrink-0 h-full">
-      {/* Top */}
-      <div className="px-4 pt-[18px] pb-[14px] border-b border-[var(--bdr)]">
-        <div className="flex items-center gap-[10px] mb-[10px]">
-          <div className={cn('w-[30px] h-[30px] border flex items-center justify-center text-[12px]', a.icon)}>
-            {logo.icon}
-          </div>
-          <div>
-            <div className="serif text-[13px] font-bold leading-[1.2]">{logo.name}</div>
-          </div>
+    <aside className="w-[212px] bg-white border-r border-[#E8EEF8] flex flex-col flex-shrink-0 h-full">
+      {/* Logo */}
+      <div className="px-5 py-4 border-b border-[#E8EEF8]">
+        <div className="mb-1" style={{fontFamily:"'Playfair Display',serif",fontSize:'16px',fontWeight:700,color:'#1A3A6B',letterSpacing:'-0.2px'}}>
+          The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span>
         </div>
-        <div className={cn('flex items-center gap-[7px] px-[9px] py-[5px] border mt-2', a.role)}>
-          <div className="w-[5px] h-[5px] rounded-full bg-current opacity-80" />
-          <span className="text-[9px] tracking-[1.5px] uppercase font-bold">{logo.subtitle}</span>
+        <div className="text-[9px] font-600 uppercase tracking-[2px]" style={{fontWeight:600,color: isAdmin ? '#DC2626' : isSupport ? '#2255CC' : '#2255CC',opacity:.7}}>
+          {logo.subtitle}
         </div>
         {accountBox && (
-          <div className="bg-[var(--bg3)] border border-[var(--dim)] px-[9px] py-[7px] mt-2">
-            <div className="mono text-[10px] text-[var(--gold)]">{accountBox.id}</div>
-            <div className="text-[8px] tracking-[1.5px] uppercase text-[var(--text3)] font-semibold mt-[1px]">{accountBox.label}</div>
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-[#EEF3FF] border border-[#C5D5FA] rounded-lg">
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'10px',fontWeight:500,color:'#2255CC',flex:1}}>{accountBox.id}</div>
+            <div className="text-[8px] uppercase tracking-[1px] font-700 text-[#2255CC] bg-[#2255CC] text-white px-1.5 py-0.5 rounded" style={{background:'#2255CC',color:'#fff',fontWeight:700}}>{accountBox.label}</div>
           </div>
         )}
       </div>
@@ -48,7 +38,7 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
         {nav.map((group, gi) => (
           <div key={gi}>
             {group.section && (
-              <div className="px-4 pt-[6px] pb-[3px] mt-1 text-[7px] tracking-[2.5px] uppercase text-[var(--text3)] font-semibold">
+              <div className="px-5 pt-3 pb-1 text-[9px] font-700 uppercase tracking-[2px] text-[#BCC9DA]" style={{fontWeight:700}}>
                 {group.section}
               </div>
             )}
@@ -57,19 +47,22 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) => cn(
-                  'flex items-center gap-[9px] px-4 py-[8px] text-[12px] font-medium transition-all cursor-pointer border-l-2 border-transparent',
-                  isActive ? a.active : cn('text-[var(--text2)]', a.hover)
+                  'flex items-center gap-2.5 px-4 py-2 text-[12px] font-500 transition-all cursor-pointer border-l-[3px] mx-1 rounded-r-lg',
+                  isActive
+                    ? 'bg-[#EEF3FF] text-[#2255CC] border-l-[#2255CC] font-600'
+                    : 'text-[#5C7A9E] border-l-transparent hover:bg-[#F4F7FD] hover:text-[#1A3A6B]'
                 )}
+                style={{fontWeight: undefined}}
               >
-                <span className="text-[13px] w-[17px] text-center flex-shrink-0">{item.icon}</span>
+                <span className="text-[13px] w-4 text-center flex-shrink-0">{item.icon}</span>
                 <span className="flex-1">{item.label}</span>
                 {item.badge !== undefined && (
                   <span className={cn(
-                    'text-[7px] px-[5px] py-[1px] rounded-[7px] font-bold',
-                    item.badgeType === 'red' ? 'bg-[var(--red)] text-white' :
-                    item.badgeType === 'blue' ? 'bg-[var(--blue)] text-white' :
-                    'bg-[var(--gold3)] text-[var(--gold2)]'
-                  )}>{item.badge}</span>
+                    'text-[9px] px-1.5 py-0.5 rounded-full font-700',
+                    item.badgeType === 'red' ? 'bg-red-100 text-red-600' :
+                    item.badgeType === 'blue' ? 'bg-blue-100 text-blue-700' :
+                    'bg-[#EEF3FF] text-[#2255CC]'
+                  )} style={{fontWeight:700}}>{item.badge}</span>
                 )}
               </NavLink>
             ))}
@@ -77,20 +70,20 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
         ))}
       </nav>
 
-      {/* Bottom user */}
-      <div className="px-4 py-3 border-t border-[var(--bdr)] flex items-center gap-[9px]">
-        <div className={cn('w-[30px] h-[30px] rounded-full border-[1.5px] flex items-center justify-center serif text-[11px] font-bold', a.icon)} style={{ background: 'rgba(0,0,0,.2)' }}>
-          {user.initials}
+      {/* User footer */}
+      <div className="border-t border-[#E8EEF8] px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-[#1A3A6B] flex items-center justify-center text-[11px] font-700 text-white flex-shrink-0" style={{fontWeight:700}}>
+            {user.initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] font-600 text-[#1A3A6B] truncate" style={{fontWeight:600}}>{user.name}</div>
+            <div className="text-[10px] text-[#8FA3BF] capitalize">{user.role}</div>
+          </div>
+          <button onClick={onLogout} className="text-[#8FA3BF] hover:text-[#DC2626] cursor-pointer bg-transparent border-none text-[11px] transition-colors" title="Log out">
+            ⎋
+          </button>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[12px] font-semibold truncate">{user.name}</div>
-          <div className="text-[9px] text-[var(--text3)] capitalize">{user.role}</div>
-        </div>
-        <button
-          onClick={onLogout}
-          className="text-[var(--text3)] hover:text-[var(--red)] transition-colors text-[13px] cursor-pointer bg-none border-none"
-          title="Logout"
-        >⏻</button>
       </div>
     </aside>
   )

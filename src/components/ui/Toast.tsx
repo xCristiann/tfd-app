@@ -1,31 +1,29 @@
 import type { ToastMessage } from '@/types/database'
 
-const border: Record<ToastMessage['type'], string> = {
-  success: 'border-l-[var(--green)]',
-  error:   'border-l-[var(--red)]',
-  warning: 'border-l-[var(--gold)]',
-  info:    'border-l-[var(--blue)]',
+const config: Record<ToastMessage['type'], { border: string; bg: string }> = {
+  success: { border: 'border-l-green-500',  bg: 'bg-green-50' },
+  error:   { border: 'border-l-red-500',    bg: 'bg-red-50' },
+  warning: { border: 'border-l-amber-500',  bg: 'bg-amber-50' },
+  info:    { border: 'border-l-[#2255CC]',  bg: 'bg-[#EEF3FF]' },
 }
 
-export function ToastContainer({ toasts, dismiss }: {
-  toasts: ToastMessage[]
-  dismiss: (id: string) => void
-}) {
+export function ToastContainer({ toasts, dismiss }: { toasts: ToastMessage[]; dismiss: (id: string) => void }) {
   return (
-    <div className="fixed top-[58px] right-[15px] z-[9999] flex flex-col gap-[7px]">
-      {toasts.map((t) => (
-        <div
-          key={t.id}
-          onClick={() => dismiss(t.id)}
-          className={`bg-[var(--bg2)] border border-[var(--bdr2)] border-l-[3px] ${border[t.type]} px-[13px] py-[10px] min-w-[240px] flex items-start gap-[9px] cursor-pointer shadow-[0_6px_28px_rgba(0,0,0,.55)] animate-[slideIn_.25s_ease]`}
-        >
-          <span className="text-[15px] flex-shrink-0">{t.icon}</span>
-          <div>
-            <div className="text-[11px] font-semibold mb-[2px]">{t.title}</div>
-            <div className="text-[10px] text-[var(--text2)] leading-[1.45]">{t.body}</div>
+    <div className="fixed top-[60px] right-4 z-[9999] flex flex-col gap-2">
+      {toasts.map((t) => {
+        const c = config[t.type]
+        return (
+          <div key={t.id} onClick={() => dismiss(t.id)}
+            className={`${c.bg} border border-[#E8EEF8] border-l-4 ${c.border} px-4 py-3 min-w-[260px] max-w-[320px] flex items-start gap-3 cursor-pointer rounded-xl shadow-lg`}
+            style={{animation:'slideIn .2s ease'}}>
+            <span className="text-base flex-shrink-0">{t.icon}</span>
+            <div>
+              <div className="text-[12px] font-600 text-[#1A3A6B] mb-0.5" style={{fontWeight:600}}>{t.title}</div>
+              <div className="text-[11px] text-[#5C7A9E] leading-relaxed">{t.body}</div>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
