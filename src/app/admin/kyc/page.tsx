@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/useToast'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/email'
 import { ADMIN_NAV } from '@/lib/nav'
+import { formatDate } from '@/lib/utils'
 
 const STATUS_COLORS: Record<string, string> = {
   pending:      'bg-[rgba(34,85,204,.08)] text-[#2255CC]',
@@ -78,14 +79,16 @@ export function AdminKycPage() {
     setSyncing(true)
     let updated = 0
     for (const r of records) {
-      if (!r.inquiry_id || !['pending','in_review','in_progress'].includes(r.status)) continue
+      const sessionId = r.kyc?.inquiry_id
+      const currentStatus = r.kyc?.status ?? r.kyc_status
+      if (!sessionId || !['pending','in_review','in_progress','not_started'].includes(currentStatus ?? '')) continue
       try {
-        const res = await fetch(`/api/kyc-status?sessionId=${r.inquiry_id}`)
+        const res = await fetch(`/api/kyc-status?sessionId=${sessionId}`)
         if (!res.ok) continue
         const { status: newStatus } = await res.json()
-        if (newStatus && newStatus !== r.status) {
-          await supabase.from('kyc_verifications').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', r.id)
-          await supabase.from('users').update({ kyc_status: newStatus }).eq('id', r.user_id)
+        if (newStatus && newStatus !== currentStatus) {
+          await supabase.from('kyc_verifications').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', r.kyc.id)
+          await supabase.from('users').update({ kyc_status: newStatus }).eq('id', r.id)
           updated++
         }
       } catch {}
@@ -96,17 +99,19 @@ export function AdminKycPage() {
   }
 
   async function syncOne(r: any) {
-    if (!r.inquiry_id) { toast('warning', '⚠️', 'No Session', 'No Didit session ID for this record.'); return }
+    const sessionId = r.kyc?.inquiry_id
+    if (!sessionId) { toast('warning', '⚠️', 'No Session', 'No Didit session ID for this trader.'); return }
     try {
-      const res = await fetch(`/api/kyc-status?sessionId=${r.inquiry_id}`)
+      const res = await fetch(`/api/kyc-status?sessionId=${sessionId}`)
       const { status: newStatus, raw } = await res.json()
-      if (newStatus && newStatus !== r.status) {
-        await supabase.from('kyc_verifications').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', r.id)
-        await supabase.from('users').update({ kyc_status: newStatus }).eq('id', r.user_id)
-        toast('success', '✅', 'Updated', `Status synced: ${newStatus} (Didit: ${raw})`)
+      const currentStatus = r.kyc?.status ?? r.kyc_status
+      if (newStatus && newStatus !== currentStatus) {
+        await supabase.from('kyc_verifications').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', r.kyc.id)
+        await supabase.from('users').update({ kyc_status: newStatus }).eq('id', r.id)
+        toast('success', '✅', 'Updated', `Status: ${newStatus} (Didit: ${raw})`)
         load()
       } else {
-        toast('info', 'ℹ️', 'No Change', `Didit says: ${raw ?? newStatus}`)
+        toast('info', 'ℹ️', 'No Change', `Didit says: ${raw ?? newStatus} — already ${currentStatus}`)
       }
     } catch (e: any) {
       toast('error', '❌', 'Error', e.message)
@@ -125,16 +130,22 @@ export function AdminKycPage() {
 
         <div className={`grid gap-[14px] ${selected ? 'grid-cols-[1fr_380px]' : 'grid-cols-1'}`}>
           <Card>
-            <CardHeader title={`Traders (${filtered.length})`}>
-              <div className="flex gap-[3px]">
-                {['all','pending','approved','declined','not_started'].map(f => (
-                  <button key={f} onClick={() => setFilter(f)}
-                    className={`px-[9px] py-[4px] text-[7px] tracking-[1px] uppercase font-semibold cursor-pointer border transition-all ${filter===f ? 'bg-[rgba(220,38,38,.1)] border-[rgba(220,38,38,.3)] text-[#DC2626]' : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'}`}>
-                    {f.replace('_',' ')}
-                  </button>
-                ))}
+            <CardHeader title={`Traders (${filtered.length})`} action={
+              <div className="flex items-center gap-2">
+                <div className="flex gap-[3px]">
+                  {['all','pending','approved','declined','not_started'].map(f => (
+                    <button key={f} onClick={() => setFilter(f)}
+                      className={`px-[9px] py-[4px] text-[7px] tracking-[1px] uppercase font-semibold cursor-pointer border transition-all ${filter===f ? 'bg-[rgba(220,38,38,.1)] border-[rgba(220,38,38,.3)] text-[#DC2626]' : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'}`}>
+                      {f.replace('_',' ')}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={syncAllFromDidit} disabled={syncing}
+                  className="px-3 py-1.5 text-[10px] font-semibold bg-[#EEF3FF] text-[#2255CC] border border-[#C5D5FA] rounded-lg cursor-pointer hover:bg-[#E0EAFF] transition-colors disabled:opacity-50">
+                  {syncing ? '⏳ Syncing…' : '🔄 Sync Didit'}
+                </button>
               </div>
-            </CardHeader>
+            }/>
 
             {loading ? (
               <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[#DC2626] border-t-transparent rounded-full animate-spin"/></div>
@@ -165,18 +176,26 @@ export function AdminKycPage() {
                           </span>
                         </td>
                         <td className="px-[11px] py-[9px]">
-                          {kycStatus === 'pending' && (
-                            <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                          <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
+                            {kycStatus !== 'approved' && (
                               <button onClick={() => updateStatus(r.id, r.kyc?.id, 'approved')} disabled={updating}
-                                className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer bg-[rgba(22,163,74,.1)] text-[#16A34A] border border-[rgba(22,163,74,.2)] hover:bg-[rgba(22,163,74,.2)] transition-colors">
-                                Approve
+                                className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer bg-[rgba(22,163,74,.1)] text-[#16A34A] border border-[rgba(22,163,74,.2)] hover:bg-[rgba(22,163,74,.2)] rounded transition-colors">
+                                ✓
                               </button>
+                            )}
+                            {kycStatus !== 'declined' && (
                               <button onClick={() => updateStatus(r.id, r.kyc?.id, 'declined')} disabled={updating}
-                                className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(220,38,38,.2)] hover:bg-[rgba(220,38,38,.2)] transition-colors">
-                                Decline
+                                className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(220,38,38,.2)] hover:bg-[rgba(220,38,38,.2)] rounded transition-colors">
+                                ✕
                               </button>
-                            </div>
-                          )}
+                            )}
+                            {r.kyc?.inquiry_id && (
+                              <button onClick={() => syncOne(r)}
+                                className="px-[7px] py-[3px] text-[8px] font-bold cursor-pointer bg-[#EEF3FF] text-[#2255CC] border border-[#C5D5FA] hover:bg-[#E0EAFF] rounded transition-colors">
+                                🔄
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )
