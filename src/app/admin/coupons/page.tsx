@@ -167,19 +167,22 @@ export function AdminCouponsPage() {
         </div>
 
         <Card>
-          <CardHeader title={`Coupon Codes (${filtered.length})`}>
-            <div className="flex items-center gap-2">
-              <div className="flex gap-[3px]">
-                {['all','active','expired','maxed','disabled'].map(f => (
-                  <button key={f} onClick={() => setFilter(f)}
-                    className={`px-[9px] py-[4px] text-[7px] tracking-[1px] uppercase font-semibold cursor-pointer border transition-all ${filter===f?'bg-[rgba(255,51,82,.1)] border-[rgba(255,51,82,.3)] text-[var(--red)]':'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)]'}`}>
-                    {f}
-                  </button>
-                ))}
-              </div>
-              <Button size="sm" onClick={openCreate}>+ New Coupon</Button>
-            </div>
-          </CardHeader>
+          <CardHeader
+              title={`Coupon Codes (${filtered.length})`}
+              action={
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-[3px]">
+                    {['all','active','expired','maxed','disabled'].map(f => (
+                      <button key={f} onClick={() => setFilter(f)}
+                        className={`px-[9px] py-[4px] text-[7px] tracking-[1px] uppercase font-semibold cursor-pointer border transition-all ${filter===f?'bg-[rgba(255,51,82,.1)] border-[rgba(255,51,82,.3)] text-[var(--red)]':'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)]'}`}>
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                  <Button size="sm" onClick={openCreate}>+ New Coupon</Button>
+                </div>
+              }
+            />
 
           {loading ? (
             <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[var(--red)] border-t-transparent rounded-full animate-spin"/></div>
