@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { ToastContainer } from '@/components/ui/Toast'
 import { fmt } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { sendEmail } from '@/lib/email'
 import { TRADER_NAV } from '@/lib/nav'
 
 const METHODS = ['usdt_trc20','usdt_erc20','bitcoin','wise','bank']
@@ -80,6 +81,16 @@ export function PayoutsPage() {
     setAmount(''); setWallet(''); setNotes('')
     toast('success','💰','Payout Requested',
       `$${amount} submitted. Your account is locked for trading until admin reviews. You will be notified within 24h.`)
+
+    // Email confirmation to trader
+    if (profile?.email) {
+      sendEmail('payout_requested', profile.email, {
+        first_name:     profile.first_name ?? 'Trader',
+        amount:         `$${amount}`,
+        method:         method,
+        account_number: selectedAccount.account_number,
+      }).catch(() => {})
+    }
   }
 
   const totalPaid = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + (p.net_usd ?? p.requested_usd), 0)

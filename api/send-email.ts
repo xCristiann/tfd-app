@@ -130,6 +130,17 @@ function buildEmail(type: string, to: string, d: Record<string, any>, fn: string
       subject: 'KYC Verification — Action Required',
       html: wrap(`<h1 style="color:#FF3352;margin:0 0 12px">Verification Needs Attention</h1><p style="color:#B0ACC4;line-height:1.7">Hi ${fn}, we could not verify your identity. Please re-submit with a valid government-issued photo ID.</p>${d.reason ? `<div style="border-left:3px solid #FF3352;background:rgba(255,51,82,.05);padding:12px;margin:12px 0;color:#FF3352">${d.reason}</div>` : ''}<a href="${SITE}/dashboard/kyc" style="display:inline-block;background:#D4A843;color:#0A0A0F;padding:12px 24px;font-weight:700;text-decoration:none;letter-spacing:2px;text-transform:uppercase;margin-top:16px">Re-submit Verification &rarr;</a>`),
     }
+    case 'payout_requested': return {
+      from: 'The Funded Diaries <support@thefundeddiaries.com>', to,
+      subject: `Payout Request Received — ${d.amount||''}`,
+      html: wrap(`
+        <div style="display:inline-block;background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);color:#D4A843;padding:3px 10px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px">Request Received</div>
+        <h1 style="color:#D4A843;margin:0 0 10px;font-size:22px">Payout Request Submitted</h1>
+        <p style="color:#B0ACC4;line-height:1.7;margin-bottom:4px">Hi ${fn}, your payout request has been received and is pending admin review. You will be notified once it's processed.</p>
+        ${card(row('Amount Requested', d.amount||'—','#D4A843') + row('Method', d.method||'—') + row('Account', d.account_number||'—') + row('Status','Pending Review','#D4A843'))}
+        <p style="color:#B0ACC4;font-size:12px;margin-top:4px">Trading on this account is suspended until your request is reviewed. This typically takes 1–2 business days.</p>
+      `),
+    }
     case 'payout_approved': return {
       from: 'The Funded Diaries <support@thefundeddiaries.com>', to,
       subject: `Payout Approved 💰 — ${d.amount||''}`,

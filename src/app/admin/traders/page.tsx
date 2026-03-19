@@ -169,6 +169,11 @@ export function AdminTradersPage() {
               body: `${selectedTrader?.first_name} ${selectedTrader?.last_name} breached ${account.account_number}.`, is_read: false }
           ])
           toast('warning', '🚨', 'Account Breached', `${account.account_number} breached.`)
+          // Email trader
+          try {
+            const { data: trader } = await supabase.from('users').select('email,first_name').eq('id', account.user_id).single()
+            if (trader?.email) sendEmail('account_breached', trader.email, { first_name: trader.first_name ?? 'Trader', account_number: account.account_number, reason: 'Drawdown limit exceeded.', balance: `$${newBal.toLocaleString()}` })
+          } catch(e) {}
         }
       } else if (profitPct >= targetPct && account.status !== 'passed' && account.status !== 'breached') {
         await supabase.from('accounts').update({ status: 'passed' }).eq('id', account.id)
@@ -179,6 +184,11 @@ export function AdminTradersPage() {
             body: `${selectedTrader?.first_name} ${selectedTrader?.last_name} reached ${profitPct.toFixed(2)}% on ${account.account_number}. Review and advance phase.`, is_read: false }
         ])
         toast('success', '🎯', 'Target Reached', `${account.account_number} hit profit target.`)
+        // Email trader
+        try {
+          const { data: trader } = await supabase.from('users').select('email,first_name').eq('id', account.user_id).single()
+          if (trader?.email) sendEmail('phase_advanced', trader.email, { first_name: trader.first_name ?? 'Trader', account_number: account.account_number, from_phase: account.phase, to_phase: 'review', login: account.platform_login ?? '', server: account.server ?? 'CFT-Live-01' })
+        } catch(e) {}
       }
     }
 
@@ -214,6 +224,24 @@ export function AdminTradersPage() {
     setAddAccLoading(false)
     if (error) { toast('error', '❌', 'Error', error.message); return }
     toast('success', '✅', 'Account Added', `${accountNumber} created.`)
+    // Email trader about new account
+    try {
+      const { data: trader } = await supabase.from('users').select('email,first_name').eq('id', selectedTrader.id).single()
+      if (trader?.email) {
+        sendEmail('order_confirmation', trader.email, {
+          first_name:     trader.first_name ?? 'Trader',
+          order_number:   accountNumber,
+          product_name:   prod.name,
+          account_size:   Number(prod.account_size).toLocaleString(),
+          account_number: accountNumber,
+          login,
+          password,
+          server:         'CFT-Live-01',
+          amount:         '0.00',
+          phase:          addAccPhase,
+        })
+      }
+    } catch(e) {}
     setAddAccModal(false)
     openTrader(selectedTrader)
   }
@@ -417,6 +445,18 @@ export function AdminTradersPage() {
                               <button onClick={async ()=>{
                                 await supabase.from('accounts').update({ status: 'breached', phase: 'breached' }).eq('id', acc.id)
                                 toast('warning','⛔','Breached',`${acc.account_number} marked as breached.`)
+                                // Email trader
+                                try {
+                                  const { data: trader } = await supabase.from('users').select('email,first_name').eq('id', acc.user_id).single()
+                                  if (trader?.email) {
+                                    sendEmail('account_breached', trader.email, {
+                                      first_name: trader.first_name ?? 'Trader',
+                                      account_number: acc.account_number,
+                                      reason: 'Account marked as breached by risk management.',
+                                      balance: `$${Number(acc.balance).toLocaleString()}`,
+                                    })
+                                  }
+                                } catch(e) {}
                                 openTrader(selectedTrader)
                               }}
                                 className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,140,0,.1)] text-[var(--gold)] border border-[rgba(255,140,0,.2)]">
