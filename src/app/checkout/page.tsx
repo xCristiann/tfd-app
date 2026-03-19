@@ -164,25 +164,29 @@ export function CheckoutPage() {
   }
 
   async function applyCoupon() {
-    if (!couponInput.trim() || !product) return
+    if (!couponInput.trim() || !product || !profile) return
     setCouponLoading(true); setCouponError('')
-    const { data, error } = await supabase.from('coupons')
-      .select('*').eq('code', couponInput.toUpperCase().trim()).eq('is_active', true).single()
-    if (error || !data) { setCouponError('Invalid or expired coupon code.'); setCouponData(null); setCouponLoading(false); return }
-    if (data.expires_at && new Date(data.expires_at) < new Date()) { setCouponError('This coupon has expired.'); setCouponData(null); setCouponLoading(false); return }
-    if (data.max_uses && data.uses_count >= data.max_uses) { setCouponError('This coupon has reached its usage limit.'); setCouponData(null); setCouponLoading(false); return }
-    if (data.min_order_usd && product.price_usd < data.min_order_usd) { setCouponError(`Minimum order $${data.min_order_usd} required.`); setCouponData(null); setCouponLoading(false); return }
-    setCouponData(data); setCouponCode(data.code)
+    const { data, error } = await supabase.rpc('validate_coupon', {
+      p_code:       couponInput.toUpperCase().trim(),
+      p_user_id:    profile.id,
+      p_product_id: product.id,
+      p_order_usd:  product.price_usd,
+    })
     setCouponLoading(false)
+    if (error || !data?.valid) {
+      setCouponError(data?.error ?? error?.message ?? 'Invalid coupon code.')
+      setCouponData(null)
+      return
+    }
+    // Fetch full coupon for display
+    const { data: coupon } = await supabase.from('coupons').select('*').eq('code', couponInput.toUpperCase().trim()).single()
+    setCouponData({ ...coupon, _discount: data.discount_usd })
+    setCouponCode(coupon.code)
   }
 
   function removeCoupon() { setCouponData(null); setCouponCode(''); setCouponInput(''); setCouponError('') }
 
-  const discountAmount = couponData
-    ? couponData.discount_type === 'percent'
-      ? Math.round(product?.price_usd * couponData.discount_value / 100 * 100) / 100
-      : Math.min(couponData.discount_value, product?.price_usd ?? 0)
-    : 0
+  const discountAmount = couponData?._discount ?? 0
   const finalPrice = Math.max(0, (product?.price_usd ?? 0) - discountAmount)
 
   async function proceedToPayment() {
