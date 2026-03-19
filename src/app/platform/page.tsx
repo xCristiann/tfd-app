@@ -1,980 +1,781 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/useToast'
 import { useAccount } from '@/hooks/useAccount'
 import { ToastContainer } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
-import { fmt } from '@/lib/utils'
 
+const FINNHUB = (import.meta as any).env?.VITE_FINNHUB_KEY ?? ''
 const LEVERAGE = 50
 const LOT_SIZE = 100_000
 
-/* ═══════════════════════════════════════════════════════════════════
-   DATA STRATEGY
-   ─────────────────────────────────────────────────────────────────
-   Live prices: Polygon.io WebSocket (forex real-time)
-                + Polygon REST snapshot (indices + metals)
-   Candles:     Polygon.io REST /v2/aggs (real OHLC, up to date, free)
-   API key:     G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO
-   ═══════════════════════════════════════════════════════════════════ */
-const POLY = 'G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO'
+/* ══ INSTRUMENTS ══════════════════════════════════════════════════ */
+const INSTRUMENTS = [
+  // Forex
+  { sym:'EUR/USD', fh:'OANDA:EUR_USD', dec:5, pip:0.0001, spread:0.00010, cat:'Forex', lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', fh:'OANDA:GBP_USD', dec:5, pip:0.0001, spread:0.00015, cat:'Forex', lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/JPY', fh:'OANDA:USD_JPY', dec:3, pip:0.01,   spread:0.010,   cat:'Forex', lotUSD:(_:number)=>LOT_SIZE },
+  { sym:'USD/CHF', fh:'OANDA:USD_CHF', dec:5, pip:0.0001, spread:0.00015, cat:'Forex', lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'AUD/USD', fh:'OANDA:AUD_USD', dec:5, pip:0.0001, spread:0.00015, cat:'Forex', lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/CAD', fh:'OANDA:USD_CAD', dec:5, pip:0.0001, spread:0.00020, cat:'Forex', lotUSD:(p:number)=>LOT_SIZE/p },
+  { sym:'NZD/USD', fh:'OANDA:NZD_USD', dec:5, pip:0.0001, spread:0.00020, cat:'Forex', lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'EUR/JPY', fh:'OANDA:EUR_JPY', dec:3, pip:0.01,   spread:0.025,   cat:'Forex', lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'GBP/JPY', fh:'OANDA:GBP_JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex', lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'EUR/GBP', fh:'OANDA:EUR_GBP', dec:5, pip:0.0001, spread:0.00015, cat:'Forex', lotUSD:(p:number)=>p*1.27*LOT_SIZE },
+  // Metals
+  { sym:'XAU/USD', fh:'OANDA:XAU_USD', dec:2, pip:0.10,   spread:0.30,    cat:'Metals', lotUSD:(p:number)=>p*100 },
+  { sym:'XAG/USD', fh:'OANDA:XAG_USD', dec:4, pip:0.001,  spread:0.030,   cat:'Metals', lotUSD:(p:number)=>p*5000 },
+  // Indices - Finnhub real-time symbols
+  { sym:'NAS100',  fh:'NASDAQ:QQQ',    dec:2, pip:1.0,     spread:1.5,     cat:'Indices', idxMult:40,  lotUSD:(p:number)=>p*400 },
+  { sym:'US500',   fh:'AMEX:SPY',      dec:2, pip:0.10,    spread:0.50,    cat:'Indices', idxMult:10,  lotUSD:(p:number)=>p*500 },
+  { sym:'US30',    fh:'AMEX:DIA',      dec:1, pip:1.0,     spread:2.0,     cat:'Indices', idxMult:100, lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   fh:'XETRA:EXS1',   dec:1, pip:1.0,     spread:1.0,     cat:'Indices', idxMult:1,   lotUSD:(p:number)=>p*25 },
+] as const
 
-/* ── All instruments ─────────────────────────────────────────────── */
-const ALL_INSTRUMENTS = [
-  // ── Forex major ───────────────────────────────────────────────────
-  { sym:'EUR/USD', poly:'C:EURUSD', market:'forex', spread:0.00010, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', poly:'C:GBPUSD', market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/JPY', poly:'C:USDJPY', market:'forex', spread:0.010,   dec:3, pip:0.01,   cat:'forex', lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'USD/CHF', poly:'C:USDCHF', market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'AUD/USD', poly:'C:AUDUSD', market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/CAD', poly:'C:USDCAD', market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>1/p*LOT_SIZE },
-  { sym:'NZD/USD', poly:'C:NZDUSD', market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*LOT_SIZE },
-  // ── Forex minor ───────────────────────────────────────────────────
-  { sym:'GBP/JPY', poly:'C:GBPJPY', market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex', lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'EUR/JPY', poly:'C:EURJPY', market:'forex', spread:0.025,   dec:3, pip:0.01,   cat:'forex', lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'EUR/GBP', poly:'C:EURGBP', market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*1.29*LOT_SIZE },
-  { sym:'AUD/JPY', poly:'C:AUDJPY', market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex', lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'EUR/CHF', poly:'C:EURCHF', market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'EUR/AUD', poly:'C:EURAUD', market:'forex', spread:0.00030, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*0.65*LOT_SIZE },
-  { sym:'EUR/CAD', poly:'C:EURCAD', market:'forex', spread:0.00030, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*0.74*LOT_SIZE },
-  { sym:'GBP/CHF', poly:'C:GBPCHF', market:'forex', spread:0.00025, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/AUD', poly:'C:GBPAUD', market:'forex', spread:0.00030, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*0.65*LOT_SIZE },
-  { sym:'GBP/CAD', poly:'C:GBPCAD', market:'forex', spread:0.00030, dec:5, pip:0.0001, cat:'forex', lotUSD:(p:number)=>p*0.74*LOT_SIZE },
-  { sym:'CAD/JPY', poly:'C:CADJPY', market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex', lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'CHF/JPY', poly:'C:CHFJPY', market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex', lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'USD/MXN', poly:'C:USDMXN', market:'forex', spread:0.050,   dec:4, pip:0.0001, cat:'forex', lotUSD:(_:number)=>LOT_SIZE*0.055 },
-  // ── Metals ────────────────────────────────────────────────────────
-  { sym:'XAU/USD', poly:'C:XAUUSD', market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals',lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', poly:'C:XAGUSD', market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals',lotUSD:(p:number)=>p*5000  },
-  // ── US Indices ────────────────────────────────────────────────────
-  // Indices: Polygon free supports stocks not indices
-  // Use ETF proxies: QQQ=NDX/40, SPY=SPX/10, DIA=DJI/100, IWM=RUT/10
-  // EWG=DAX/740, EWU=FTSE/240, EWQ=CAC/70
-  { sym:'NAS100',  poly:'QQQ',   idxMult:40,   market:'us',  spread:1.5,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   poly:'SPY',   idxMult:10,   market:'us',  spread:0.50, dec:2, pip:0.10, cat:'index', lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    poly:'DIA',   idxMult:100,  market:'us',  spread:2.0,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*5000 },
-  { sym:'US2000',  poly:'IWM',   idxMult:10,   market:'us',  spread:1.0,  dec:2, pip:0.10, cat:'index', lotUSD:(p:number)=>p*500  },
-  { sym:'VIX',     poly:'VIXY',  idxMult:1,    market:'us',  spread:0.10, dec:2, pip:0.01, cat:'index', lotUSD:(p:number)=>p*100  },
-  // ── EU Indices ────────────────────────────────────────────────────
-  { sym:'GER40',   poly:'EWG',   idxMult:740,  market:'eu',  spread:1.0,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*18500},
-  { sym:'UK100',   poly:'EWU',   idxMult:240,  market:'uk',  spread:1.0,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*2400 },
-  { sym:'FRA40',   poly:'EWQ',   idxMult:70,   market:'eu',  spread:1.0,  dec:1, pip:1.0,  cat:'index', lotUSD:(p:number)=>p*1400 },
-]
+type InstrumentType = typeof INSTRUMENTS[number]
 
-const SEED: Record<string,number> = {
+const SEEDS: Record<string,number> = {
   'EUR/USD':1.0853,'GBP/USD':1.2940,'USD/JPY':148.50,'USD/CHF':0.8820,
-  'AUD/USD':0.6350,'USD/CAD':1.3580,'NZD/USD':0.5780,'GBP/JPY':192.50,
-  'EUR/JPY':170.20,'EUR/GBP':0.8380,'AUD/JPY':94.30,'EUR/CHF':0.9560,
-  'EUR/AUD':1.7080,'EUR/CAD':1.5640,'GBP/CHF':1.1250,'GBP/AUD':2.0450,
-  'GBP/CAD':1.8720,'CAD/JPY':109.30,'CHF/JPY':168.50,'USD/MXN':20.050,
-  'XAU/USD':2980.0,'XAG/USD':33.50,
-  'NAS100':21700,'US500':5750,'US30':42800,'US2000':2080,'VIX':18.5,
-  'GER40':22500,'UK100':8700,'FRA40':8200,
+  'AUD/USD':0.6350,'USD/CAD':1.3580,'NZD/USD':0.5780,'EUR/JPY':170.20,
+  'GBP/JPY':192.50,'EUR/GBP':0.8380,'XAU/USD':2980.0,'XAG/USD':33.50,
+  'NAS100':21700,'US500':5750,'US30':42800,'GER40':22500,
 }
 
-const TF_CONFIG: Record<string,{mult:number;span:string;daysBack:number;sec:number}> = {
-  M1:  {mult:1,  span:'minute',daysBack:3,   sec:60    },
-  M5:  {mult:5,  span:'minute',daysBack:14,  sec:300   },
-  M15: {mult:15, span:'minute',daysBack:30,  sec:900   },
-  M30: {mult:30, span:'minute',daysBack:60,  sec:1800  },
-  H1:  {mult:1,  span:'hour',  daysBack:180, sec:3600  },
-  H4:  {mult:4,  span:'hour',  daysBack:365, sec:14400 },
-  D1:  {mult:1,  span:'day',   daysBack:1825,sec:86400 },
-}
-
-type Candle = {time:number;open:number;high:number;low:number;close:number}
-
-/* ══════════════════════════════════════════════════════════════════
-   MARKET HOURS (CFD hours, source: tradermade.com/cfd-opening-times)
-   ══════════════════════════════════════════════════════════════════ */
-function getMarketStatus(market:string):{open:boolean;label:string;nextOpen:string} {
-  const now=new Date()
-  const day=now.getUTCDay(), hm=now.getUTCHours()*60+now.getUTCMinutes()
-  const month=now.getUTCMonth()+1, summer=month>=3&&month<=10
-  const fmtD=(d:Date)=>d.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC',timeZoneName:'short'})
-  const nextDay=(dd:number,hh:number,mm:number)=>{const d=new Date(now);let add=(dd-day+7)%7;if(add===0&&hm>=hh*60+mm)add=7;d.setUTCDate(d.getUTCDate()+add);d.setUTCHours(hh,mm,0,0);return fmtD(d)}
-
-  if(market==='forex'){
-    const closed=day===6||(day===0&&hm<22*60)||(day===5&&hm>=21*60+45)
-    const brk=!closed&&hm>=21*60+45&&hm<22*60
-    if(!closed&&!brk) return {open:true,label:'Forex Open 24/5',nextOpen:''}
-    if(brk) return {open:false,label:'Daily Break 21:45–22:00 UTC',nextOpen:'Reopens 22:00 UTC'}
-    const d=new Date(now)
-    if(day===6){d.setUTCDate(d.getUTCDate()+1);d.setUTCHours(22,0,0,0)}
-    else if(day===0)d.setUTCHours(22,0,0,0)
-    else{d.setUTCDate(d.getUTCDate()+2);d.setUTCHours(22,0,0,0)}
-    return {open:false,label:'Forex Closed — Weekend',nextOpen:fmtD(d)}
-  }
-  if(market==='us'){
-    const openH=summer?22:23
-    const b1s=summer?20*60+15:21*60+15, b1e=summer?20*60+30:21*60+30
-    const b2s=summer?21*60:22*60,       b2e=summer?22*60:23*60
-    if(day===6||(day===0&&hm<openH*60)||(day===5&&hm>=b1s))
-      return {open:false,label:'US Indices Closed — Weekend',nextOpen:nextDay(0,openH,0)}
-    if(hm>=b1s&&hm<b1e) return {open:false,label:'US Indices — Daily Break',nextOpen:`Reopens ${summer?'20:30':'21:30'} UTC`}
-    if(hm>=b2s&&hm<b2e) return {open:false,label:'US Indices — Daily Break',nextOpen:`Reopens ${summer?'22:00':'23:00'} UTC`}
-    return {open:true,label:'US Indices Open (CFD 24/5)',nextOpen:''}
-  }
-  if(market==='eu'||market==='uk'){
-    const name=market==='eu'?'EU Indices':'UK100'
-    if(day===0||day===6) return {open:false,label:`${name} Closed — Weekend`,nextOpen:nextDay(1,7,0)}
-    if(hm>=7*60&&hm<21*60) return {open:true,label:`${name} Open`,nextOpen:''}
-    const d=new Date(now)
-    if(hm>=21*60){d.setUTCDate(d.getUTCDate()+1);if(d.getUTCDay()===6)d.setUTCDate(d.getUTCDate()+2);else if(d.getUTCDay()===0)d.setUTCDate(d.getUTCDate()+1)}
-    d.setUTCHours(7,0,0,0)
-    return {open:false,label:hm<7*60?`${name} Pre-Market`:`${name} After Hours`,nextOpen:fmtD(d)}
-  }
-  return {open:true,label:'Open',nextOpen:''}
-}
-
-/* ── LWC loader ──────────────────────────────────────────────────── */
-let _lwcReady=false;const _lwcQ:Array<()=>void>=[]
-function loadLWC():Promise<void>{
-  return new Promise(res=>{
-    if(_lwcReady){res();return}_lwcQ.push(res)
-    if(document.getElementById('lwc-s'))return
-    const s=document.createElement('script')
-    s.id='lwc-s';s.src='https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js'
-    s.onload=()=>{_lwcReady=true;_lwcQ.forEach(f=>f());_lwcQ.length=0}
+/* ══ LWC LOADER ══════════════════════════════════════════════════ */
+let _lwcReady = false; const _lwcQ: Array<()=>void> = []
+function loadLWC(): Promise<void> {
+  return new Promise(res => {
+    if (_lwcReady) { res(); return }
+    _lwcQ.push(res)
+    if (document.getElementById('lwc-s')) return
+    const s = document.createElement('script')
+    s.id = 'lwc-s'
+    s.src = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js'
+    s.onload = () => { _lwcReady = true; _lwcQ.forEach(f => f()); _lwcQ.length = 0 }
     document.head.appendChild(s)
   })
 }
 
-/* ── Polygon candles ─────────────────────────────────────────────── */
-async function fetchCandles(polyTicker:string, tf:string, idxMult=1):Promise<Candle[]>{
-  const {mult,span,daysBack}=TF_CONFIG[tf]??TF_CONFIG.H1
-  const to=new Date(), from=new Date(Date.now()-daysBack*86400*1000)
-  const fmtDate=(d:Date)=>d.toISOString().split('T')[0]
-  const url=`https://api.polygon.io/v2/aggs/ticker/${polyTicker}/range/${mult}/${span}/${fmtDate(from)}/${fmtDate(to)}?adjusted=true&sort=asc&limit=50000&apiKey=${POLY}`
-  try{
-    const r=await fetch(url)
-    if(!r.ok) throw new Error(`HTTP ${r.status}`)
-    const d=await r.json()
-    if(!d.results?.length){
-      console.warn('[Polygon candles] no results for',polyTicker,tf,'status:',d.status,'message:',d.message)
-      return []
-    }
-    return (d.results as any[]).map((b:any)=>({
-      time:  Math.floor(b.t/1000),
-      open:  +(b.o*idxMult).toFixed(idxMult>1?1:6),
-      high:  +(b.h*idxMult).toFixed(idxMult>1?1:6),
-      low:   +(b.l*idxMult).toFixed(idxMult>1?1:6),
-      close: +(b.c*idxMult).toFixed(idxMult>1?1:6),
+/* ══ CANDLES via Finnhub REST ════════════════════════════════════ */
+type Candle = { time: number; open: number; high: number; low: number; close: number }
+
+const TF: Record<string,{res:string;daysBack:number;sec:number}> = {
+  M1:  { res:'1',  daysBack:2,   sec:60    },
+  M5:  { res:'5',  daysBack:7,   sec:300   },
+  M15: { res:'15', daysBack:14,  sec:900   },
+  M30: { res:'30', daysBack:30,  sec:1800  },
+  H1:  { res:'60', daysBack:90,  sec:3600  },
+  H4:  { res:'240',daysBack:365, sec:14400 },
+  D1:  { res:'D',  daysBack:1000,sec:86400 },
+}
+
+async function fetchCandles(inst: any, tf: string): Promise<Candle[]> {
+  if (!FINNHUB) return []
+  const { res, daysBack } = TF[tf] ?? TF.H1
+  const to   = Math.floor(Date.now() / 1000)
+  const from = to - daysBack * 86400
+  const mult = inst.idxMult ?? 1
+
+  // Forex & metals: use Finnhub forex candles
+  // Indices: use stock candles
+  const isForex = inst.cat === 'Forex' || inst.cat === 'Metals'
+  const url = isForex
+    ? `https://finnhub.io/api/v1/forex/candle?symbol=${inst.fh}&resolution=${res}&from=${from}&to=${to}&token=${FINNHUB}`
+    : `https://finnhub.io/api/v1/stock/candle?symbol=${inst.fh}&resolution=${res}&from=${from}&to=${to}&token=${FINNHUB}`
+
+  try {
+    const r = await fetch(url)
+    const d = await r.json()
+    if (d.s !== 'ok' || !d.t?.length) return []
+    return d.t.map((t: number, i: number) => ({
+      time:  t,
+      open:  +((d.o[i] ?? 0) * mult).toFixed(inst.dec),
+      high:  +((d.h[i] ?? 0) * mult).toFixed(inst.dec),
+      low:   +((d.l[i] ?? 0) * mult).toFixed(inst.dec),
+      close: +((d.c[i] ?? 0) * mult).toFixed(inst.dec),
     }))
-  }catch(e){
-    console.warn('[Polygon candles]',polyTicker,tf,e)
+  } catch {
     return []
   }
 }
 
-/* ── Chart with SL/TP lines ─────────────────────────────────────── */
-interface ChartProps {
-  sym:string; tf:string; livePrice:number
-  onLastClose:(p:number)=>void
-  openTrades:any[]
-  onUpdateSLTP:(tradeId:string, sl:number|null, tp:number|null)=>void
-}
+/* ══ CHART ════════════════════════════════════════════════════════ */
+function CandleChart({ inst, tf, livePrice, openTrades }: {
+  inst: any; tf: string; livePrice: number; openTrades: any[]
+}) {
+  const divRef   = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<any>(null)
+  const serRef   = useRef<any>(null)
+  const lastRef  = useRef<Candle | null>(null)
 
-function CandleChart({sym,tf,livePrice,onLastClose,openTrades,onUpdateSLTP}:ChartProps){
-  const divRef  =useRef<HTMLDivElement>(null)
-  const chartRef=useRef<any>(null)
-  const serRef  =useRef<any>(null)
-  const lastRef =useRef<Candle|null>(null)
-  const linesRef=useRef<Map<string,{entry:any;sl:any;tp:any}>>(new Map())
-
-  // Build/destroy chart when sym or tf changes
-  useEffect(()=>{
-    const el=divRef.current;if(!el)return
-    let dead=false
-    loadLWC().then(async()=>{
-      if(dead||!divRef.current)return
-      try{chartRef.current?.remove()}catch{}
-      linesRef.current.clear()
-      const LWC=(window as any).LightweightCharts
-      const chart=LWC.createChart(el,{
-        width:el.clientWidth,height:el.clientHeight,
-        layout:{background:{type:'solid',color:'#0A0A0F'},textColor:'rgba(200,190,240,0.5)'},
-        grid:{vertLines:{color:'rgba(34,85,204,0.05)'},horzLines:{color:'rgba(34,85,204,0.05)'}},
-        crosshair:{mode:1},
-        rightPriceScale:{borderColor:'rgba(34,85,204,0.15)'},
-        timeScale:{borderColor:'rgba(34,85,204,0.15)',timeVisible:true,secondsVisible:false},
+  useEffect(() => {
+    const el = divRef.current; if (!el) return
+    let dead = false
+    loadLWC().then(async () => {
+      if (dead || !divRef.current) return
+      try { chartRef.current?.remove() } catch {}
+      const LWC = (window as any).LightweightCharts
+      const chart = LWC.createChart(el, {
+        width: el.clientWidth, height: el.clientHeight,
+        layout: { background: { type: 'solid', color: '#FAFBFF' }, textColor: '#5C7A9E' },
+        grid: { vertLines: { color: 'rgba(34,85,204,.06)' }, horzLines: { color: 'rgba(34,85,204,.06)' } },
+        crosshair: { mode: 1 },
+        rightPriceScale: { borderColor: '#E8EEF8' },
+        timeScale: { borderColor: '#E8EEF8', timeVisible: true, secondsVisible: false },
       })
-      const series=chart.addCandlestickSeries({
-        upColor:'#00D97E',downColor:'#FF3352',
-        borderUpColor:'#00D97E',borderDownColor:'#FF3352',
-        wickUpColor:'#00D97E',wickDownColor:'#FF3352',
+      const series = chart.addCandlestickSeries({
+        upColor: '#16A34A', downColor: '#DC2626',
+        borderUpColor: '#16A34A', borderDownColor: '#DC2626',
+        wickUpColor: '#16A34A', wickDownColor: '#DC2626',
       })
-      chartRef.current=chart;serRef.current=series
-      const ro=new ResizeObserver(()=>{if(chartRef.current&&divRef.current)chartRef.current.resize(divRef.current.clientWidth,divRef.current.clientHeight)})
+      chartRef.current = chart; serRef.current = series
+      const ro = new ResizeObserver(() => {
+        if (chartRef.current && divRef.current)
+          chartRef.current.resize(divRef.current.clientWidth, divRef.current.clientHeight)
+      })
       ro.observe(el)
-      const inst=ALL_INSTRUMENTS.find(i=>i.sym===sym)! as any
-      const candles=await fetchCandles(inst.poly, tf, inst.idxMult??1)
-      if(dead){ro.disconnect();return}
-      if(candles.length>0){
+      const candles = await fetchCandles(inst, tf)
+      if (dead) { ro.disconnect(); return }
+      if (candles.length > 0) {
         series.setData(candles)
-        lastRef.current=candles[candles.length-1]
+        lastRef.current = candles[candles.length - 1]
         chart.timeScale().fitContent()
-        onLastClose(candles[candles.length-1].close)
-      } else {
-        const seed:Candle={time:Math.floor(Date.now()/1000),open:livePrice,high:livePrice,low:livePrice,close:livePrice}
-        lastRef.current=seed;series.setData([seed])
       }
-      return ()=>ro.disconnect()
+      return () => ro.disconnect()
     })
-    return ()=>{dead=true}
-  },[sym,tf])
+    return () => { dead = true }
+  }, [inst.sym, tf])
 
-  // Update live candle
-  useEffect(()=>{
-    if(!serRef.current||livePrice<=0)return
-    const sec=TF_CONFIG[tf].sec
-    const now=Math.floor(Date.now()/1000)
-    const cTime=Math.floor(now/sec)*sec
-    const prev=lastRef.current
-    const c:Candle=(!prev||cTime>prev.time)
-      ?{time:cTime,open:livePrice,high:livePrice,low:livePrice,close:livePrice}
-      :{time:prev.time,open:prev.open,high:Math.max(prev.high,livePrice),low:Math.min(prev.low,livePrice),close:livePrice}
-    lastRef.current=c
-    try{serRef.current.update(c)}catch{}
-  },[livePrice,tf])
+  // Live candle update
+  useEffect(() => {
+    if (!serRef.current || livePrice <= 0) return
+    const sec = TF[tf].sec
+    const now = Math.floor(Date.now() / 1000)
+    const cTime = Math.floor(now / sec) * sec
+    const prev = lastRef.current
+    const c: Candle = (!prev || cTime > prev.time)
+      ? { time: cTime, open: livePrice, high: livePrice, low: livePrice, close: livePrice }
+      : { time: prev.time, open: prev.open, high: Math.max(prev.high, livePrice), low: Math.min(prev.low, livePrice), close: livePrice }
+    lastRef.current = c
+    try { serRef.current.update(c) } catch {}
+  }, [livePrice, tf])
 
-  // Draw/update SL TP Entry lines for open trades on this symbol
-  useEffect(()=>{
-    const chart=chartRef.current;const series=serRef.current
-    if(!chart||!series)return
-    const inst=ALL_INSTRUMENTS.find(i=>i.sym===sym)
-    const trades=openTrades.filter(t=>t.symbol===sym)
-    const existingIds=new Set(linesRef.current.keys())
-
-    // Remove lines for closed trades
-    existingIds.forEach(id=>{
-      if(!trades.find(t=>t.id===id)){
-        const lines=linesRef.current.get(id)
-        if(lines){
-          try{series.removePriceLine(lines.entry)}catch{}
-          try{if(lines.sl)series.removePriceLine(lines.sl)}catch{}
-          try{if(lines.tp)series.removePriceLine(lines.tp)}catch{}
-        }
+  // SL/TP lines for open trades
+  const linesRef = useRef<Map<string,{e:any;sl:any;tp:any}>>(new Map())
+  useEffect(() => {
+    const series = serRef.current; if (!series) return
+    const trades = openTrades.filter(t => t.symbol === inst.sym)
+    const ids = new Set(linesRef.current.keys())
+    ids.forEach(id => {
+      if (!trades.find(t => t.id === id)) {
+        const l = linesRef.current.get(id)
+        try { series.removePriceLine(l?.e) } catch {}
+        try { if (l?.sl) series.removePriceLine(l.sl) } catch {}
+        try { if (l?.tp) series.removePriceLine(l.tp) } catch {}
         linesRef.current.delete(id)
       }
     })
-
-    // Add/update lines for open trades
-    trades.forEach(t=>{
-      const existing=linesRef.current.get(t.id)
-      const dec=inst?.dec??5
-
-      if(!existing){
-        // Create entry line
-        const entryLine=series.createPriceLine({
-          price:t.open_price,
-          color:t.direction==='buy'?'rgba(22,163,74,0.8)':'rgba(220,38,38,0.8)',
-          lineWidth:1,lineStyle:2,axisLabelVisible:true,
-          title:`${t.direction.toUpperCase()} ${t.lots}`,
-        })
-        // Create SL line
-        const slLine=t.sl?series.createPriceLine({
-          price:t.sl,color:'rgba(220,38,38,0.9)',lineWidth:1,lineStyle:1,
-          axisLabelVisible:true,title:'SL',draggable:true,
-        }):null
-        // Create TP line
-        const tpLine=t.tp?series.createPriceLine({
-          price:t.tp,color:'rgba(22,163,74,0.9)',lineWidth:1,lineStyle:1,
-          axisLabelVisible:true,title:'TP',draggable:true,
-        }):null
-        linesRef.current.set(t.id,{entry:entryLine,sl:slLine,tp:tpLine})
-      } else {
-        // Update prices if changed
-        try{existing.entry.applyOptions({price:t.open_price})}catch{}
-        if(existing.sl&&t.sl) try{existing.sl.applyOptions({price:t.sl})}catch{}
-        if(existing.tp&&t.tp) try{existing.tp.applyOptions({price:t.tp})}catch{}
-      }
+    trades.forEach(t => {
+      if (linesRef.current.has(t.id)) return
+      const e = series.createPriceLine({ price: t.open_price, color: t.direction==='buy'?'rgba(22,163,74,.9)':'rgba(220,38,38,.9)', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `${t.direction.toUpperCase()} ${t.lots}` })
+      const sl = t.sl ? series.createPriceLine({ price: t.sl, color: 'rgba(220,38,38,.8)', lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: 'SL' }) : null
+      const tp = t.tp ? series.createPriceLine({ price: t.tp, color: 'rgba(22,163,74,.8)', lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: 'TP' }) : null
+      linesRef.current.set(t.id, { e, sl, tp })
     })
-  },[openTrades,sym])
+  }, [openTrades, inst.sym])
 
-  return <div ref={divRef} style={{width:'100%',height:'100%'}}/>
+  return <div ref={divRef} style={{ width: '100%', height: '100%' }} />
 }
 
-/* ── Margin calculation ──────────────────────────────────────────── */
-/*
-  Correct formula:
-  Required Margin = (Lots × Contract Size) / Leverage
-  For EUR/USD: 1 lot = 100,000 EUR, margin = 100,000 / 50 = $2,000 per lot
-  For XAU/USD: 1 lot = 100 oz, price ~$3000, notional = $300,000, margin = $300,000/50 = $6,000
-  For NAS100:  1 lot = index×10, price ~21700, notional = $217,000, margin = $217,000/50 = $4,340
+/* ══ PRICE FEED ══════════════════════════════════════════════════ */
+function usePriceFeed() {
+  const [prices, setPrices] = useState<Record<string,number>>({ ...SEEDS })
+  const prevRef  = useRef<Record<string,number>>({ ...SEEDS })
+  const priceRef = useRef<Record<string,number>>({ ...SEEDS })
 
-  lotUSD(price) returns the USD notional value of 1 lot at current price
-  reqMargin = lotUSD(execPrice) * lots / LEVERAGE
-*/
+  const push = useCallback((sym: string, price: number) => {
+    if (!price || isNaN(price) || price <= 0) return
+    prevRef.current[sym] = priceRef.current[sym] || price
+    priceRef.current[sym] = price
+    setPrices(p => p[sym] === price ? p : { ...p, [sym]: price })
+  }, [])
 
-/* ── P&L ─────────────────────────────────────────────────────────── */
-function calcPnl(trade:any,price:number):number{
-  const inst=ALL_INSTRUMENTS.find(i=>i.sym===trade.symbol)
-  if(!inst)return 0
-  const diff=trade.direction==='buy'?price-trade.open_price:trade.open_price-price
-  // For JPY pairs: pip value in USD needs /price conversion
-  const isJpy=trade.symbol.includes('JPY')
-  const units=isJpy?LOT_SIZE/price:inst.lotUSD(1)
-  return diff*units*trade.lots
-}
+  useEffect(() => {
+    if (!FINNHUB) return
+    let dead = false
+    let ws: WebSocket
+    let wsTimer: any
+    let pollTimer: any
 
-/* ── Price feed ──────────────────────────────────────────────────── */
-function usePriceFeed(){
-  const [prices,setPrices]=useState<Record<string,number>>({...SEED})
-  const refPrev  =useRef<Record<string,number>>({...SEED})
-  const refPrices=useRef<Record<string,number>>({...SEED})
-
-  const push=useCallback((sym:string,price:number)=>{
-    if(!price||isNaN(price)||price<=0)return
-    refPrev.current[sym]=refPrices.current[sym]||price
-    refPrices.current[sym]=price
-    setPrices(p=>p[sym]===price?p:{...p,[sym]:price})
-  },[])
-
-  useEffect(()=>{
-    let dead=false,ws:WebSocket,wsTimer:ReturnType<typeof setTimeout>,pollTimer:ReturnType<typeof setInterval>
-
-    // Polygon Forex WebSocket
-    const connectWS=()=>{
-      if(dead)return
-      try{
-        ws=new WebSocket('wss://socket.polygon.io/forex')
-        ws.onopen=()=>ws.send(JSON.stringify({action:'auth',params:POLY}))
-        ws.onmessage=({data})=>{
-          try{
-            const msgs:any[]=JSON.parse(data)
-            for(const msg of msgs){
-              if(msg.ev==='status'&&msg.status==='auth_success'){
-                const subs=ALL_INSTRUMENTS.filter(i=>i.poly.startsWith('C:')).map(i=>`C.${i.sym}`).join(',')
-                ws.send(JSON.stringify({action:'subscribe',params:subs}))
-              }
-              if(msg.ev==='C'&&msg.p){
-                const mid=((msg.bp||0)+(msg.ap||0))/2||msg.l||0
-                const inst=ALL_INSTRUMENTS.find(i=>i.sym===msg.p)
-                if(inst&&mid>0)push(inst.sym,mid)
+    // WebSocket for forex real-time
+    const connect = () => {
+      if (dead) return
+      try {
+        ws = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB}`)
+        ws.onopen = () => {
+          // Subscribe to forex pairs
+          const forexInsts = INSTRUMENTS.filter(i => i.cat === 'Forex' || i.cat === 'Metals')
+          forexInsts.forEach(i => ws.send(JSON.stringify({ type: 'subscribe', symbol: i.fh })))
+          // Subscribe to indices via stock symbols
+          const idxInsts = INSTRUMENTS.filter(i => i.cat === 'Indices')
+          idxInsts.forEach(i => ws.send(JSON.stringify({ type: 'subscribe', symbol: i.fh })))
+        }
+        ws.onmessage = ({ data }) => {
+          try {
+            const msg = JSON.parse(data)
+            if (msg.type === 'trade' && msg.data) {
+              for (const t of msg.data) {
+                const inst = INSTRUMENTS.find(i => i.fh === t.s) as any
+                if (!inst || !t.p) continue
+                const price = inst.idxMult ? +(t.p * inst.idxMult).toFixed(inst.dec) : t.p
+                push(inst.sym, price)
               }
             }
-          }catch{}
+          } catch {}
         }
-        ws.onclose=()=>{if(!dead)wsTimer=setTimeout(connectWS,2000)}
-        ws.onerror=()=>{try{ws.close()}catch{}}
-      }catch{if(!dead)wsTimer=setTimeout(connectWS,3000)}
+        ws.onclose = () => { if (!dead) wsTimer = setTimeout(connect, 2000) }
+        ws.onerror = () => { try { ws.close() } catch {} }
+      } catch { if (!dead) wsTimer = setTimeout(connect, 3000) }
     }
 
-    // REST poll — indices (Polygon prev day) + all instruments as backup
-    const pollAll=async()=>{
-      if(dead)return
+    // REST poll as backup + for symbols not in WS
+    const poll = async () => {
+      if (dead) return
+      for (const inst of INSTRUMENTS as any[]) {
+        try {
+          const isForex = inst.cat === 'Forex' || inst.cat === 'Metals'
+          const url = isForex
+            ? `https://finnhub.io/api/v1/forex/rates?base=USD&token=${FINNHUB}`
+            : `https://finnhub.io/api/v1/quote?symbol=${inst.fh}&token=${FINNHUB}`
 
-      // 1. Forex + Metals snapshot (C: tickers)
-      const forexTickers=ALL_INSTRUMENTS.filter(i=>i.poly.startsWith('C:')).map(i=>i.poly).join(',')
-      try{
-        const r=await fetch(`https://api.polygon.io/v2/snapshot/locale/global/markets/forex/tickers?tickers=${forexTickers}&apiKey=${POLY}`)
-        const d=await r.json()
-        if(d.tickers){for(const t of d.tickers){
-          const inst=ALL_INSTRUMENTS.find(i=>i.poly===t.ticker)
-          if(!inst)continue
-          // Try multiple price fields in order of preference
-          const price=t.lastQuote?.mp // midpoint
-            ||((t.lastQuote?.ap||0)+(t.lastQuote?.bp||0))/2
-            ||t.day?.c||t.lastTrade?.p||0
-          if(price>0)push(inst.sym,price)
-        }}
-      }catch{}
-
-      // 2. ETF stocks snapshot for indices (Polygon free supports stocks)
-      const idxInsts=(ALL_INSTRUMENTS as any[]).filter(i=>i.idxMult)
-      const etfTickers=idxInsts.map((i:any)=>i.poly).join(',')
-      try{
-        const r=await fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${etfTickers}&apiKey=${POLY}`)
-        const d=await r.json()
-        if(d.tickers){for(const t of d.tickers){
-          const inst=idxInsts.find((i:any)=>i.poly===t.ticker)
-          if(!inst)continue
-          const etfPrice=t.day?.c||t.lastTrade?.p||t.prevDay?.c||0
-          if(etfPrice>0)push(inst.sym, Math.round(etfPrice*(inst as any).idxMult*10)/10)
-        }}
-      }catch{}
-    }
-
-    connectWS()
-    pollAll()
-    pollTimer=setInterval(pollAll,5000)
-    return ()=>{
-      dead=true;clearTimeout(wsTimer);clearInterval(pollTimer)
-      try{ws?.close()}catch{}
-    }
-  },[push])
-
-  return {prices,refPrev,refPrices,push}
-}
-
-/* ── Risk Monitor ─────────────────────────────────────────────────── */
-function useRiskMonitor(
-  tradesRef:{current:any[]},pricesRef:{current:Record<string,number>},
-  primaryRef:{current:any},accountId:string|null|undefined,
-  onBreach:(reason:string,trades:any[])=>void
-){
-  const firedRef=useRef(false)
-  const cbRef=useRef(onBreach);cbRef.current=onBreach
-  useEffect(()=>{
-    const iv=setInterval(()=>{
-      const primary=primaryRef.current,trades=tradesRef.current,prices=pricesRef.current
-      if(!primary||!trades.length||firedRef.current)return
-      if(primary.status==='breached'||primary.status==='passed')return
-      const balance=primary.balance??0,startBal=primary.starting_balance??balance
-      if(balance<=0||startBal<=0)return
-      const cp=(primary as any).challenge_products,phase=primary.phase??'phase1'
-      const maxDDPct  =phase==='funded'?(cp?.funded_max_dd??10):phase==='phase2'?(cp?.ph2_max_dd??10):(cp?.ph1_max_dd??10)
-      const dailyDDPct=phase==='funded'?(cp?.funded_daily_dd??5):phase==='phase2'?(cp?.ph2_daily_dd??5):(cp?.ph1_daily_dd??5)
-      const maxDDFloor=startBal-startBal*(maxDDPct/100)
-      const dailyHigh=primary.daily_high_balance??startBal
-      const dailyFloor=dailyHigh-dailyHigh*(dailyDDPct/100)
-      const floatPnl=trades.reduce((s:number,t:any)=>s+calcPnl(t,prices[t.symbol]||SEED[t.symbol]||t.open_price),0)
-      const equity=balance+floatPnl
-      if(equity<=maxDDFloor){firedRef.current=true;cbRef.current(`Max drawdown breached — equity $${(Number(equity) || 0).toFixed(2)} ≤ floor $${(Number(maxDDFloor) || 0).toFixed(2)} (${maxDDPct}%)`,trades);return}
-      if(equity<=dailyFloor){firedRef.current=true;cbRef.current(`Daily drawdown breached — equity $${(Number(equity) || 0).toFixed(2)} ≤ floor $${(Number(dailyFloor) || 0).toFixed(2)} (${dailyDDPct}% daily)`,trades);return}
-      for(const t of trades){
-        const cur=prices[t.symbol]||SEED[t.symbol]||t.open_price
-        const pct=(calcPnl(t,cur)/startBal)*100
-        if(pct<=-5){firedRef.current=true;cbRef.current(`${t.symbol} loss ${(Number(pct) || 0).toFixed(2)}% of account (limit -5%)`,trades);return}
+          if (!isForex) {
+            const r = await fetch(url)
+            const d = await r.json()
+            if (d.c && d.c > 0) {
+              const price = inst.idxMult ? +(d.c * inst.idxMult).toFixed(inst.dec) : d.c
+              push(inst.sym, price)
+            }
+          }
+        } catch {}
+        await new Promise(r => setTimeout(r, 100)) // rate limit
       }
-    },500)
-    return ()=>clearInterval(iv)
-  },[])
-  useEffect(()=>{firedRef.current=false},[accountId])
+
+      // Forex rates batch
+      try {
+        const r = await fetch(`https://finnhub.io/api/v1/forex/rates?base=USD&token=${FINNHUB}`)
+        const d = await r.json()
+        if (d.quote) {
+          const q = d.quote
+          const map: Record<string,string> = {
+            'EUR/USD':'EUR','GBP/USD':'GBP','AUD/USD':'AUD','NZD/USD':'NZD',
+            'USD/JPY':'JPY','USD/CHF':'CHF','USD/CAD':'CAD',
+          }
+          for (const [sym, base] of Object.entries(map)) {
+            const rate = q[base]
+            if (!rate) continue
+            if (sym.startsWith('USD/')) push(sym, +(1/rate).toFixed(sym==='USD/JPY'?3:5))
+            else push(sym, +rate.toFixed(5))
+          }
+          // XAU & XAG
+          if (q['XAU']) push('XAU/USD', +(1/q['XAU']).toFixed(2))
+          if (q['XAG']) push('XAG/USD', +(1/q['XAG']).toFixed(4))
+        }
+      } catch {}
+    }
+
+    connect()
+    poll()
+    pollTimer = setInterval(poll, 5000)
+
+    return () => {
+      dead = true
+      clearTimeout(wsTimer)
+      clearInterval(pollTimer)
+      try {
+        INSTRUMENTS.forEach(i => ws?.readyState === 1 && ws.send(JSON.stringify({ type: 'unsubscribe', symbol: i.fh })))
+        ws?.close()
+      } catch {}
+    }
+  }, [push])
+
+  return { prices, prevRef, priceRef, push }
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   PLATFORM PAGE
-   ══════════════════════════════════════════════════════════════════ */
-export function PlatformPage(){
-  const navigate=useNavigate()
-  const {toasts,toast,dismiss}=useToast()
-  const {accounts,primary:defPrimary}=useAccount()
-  const [selAccId,setSelAccId]=useState<string|null>(null)
-  const primary=accounts.find(a=>a.id===selAccId)??defPrimary
+/* ══ P&L CALC ════════════════════════════════════════════════════ */
+function calcPnl(trade: any, price: number): number {
+  const inst = INSTRUMENTS.find(i => i.sym === trade.symbol) as any
+  if (!inst || !price) return 0
+  const diff = trade.direction === 'buy' ? price - trade.open_price : trade.open_price - price
+  const isJpy = trade.symbol.includes('JPY')
+  const units = isJpy ? LOT_SIZE / price : inst.lotUSD(1)
+  return diff * units * trade.lots
+}
 
-  const [sym,    setSym]   =useState('EUR/USD')
-  const [tf,     setTf]    =useState('H1')
-  const [dir,    setDir]   =useState<'buy'|'sell'>('buy')
-  const [lots,   setLots]  =useState('0.10')
-  const [sl,     setSl]    =useState('')
-  const [tp,     setTp]    =useState('')
-  const [ordType,setOrdType]=useState('Market')
-  const [tab,    setTab]   =useState('positions')
-  const [confirm,setConfirm]=useState(false)
-  const [placing,setPlacing]=useState(false)
-  const [openTrades,   setOpenTrades]  =useState<any[]>([])
-  const [closedTrades, setClosedTrades]=useState<any[]>([])
+/* ══ RISK MONITOR ════════════════════════════════════════════════ */
+function useRiskMonitor(tradesRef: any, pricesRef: any, primaryRef: any, accountId: any, onBreach: any) {
+  const firedRef = useRef(false)
+  const cbRef = useRef(onBreach); cbRef.current = onBreach
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const primary = primaryRef.current, trades = tradesRef.current, prices = pricesRef.current
+      if (!primary || !trades.length || firedRef.current) return
+      if (primary.status === 'breached' || primary.status === 'passed') return
+      const balance = primary.balance ?? 0, startBal = primary.starting_balance ?? balance
+      if (balance <= 0 || startBal <= 0) return
+      const cp = (primary as any).challenge_products, phase = primary.phase ?? 'phase1'
+      const maxDDPct   = phase==='funded'?(cp?.funded_max_dd??10):phase==='phase2'?(cp?.ph2_max_dd??10):(cp?.ph1_max_dd??10)
+      const dailyDDPct = phase==='funded'?(cp?.funded_daily_dd??5):phase==='phase2'?(cp?.ph2_daily_dd??5):(cp?.ph1_daily_dd??5)
+      const maxDDFloor  = startBal - startBal * (maxDDPct / 100)
+      const dailyHigh   = primary.daily_high_balance ?? startBal
+      const dailyFloor  = dailyHigh - dailyHigh * (dailyDDPct / 100)
+      const floatPnl    = trades.reduce((s: number, t: any) => s + calcPnl(t, prices[t.symbol] || SEEDS[t.symbol] || t.open_price), 0)
+      const equity      = balance + floatPnl
+      if (equity <= maxDDFloor) { firedRef.current = true; cbRef.current(`Max drawdown breached — equity $${equity.toFixed(2)} ≤ floor $${maxDDFloor.toFixed(2)} (${maxDDPct}%)`, trades); return }
+      if (equity <= dailyFloor) { firedRef.current = true; cbRef.current(`Daily drawdown breached — equity $${equity.toFixed(2)} ≤ floor $${dailyFloor.toFixed(2)} (${dailyDDPct}% daily)`, trades); return }
+    }, 500)
+    return () => clearInterval(iv)
+  }, [])
+  useEffect(() => { firedRef.current = false }, [accountId])
+}
 
-  // Watchlist state
-  const [search,     setSearch]    =useState('')
-  const [favorites,  setFavorites] =useState<Set<string>>(()=>{
-    try{return new Set(JSON.parse(localStorage.getItem('tfd_favs')||'[]'))}catch{return new Set(['EUR/USD','GBP/USD','XAU/USD','NAS100','US30'])}
-  })
-  const [editSLTP,   setEditSLTP]  =useState<{id:string;sl:string;tp:string}|null>(null)
+/* ══ MARKET STATUS ═══════════════════════════════════════════════ */
+function mktOpen(cat: string): boolean {
+  const now = new Date(), d = now.getUTCDay(), hm = now.getUTCHours() * 60 + now.getUTCMinutes()
+  if (cat === 'Forex' || cat === 'Metals') return !(d === 6 || (d === 0 && hm < 22*60) || (d === 5 && hm >= 21*60+45))
+  if (cat === 'Indices') return !(d === 0 || d === 6) && (hm >= 13*60+30 && hm < 20*60)
+  return true
+}
 
-  const {prices,refPrev,refPrices,push}=usePriceFeed()
-  const tradesRef =useRef(openTrades);tradesRef.current=openTrades
-  const primaryRef=useRef(primary);   primaryRef.current=primary
+/* ══ PLATFORM PAGE ═══════════════════════════════════════════════ */
+export function PlatformPage() {
+  const navigate    = useNavigate()
+  const { toasts, toast, dismiss } = useToast()
+  const { accounts, primary: defPrimary } = useAccount()
+  const [selAccId, setSelAccId] = useState<string|null>(null)
+  const primary = accounts.find(a => a.id === selAccId) ?? defPrimary
 
-  const inst=ALL_INSTRUMENTS.find(i=>i.sym===sym)!
-  const ms=getMarketStatus(inst.market)
-  const livePrice=prices[sym]||SEED[sym]
-  const prevPrice=refPrev.current[sym]||livePrice
-  const up=livePrice>=prevPrice
-  const execPrice=+(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
-  const lotsNum=Math.max(0.01,parseFloat(lots)||0.01)
+  const [sym,      setSym]     = useState('EUR/USD')
+  const [tf,       setTf]      = useState('H1')
+  const [dir,      setDir]     = useState<'buy'|'sell'>('buy')
+  const [lots,     setLots]    = useState('0.10')
+  const [sl,       setSl]      = useState('')
+  const [tp,       setTp]      = useState('')
+  const [tab,      setTab]     = useState<'positions'|'history'>('positions')
+  const [catFilter,setCatFilter] = useState('All')
+  const [search,   setSearch]  = useState('')
+  const [placing,  setPlacing] = useState(false)
 
-  const balance    =primary?.balance??0
-  const openPnl    =openTrades.reduce((s,t)=>s+calcPnl(t,prices[t.symbol]||SEED[t.symbol]),0)
-  const equity     =balance+openPnl
-  const usedMargin =openTrades.reduce((s,t)=>{
-    const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol)
-    const cur=prices[t.symbol]||SEED[t.symbol]
-    if(!i)return s
-    // Correct: notional value / leverage
-    const isJpy=t.symbol.includes('JPY')
-    const notional=isJpy?LOT_SIZE:i.lotUSD(cur)
-    return s+(notional*t.lots/LEVERAGE)
-  },0)
-  const freeMargin =equity-usedMargin
-  const marginLvl  =usedMargin>0?(equity/usedMargin)*100:Infinity
+  const { prices, prevRef, priceRef, push } = usePriceFeed()
+  const tradesRef  = useRef<any[]>([])
+  const primaryRef = useRef<any>(null); primaryRef.current = primary
 
-  // Correct margin for order panel
-  const isJpySym    =sym.includes('JPY')
-  const notionalPerLot=isJpySym?LOT_SIZE:inst.lotUSD(execPrice)
-  const reqMargin  =notionalPerLot*lotsNum/LEVERAGE
-  const maxLots    =Math.max(0,Math.floor(freeMargin*LEVERAGE/notionalPerLot*100)/100)
-  const canTrade   =ms.open&&!((primary as any)?.payout_locked)&&primary?.status==='active'
+  const [openTrades,   setOpenTrades]   = useState<any[]>([])
+  const [closedTrades, setClosedTrades] = useState<any[]>([])
 
-  // Filtered + sorted watchlist
-  const watchlist=useMemo(()=>{
-    const q=search.toLowerCase()
-    const filtered=ALL_INSTRUMENTS.filter(i=>!q||i.sym.toLowerCase().includes(q)||i.cat.includes(q))
-    // Favorites always on top, regardless of category
-    const favs=filtered.filter(i=>favorites.has(i.sym))
-    const rest=filtered.filter(i=>!favorites.has(i.sym))
-    return {favs, rest}
-  },[search,favorites])
+  const inst     = INSTRUMENTS.find(i => i.sym === sym)! as any
+  const live     = prices[sym] || SEEDS[sym]
+  const prev     = prevRef.current[sym] || live
+  const up       = live >= prev
+  const exec     = +(dir === 'buy' ? live + inst.spread : live).toFixed(inst.dec)
+  const lotsNum  = Math.max(0.01, parseFloat(lots) || 0.01)
+  const balance  = primary?.balance ?? 0
+  const openPnl  = openTrades.reduce((s, t) => s + calcPnl(t, prices[t.symbol] || SEEDS[t.symbol]), 0)
+  const equity   = balance + openPnl
+  const usedMargin = openTrades.reduce((s, t) => {
+    const i = INSTRUMENTS.find(x => x.sym === t.symbol) as any
+    const cur = prices[t.symbol] || SEEDS[t.symbol]
+    if (!i) return s
+    return s + (i.lotUSD(cur) * t.lots / LEVERAGE)
+  }, 0)
+  const freeMargin = equity - usedMargin
+  const marginLvl  = usedMargin > 0 ? (equity / usedMargin) * 100 : 999
+  const reqMargin  = inst.lotUSD(exec) * lotsNum / LEVERAGE
 
-  const toggleFav=(s:string)=>{
-    setFavorites(prev=>{
-      const next=new Set(prev)
-      if(next.has(s))next.delete(s);else next.add(s)
-      localStorage.setItem('tfd_favs',JSON.stringify([...next]))
-      return next
-    })
-  }
+  tradesRef.current = openTrades
 
-  useEffect(()=>{
-    if(!primary?.id)return
-    supabase.from('trades').select('*').eq('account_id',primary.id).eq('status','open')
-      .order('opened_at',{ascending:false}).then(({data})=>setOpenTrades(data??[]))
-    supabase.from('trades').select('*').eq('account_id',primary.id).eq('status','closed')
-      .order('closed_at',{ascending:false}).limit(50).then(({data})=>setClosedTrades(data??[]))
-  },[primary?.id])
+  // Load trades
+  useEffect(() => {
+    if (!primary?.id) return
+    supabase.from('trades').select('*').eq('account_id', primary.id).eq('status', 'open').order('opened_at', { ascending: false })
+      .then(({ data }) => setOpenTrades(data ?? []))
+    supabase.from('trades').select('*').eq('account_id', primary.id).eq('status', 'closed').order('closed_at', { ascending: false }).limit(50)
+      .then(({ data }) => setClosedTrades(data ?? []))
+  }, [primary?.id])
 
-  const handleBreach=useCallback(async(reason:string,trades:any[])=>{
-    if(!primary)return
-    toast('error','🚨','Account Breached',reason)
-    const closed=await Promise.all(trades.map(async t=>{
-      const ti=ALL_INSTRUMENTS.find(i=>i.sym===t.symbol)!
-      const cur=refPrices.current[t.symbol]||SEED[t.symbol]
-      const closeP=+(t.direction==='buy'?cur:cur+ti.spread).toFixed(ti.dec)
-      const diff=t.direction==='buy'?closeP-t.open_price:t.open_price-closeP
-      const isJpy=t.symbol.includes('JPY')
-      const units=isJpy?LOT_SIZE/closeP:ti.lotUSD(1)
-      const netPnl=+(diff*units*t.lots).toFixed(2)
-      const pips=+(diff/ti.pip).toFixed(1)
-      await supabase.from('trades').update({status:'closed',close_price:closeP,closed_at:new Date().toISOString(),pips,net_pnl:netPnl,gross_pnl:netPnl,close_reason:'breach'}).eq('id',t.id)
-      return {...t,status:'closed',close_price:closeP,net_pnl:netPnl,pips}
-    }))
-    const newBal=+(balance+closed.reduce((s,t)=>s+(t.net_pnl||0),0)).toFixed(2)
-    await supabase.from('accounts').update({status:'breached',phase:'breached',balance:newBal,equity:newBal,breached_at:new Date().toISOString(),breach_reason:reason}).eq('id',primary.id)
+  // Risk monitor
+  useRiskMonitor(tradesRef, priceRef, primaryRef, primary?.id, async (reason: string, trades: any[]) => {
+    toast('error', '🚨', 'Account Breached', reason)
+    if (!primary?.id) return
+    for (const t of trades) {
+      const cur = priceRef.current[t.symbol] || SEEDS[t.symbol] || t.open_price
+      const closeP = +(t.direction === 'buy' ? cur : cur + inst.spread).toFixed(inst.dec)
+      const diff = t.direction === 'buy' ? closeP - t.open_price : t.open_price - closeP
+      const isJpy = t.symbol.includes('JPY')
+      const i = INSTRUMENTS.find(x => x.sym === t.symbol) as any
+      const units = isJpy ? LOT_SIZE / closeP : i?.lotUSD(1) ?? LOT_SIZE
+      const netPnl = +(diff * units * t.lots).toFixed(2)
+      await supabase.from('trades').update({ status: 'closed', close_price: closeP, net_pnl: netPnl, closed_at: new Date().toISOString() }).eq('id', t.id)
+    }
+    const newBal = +(balance + trades.reduce((s, t) => { const cur = priceRef.current[t.symbol] || t.open_price; const i = INSTRUMENTS.find(x => x.sym === t.symbol) as any; const diff = t.direction==='buy'?cur-t.open_price:t.open_price-cur; const isJpy=t.symbol.includes('JPY'); const units=isJpy?LOT_SIZE/cur:i?.lotUSD(1)??LOT_SIZE; return s+diff*units*t.lots }, 0)).toFixed(2)
+    await supabase.from('accounts').update({ status: 'breached', phase: 'breached', balance: newBal, equity: newBal }).eq('id', primary.id)
     await supabase.from('notifications').insert([
-      {user_id:primary.user_id,type:'breach',title:'🚨 Account Breached',body:`Account ${primary.account_number} auto-breached. ${reason}`,is_read:false,metadata:{account_id:primary.id,reason,balance:newBal}},
-      {user_id:null,type:'breach',title:`🚨 Breach — ${primary.account_number}`,body:`Auto-breached. ${reason}. Final balance: $${newBal}`,is_read:false,metadata:{account_id:primary.id,account_number:primary.account_number,reason}},
+      { user_id: primary.user_id, type: 'breach', title: 'Account Breached', body: reason, is_read: false },
+      { user_id: null, type: 'admin_breach', title: `Breach — ${primary.account_number}`, body: reason, is_read: false },
     ])
-    setOpenTrades([]);setClosedTrades(p=>[...closed,...p])
-  },[primary,refPrices,balance])
+    setOpenTrades([])
+  })
 
-  useRiskMonitor(tradesRef,refPrices,primaryRef,primary?.id,handleBreach)
-
-  const handleUpdateSLTP=useCallback(async(tradeId:string,newSl:number|null,newTp:number|null)=>{
-    const {error}=await supabase.from('trades').update({sl:newSl,tp:newTp}).eq('id',tradeId)
-    if(!error) setOpenTrades(t=>t.map(x=>x.id===tradeId?{...x,sl:newSl,tp:newTp}:x))
-  },[])
-
-  async function placeOrder(){
-    if(!primary)                                                      {toast('error','❌','No Account','No active account');return}
-    if(!ms.open)                                                      {toast('error','🔴','Market Closed',`${ms.label}. Next: ${ms.nextOpen}`);return}
-    if((primary as any).payout_locked||primary.status==='suspended') {toast('error','⛔','Locked','Payout pending');return}
-    if(primary.status==='breached'||primary.status==='passed')       {toast('error','⛔','Locked','Account not active');return}
-    if(reqMargin>freeMargin)                                          {toast('error','⛔','Margin',`Need $${(Number(reqMargin) || 0).toFixed(2)}, free: $${(Number(freeMargin) || 0).toFixed(2)}`);return}
-    setPlacing(true);setConfirm(false)
-    const {data,error}=await supabase.from('trades').insert({
-      account_id:primary.id,user_id:primary.user_id,symbol:sym,direction:dir,lots:lotsNum,
-      order_type:ordType.toLowerCase(),open_price:execPrice,
-      sl:sl?+sl:null,tp:tp?+tp:null,
-      status:'open',opened_at:new Date().toISOString(),
+  // Place order
+  async function placeOrder() {
+    if (!primary?.id) { toast('error', '❌', 'No Account', 'Select a funded account.'); return }
+    if (primary.status === 'breached') { toast('error', '❌', 'Breached', 'Account is breached.'); return }
+    if (reqMargin > freeMargin) { toast('error', '❌', 'Margin', `Need $${reqMargin.toFixed(2)}, free: $${freeMargin.toFixed(2)}`); return }
+    setPlacing(true)
+    const now = new Date().toISOString()
+    const { data, error } = await supabase.from('trades').insert({
+      account_id: primary.id, user_id: primary.user_id,
+      symbol: sym, direction: dir, lots: lotsNum,
+      open_price: exec, status: 'open',
+      sl: sl ? parseFloat(sl) : null,
+      tp: tp ? parseFloat(tp) : null,
+      opened_at: now,
     }).select().single()
     setPlacing(false)
-    if(error){toast('error','❌','Error',error.message);return}
-    setOpenTrades(t=>[data,...t])
-    toast('success','⚡','Placed',`${dir.toUpperCase()} ${lotsNum} ${sym} @ ${execPrice}`)
-    setSl('');setTp('')
+    if (error) { toast('error', '❌', 'Error', error.message); return }
+    setOpenTrades(prev => [data, ...prev])
+    toast('success', '✅', `${dir.toUpperCase()} ${sym}`, `${lotsNum} lots @ ${exec}`)
+    setSl(''); setTp('')
   }
 
-  async function closeTrade(trade:any){
-    const ti=ALL_INSTRUMENTS.find(i=>i.sym===trade.symbol)!
-    const cur=refPrices.current[trade.symbol]||SEED[trade.symbol]
-    const closeP=+(trade.direction==='buy'?cur:cur+ti.spread).toFixed(ti.dec)
-    const diff=trade.direction==='buy'?closeP-trade.open_price:trade.open_price-closeP
-    const isJpy=trade.symbol.includes('JPY')
-    const units=isJpy?LOT_SIZE/closeP:ti.lotUSD(1)
-    const netPnl=+(diff*units*trade.lots).toFixed(2)
-    const pips=+(diff/ti.pip).toFixed(1)
-    await supabase.from('trades').update({status:'closed',close_price:closeP,closed_at:new Date().toISOString(),pips,net_pnl:netPnl,gross_pnl:netPnl}).eq('id',trade.id)
-    const newBal=+(balance+netPnl).toFixed(2)
-    await supabase.from('accounts').update({balance:newBal,equity:newBal}).eq('id',primary!.id)
-    setOpenTrades(t=>t.filter(x=>x.id!==trade.id))
-    setClosedTrades(t=>[{...trade,status:'closed',close_price:closeP,net_pnl:netPnl,pips},...t])
-    toast(netPnl>=0?'success':'warning',netPnl>=0?'💰':'🔴','Closed',`${trade.symbol} ${netPnl>=0?'+':''}${fmt(netPnl)}`)
+  // Close trade
+  async function closeTrade(t: any) {
+    const cur = prices[t.symbol] || SEEDS[t.symbol] || t.open_price
+    const i = INSTRUMENTS.find(x => x.sym === t.symbol) as any
+    const closeP = +(t.direction === 'buy' ? cur : cur + (i?.spread ?? 0)).toFixed(i?.dec ?? 5)
+    const diff = t.direction === 'buy' ? closeP - t.open_price : t.open_price - closeP
+    const isJpy = t.symbol.includes('JPY')
+    const units = isJpy ? LOT_SIZE / closeP : i?.lotUSD(1) ?? LOT_SIZE
+    const netPnl = +(diff * units * t.lots).toFixed(2)
+    const pips   = +(diff / (i?.pip ?? 0.0001)).toFixed(1)
+    const now = new Date().toISOString()
+    await supabase.from('trades').update({ status: 'closed', close_price: closeP, net_pnl: netPnl, pips, closed_at: now }).eq('id', t.id)
+    const newBal = +(balance + netPnl).toFixed(2)
+    await supabase.from('accounts').update({ balance: newBal, equity: newBal }).eq('id', primary!.id)
+    setOpenTrades(prev => prev.filter(x => x.id !== t.id))
+    setClosedTrades(prev => [{ ...t, status: 'closed', close_price: closeP, net_pnl: netPnl, closed_at: now }, ...prev])
+    toast(netPnl >= 0 ? 'success' : 'error', netPnl >= 0 ? '💰' : '📉', `Closed ${t.symbol}`, `${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)} | ${pips >= 0 ? '+' : ''}${pips} pips`)
   }
 
-  async function saveEditSLTP(){
-    if(!editSLTP)return
-    const newSl=editSLTP.sl?parseFloat(editSLTP.sl):null
-    const newTp=editSLTP.tp?parseFloat(editSLTP.tp):null
-    await handleUpdateSLTP(editSLTP.id,newSl,newTp)
-    setEditSLTP(null)
+  /* ══ UI ══════════════════════════════════════════════════════════ */
+  const S = {
+    page:   { fontFamily:"'Inter',system-ui,sans-serif", background:'#F0F4FB', color:'#1A3A6B', height:'100vh', display:'flex', flexDirection:'column' as const, overflow:'hidden' },
+    topbar: { height:'48px', background:'#1A3A6B', display:'flex', alignItems:'center', padding:'0 16px', gap:'12px', flexShrink:0 },
+    row:    { flex:1, display:'flex', overflow:'hidden' },
+    // Left watchlist
+    watch:  { width:'200px', background:'#fff', borderRight:'1px solid #E8EEF8', display:'flex', flexDirection:'column' as const, flexShrink:0, overflow:'hidden' },
+    // Center chart + orderbook
+    center: { flex:1, display:'flex', flexDirection:'column' as const, overflow:'hidden' },
+    chart:  { flex:1, background:'#FAFBFF', position:'relative' as const },
+    // Right order panel
+    right:  { width:'240px', background:'#fff', borderLeft:'1px solid #E8EEF8', display:'flex', flexDirection:'column' as const, flexShrink:0 },
+    // Bottom positions
+    bottom: { height:'180px', background:'#fff', borderTop:'1px solid #E8EEF8', flexShrink:0, overflow:'hidden' },
   }
 
-  // Cat labels
-  const CAT_LABELS:Record<string,string>={forex:'Forex',metals:'Metals',index:'Indices'}
+  const CATS = ['All', 'Forex', 'Metals', 'Indices']
+  const filtered = INSTRUMENTS.filter(i => {
+    if (catFilter !== 'All' && (i as any).cat !== catFilter) return false
+    if (search && !i.sym.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
 
-  return(
-  <>
-  <div style={{display:'flex',height:'100vh',overflow:'hidden',background:'#0A0A0F',color:'#1A3A6B',fontSize:12}}>
-
-    {/* ── Watchlist ── */}
-    <div style={{width:192,flexShrink:0,background:'#fff',borderRight:'1px solid #E8EEF8',display:'flex',flexDirection:'column'}}>
-      <div style={{padding:'10px 12px',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',gap:8}}>
-        <div style={{width:20,height:20,border:'1px solid #2255CC',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'#2255CC'}}>✦</div>
-        <span style={{fontFamily:'serif',fontSize:11,fontWeight:'bold',lineHeight:1.3}}>TFD<br/>Terminal</span>
-      </div>
-      {/* Search */}
-      <div style={{padding:'6px 10px',borderBottom:'1px solid #E8EEF8'}}>
-        <input
-          value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Search..."
-          style={{width:'100%',padding:'5px 8px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',color:'#1A3A6B',fontSize:10,outline:'none',boxSizing:'border-box' as const}}
-        />
-      </div>
-      {/* Instrument list */}
-      <div style={{flex:1,overflowY:'auto'}}>
-        {(()=>{
-          const renderItem=(i:typeof ALL_INSTRUMENTS[0])=>{
-            const cur=prices[i.sym]||SEED[i.sym]
-            const prv=refPrev.current[i.sym]||cur
-            const isUp=cur>=prv
-            const isFav=favorites.has(i.sym)
-            const iMs=getMarketStatus(i.market)
-            return(
-              <div key={i.sym} onClick={()=>setSym(i.sym)} style={{
-                padding:'6px 10px 5px',cursor:'pointer',borderBottom:'1px solid rgba(34,85,204,.02)',
-                background:sym===i.sym?'rgba(34,85,204,.07)':'transparent',
-                borderLeft:sym===i.sym?'2px solid #2255CC':'2px solid transparent',
-              }}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <span style={{fontWeight:600,fontSize:10}}>{i.sym}</span>
-                  <div style={{display:'flex',gap:5,alignItems:'center'}}>
-                    <span
-                      onClick={e=>{e.stopPropagation();toggleFav(i.sym)}}
-                      style={{fontSize:15,cursor:'pointer',color:isFav?'#2255CC':'rgba(255,255,255,.2)',lineHeight:1,userSelect:'none' as const}}
-                      title={isFav?'Remove from favorites':'Add to favorites'}
-                    >{isFav?'★':'☆'}</span>
-                    <span style={{width:5,height:5,borderRadius:'50%',background:!iMs.open?'#DC2626':prices[i.sym]>0?'#16A34A':'#444'}}/>
-                  </div>
-                </div>
-                <div style={{fontFamily:'monospace',fontSize:12,marginTop:1,fontWeight:700,color:isUp?'#16A34A':'#DC2626',opacity:iMs.open?1:0.55}}>
-                  {cur.toFixed(i.dec)}
-                </div>
-                <div style={{fontSize:8,color:iMs.open?(isUp?'#16A34A':'#DC2626'):'#8FA3BF'}}>
-                  {iMs.open?`${isUp?'▲':'▼'} ${Math.abs(cur-prv).toFixed(i.dec)}`:'CLOSED'}
-                </div>
-              </div>
-            )
-          }
-          return(
-            <>
-              {/* Favorites section — always first, any category */}
-              {watchlist.favs.length>0&&(
-                <div>
-                  <div style={{padding:'4px 10px',fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#2255CC',fontWeight:700,background:'rgba(34,85,204,.05)',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',gap:5}}>
-                    <span>★</span> Favorites
-                  </div>
-                  {watchlist.favs.map(renderItem)}
-                </div>
-              )}
-              {/* Rest grouped by category */}
-              {['forex','metals','index'].map(cat=>{
-                const items=watchlist.rest.filter(i=>i.cat===cat)
-                if(!items.length)return null
-                return(
-                  <div key={cat}>
-                    <div style={{padding:'4px 10px',fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:700,background:'rgba(0,0,0,.3)',borderBottom:'1px solid #E8EEF8'}}>
-                      {CAT_LABELS[cat]}
-                    </div>
-                    {items.map(renderItem)}
-                  </div>
-                )
-              })}
-            </>
-          )
-        })()}
-      </div>
-      <div style={{padding:'8px 10px',borderTop:'1px solid #E8EEF8'}}>
-        {accounts.length>1
-          ?<select value={selAccId??primary?.id??''} onChange={e=>setSelAccId(e.target.value)} style={{width:'100%',padding:'5px 6px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',color:'#1A3A6B',fontSize:9,fontFamily:'monospace',outline:'none',marginBottom:6}}>
-              {accounts.map(a=><option key={a.id} value={a.id}>{a.account_number}</option>)}
-            </select>
-          :<div style={{marginBottom:6,padding:'4px 6px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',fontSize:9,fontFamily:'monospace',color:'#2255CC',textAlign:'center' as const}}>{primary?.account_number??'—'}</div>
-        }
-        <button onClick={()=>navigate('/dashboard')} style={{width:'100%',fontSize:9,letterSpacing:1,textTransform:'uppercase' as const,color:'#8FA3BF',background:'none',border:'none',cursor:'pointer'}}>← Dashboard</button>
-      </div>
-    </div>
-
-    {/* ── Main ── */}
-    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-      {!ms.open&&(
-        <div style={{background:'rgba(220,38,38,.1)',borderBottom:'1px solid rgba(220,38,38,.25)',padding:'6px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
-          <span style={{fontSize:11,color:'#DC2626',fontWeight:600}}>🔴 {ms.label}</span>
-          {ms.nextOpen&&<span style={{fontSize:10,color:'#8FA3BF'}}>Next open: {ms.nextOpen}</span>}
+  return (
+    <div style={S.page}>
+      {/* ── TOPBAR ── */}
+      <div style={S.topbar}>
+        <button onClick={() => navigate('/dashboard')} style={{ background:'rgba(255,255,255,.1)', border:'none', color:'#fff', padding:'5px 12px', borderRadius:'6px', cursor:'pointer', fontSize:'11px', fontWeight:600 }}>
+          ← Dashboard
+        </button>
+        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'14px', fontWeight:700, color:'#fff' }}>
+          The Funded <span style={{ color:'#60A5FA', fontStyle:'italic' }}>Diaries</span>
         </div>
-      )}
+        <div style={{ display:'flex', alignItems:'center', gap:'6px', marginLeft:'8px' }}>
+          <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#4ADE80' }}/>
+          <span style={{ fontSize:'10px', color:'#4ADE80', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase' }}>Live</span>
+        </div>
 
-      {/* Topbar */}
-      <div style={{height:50,flexShrink:0,background:'#fff',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',padding:'0 14px',gap:10}}>
-        <span style={{fontFamily:'serif',fontSize:16,fontWeight:'bold',flexShrink:0}}>{sym}</span>
-        <span style={{fontFamily:'monospace',fontSize:22,fontWeight:700,flexShrink:0,minWidth:100,letterSpacing:-0.5,color:up?'#16A34A':'#DC2626'}}>{livePrice.toFixed(inst.dec)}</span>
-        <span style={{fontSize:10,flexShrink:0,color:up?'#16A34A':'#DC2626'}}>{up?'▲':'▼'} {Math.abs(livePrice-prevPrice).toFixed(inst.dec)}</span>
-        <div style={{display:'flex',gap:14,padding:'4px 14px',background:'rgba(0,0,0,.4)',border:'1px solid rgba(34,85,204,.08)',marginLeft:6,flexShrink:0}}>
+        {/* Account selector */}
+        <div style={{ marginLeft:'auto', display:'flex', gap:'6px', alignItems:'center' }}>
+          {accounts.map(a => (
+            <button key={a.id} onClick={() => setSelAccId(a.id)}
+              style={{ padding:'4px 10px', background: a.id===primary?.id ? 'rgba(96,165,250,.2)':'rgba(255,255,255,.08)', border: a.id===primary?.id ? '1px solid rgba(96,165,250,.4)':'1px solid rgba(255,255,255,.1)', borderRadius:'5px', color: a.id===primary?.id ? '#60A5FA':'rgba(255,255,255,.5)', fontSize:'10px', fontFamily:"'JetBrains Mono',monospace", cursor:'pointer' }}>
+              {a.account_number}
+            </button>
+          ))}
+        </div>
+
+        {/* Account stats */}
+        <div style={{ display:'flex', gap:'0', marginLeft:'12px' }}>
           {[
-            {l:'BALANCE',v:fmt(balance),c:'#2255CC'},
-            {l:'EQUITY', v:fmt(equity), c:equity>=balance?'#16A34A':'#DC2626'},
-            {l:'P&L',    v:`${openPnl>=0?'+':''}${fmt(openPnl)}`,c:openPnl>=0?'#16A34A':'#DC2626'},
-            {l:'FREE MARGIN',v:fmt(freeMargin),c:freeMargin<0?'#DC2626':'#5C7A9E'},
-            ...(usedMargin>0?[{l:'MARGIN LVL',v:`${(Number(marginLvl) || 0).toFixed(0)}%`,c:marginLvl<150?'#DC2626':'#5C7A9E'}]:[]),
-          ].map(({l,v,c})=>(
-            <div key={l} style={{flexShrink:0}}>
-              <div style={{fontSize:7,letterSpacing:1.5,color:'#8FA3BF',fontWeight:600,textTransform:'uppercase' as const}}>{l}</div>
-              <div style={{fontFamily:'monospace',fontSize:11,fontWeight:700,color:c,marginTop:1}}>{v}</div>
+            ['Balance',   `$${(Number(balance)||0).toFixed(2)}`,   '#fff'],
+            ['Equity',    `$${(Number(equity)||0).toFixed(2)}`,    equity >= balance ? '#4ADE80' : '#F87171'],
+            ['P&L',       `${openPnl>=0?'+':''}$${(Number(openPnl)||0).toFixed(2)}`, openPnl>=0?'#4ADE80':'#F87171'],
+            ['Free Margin',`$${(Number(freeMargin)||0).toFixed(2)}`, '#60A5FA'],
+          ].map(([l,v,c]) => (
+            <div key={l} style={{ padding:'0 12px', borderLeft:'1px solid rgba(255,255,255,.1)', textAlign:'right' }}>
+              <div style={{ fontSize:'9px', color:'rgba(255,255,255,.4)', textTransform:'uppercase', letterSpacing:'1px' }}>{l}</div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'12px', fontWeight:500, color:c }}>{v}</div>
             </div>
           ))}
         </div>
-        {(primary as any)?.payout_locked&&<div style={{padding:'4px 10px',background:'rgba(34,85,204,.08)',border:'1px solid #C5D5EA',fontSize:9,color:'#2255CC',letterSpacing:1,fontWeight:600,textTransform:'uppercase' as const,flexShrink:0}}>⏳ Payout Pending</div>}
-        <div style={{marginLeft:'auto',display:'flex',gap:2}}>
-          {Object.keys(TF_CONFIG).map(t=>(
-            <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 7px',fontSize:9,fontFamily:'monospace',fontWeight:'bold',cursor:'pointer',background:tf===t?'rgba(34,85,204,.15)':'transparent',border:tf===t?'1px solid #C5D5EA':'1px solid transparent',color:tf===t?'#2255CC':'#8FA3BF'}}>{t}</button>
-          ))}
-        </div>
-        <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
-          <div style={{width:5,height:5,borderRadius:'50%',background:ms.open?'#16A34A':'#DC2626',boxShadow:ms.open?'0 0 6px #16A34A':'none'}}/>
-          <span style={{fontSize:9,color:ms.open?'#16A34A':'#DC2626',letterSpacing:1.5,textTransform:'uppercase' as const,fontWeight:600}}>{ms.open?'Live':'Closed'}</span>
-        </div>
       </div>
 
-      {/* Chart */}
-      <div style={{flex:1,overflow:'hidden'}}>
-        <div key={`${sym}_${tf}`} style={{width:'100%',height:'100%'}}>
-          <CandleChart
-            sym={sym} tf={tf} livePrice={livePrice}
-            onLastClose={p=>push(sym,p)}
-            openTrades={openTrades}
-            onUpdateSLTP={handleUpdateSLTP}
-          />
-        </div>
-      </div>
-
-      {/* Bottom tabs */}
-      <div style={{height:220,flexShrink:0,background:'#fff',borderTop:'1px solid #E8EEF8',display:'flex',flexDirection:'column'}}>
-        <div style={{display:'flex',borderBottom:'1px solid #E8EEF8'}}>
-          {[['positions',`Positions (${openTrades.length})`],['history',`History (${closedTrades.length})`],['account','Account']].map(([k,l])=>(
-            <button key={k} onClick={()=>setTab(k)} style={{padding:'7px 14px',fontSize:9,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:600,cursor:'pointer',border:'none',marginBottom:-1,borderBottom:tab===k?'2px solid #2255CC':'2px solid transparent',background:tab===k?'rgba(34,85,204,.03)':'transparent',color:tab===k?'#2255CC':'#8FA3BF'}}>{l}</button>
-          ))}
-        </div>
-        <div style={{flex:1,overflow:'auto'}}>
-
-          {tab==='positions'&&(openTrades.length===0
-            ?<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'#8FA3BF',fontSize:11}}>No open positions</div>
-            :<table style={{width:'100%',borderCollapse:'collapse',fontSize:10}}>
-               <thead><tr style={{borderBottom:'1px solid rgba(26,58,107,.06)'}}>
-                 {['Symbol','Dir','Lots','Open','Current','P&L','DD%','SL','TP','Time',''].map(h=>(
-                   <th key={h} style={{padding:'5px 8px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',textAlign:'left' as const,fontWeight:600}}>{h}</th>
-                 ))}
-               </tr></thead>
-               <tbody>{openTrades.map(t=>{
-                 const cur=prices[t.symbol]||SEED[t.symbol]
-                 const ti=ALL_INSTRUMENTS.find(i=>i.sym===t.symbol)!
-                 const pnl=calcPnl(t,cur)
-                 const ddPct=balance>0?(pnl/balance)*100:0
-                 const warn=ddPct<=-4
-                 const isEditing=editSLTP?.id===t.id
-                 return(
-                   <tr key={t.id} style={{borderBottom:'1px solid rgba(34,85,204,.03)',background:warn?'rgba(220,38,38,.05)':'transparent'}}>
-                     <td style={{padding:'5px 8px',fontWeight:700}}>{t.symbol}</td>
-                     <td style={{padding:'5px 8px'}}><span style={{fontSize:8,fontWeight:'bold',color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction.toUpperCase()}</span></td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace'}}>{t.lots}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',color:'#5C7A9E'}}>{t.open_price}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:600,color:cur>=t.open_price?'#16A34A':'#DC2626'}}>{cur.toFixed(ti?.dec??5)}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:700,fontSize:11,color:pnl>=0?'#16A34A':'#DC2626'}}>{pnl>=0?'+':''}{fmt(pnl)}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:10,fontWeight:600,color:warn?'#DC2626':ddPct<0?'rgba(220,38,38,.7)':'#16A34A'}}>{ddPct>=0?'+':''}{(Number(ddPct) || 0).toFixed(2)}%</td>
-                     {/* SL editable */}
-                     <td style={{padding:'5px 8px'}}>
-                       {isEditing
-                         ?<input value={editSLTP!.sl} onChange={e=>setEditSLTP(x=>x?{...x,sl:e.target.value}:null)}
-                             style={{width:70,padding:'2px 4px',background:'rgba(220,38,38,.1)',border:'1px solid rgba(220,38,38,.4)',color:'#DC2626',fontFamily:'monospace',fontSize:9,outline:'none'}}
-                             type="number" placeholder="SL"/>
-                         :<span style={{fontFamily:'monospace',color:'#DC2626',fontSize:9,cursor:'pointer',textDecoration:'underline',textDecorationStyle:'dotted' as const}}
-                             onClick={()=>setEditSLTP({id:t.id,sl:t.sl?.toString()||'',tp:t.tp?.toString()||''})}>
-                             {t.sl??'—'}
-                           </span>
-                       }
-                     </td>
-                     {/* TP editable */}
-                     <td style={{padding:'5px 8px'}}>
-                       {isEditing
-                         ?<input value={editSLTP!.tp} onChange={e=>setEditSLTP(x=>x?{...x,tp:e.target.value}:null)}
-                             style={{width:70,padding:'2px 4px',background:'rgba(22,163,74,.1)',border:'1px solid rgba(22,163,74,.4)',color:'#16A34A',fontFamily:'monospace',fontSize:9,outline:'none'}}
-                             type="number" placeholder="TP"/>
-                         :<span style={{fontFamily:'monospace',color:'#16A34A',fontSize:9,cursor:'pointer',textDecoration:'underline',textDecorationStyle:'dotted' as const}}
-                             onClick={()=>setEditSLTP({id:t.id,sl:t.sl?.toString()||'',tp:t.tp?.toString()||''})}>
-                             {t.tp??'—'}
-                           </span>
-                       }
-                     </td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:9,color:'#8FA3BF'}}>{new Date(t.opened_at).toLocaleTimeString()}</td>
-                     <td style={{padding:'5px 8px',display:'flex',gap:4}}>
-                       {isEditing
-                         ?<>
-                            <button onClick={saveEditSLTP} style={{padding:'2px 6px',fontSize:8,cursor:'pointer',background:'rgba(22,163,74,.15)',color:'#16A34A',border:'1px solid rgba(22,163,74,.3)',fontWeight:'bold'}}>✓</button>
-                            <button onClick={()=>setEditSLTP(null)} style={{padding:'2px 6px',fontSize:8,cursor:'pointer',background:'transparent',color:'#8FA3BF',border:'1px solid rgba(26,58,107,.06)'}}>✕</button>
-                          </>
-                         :<button onClick={()=>closeTrade(t)} style={{padding:'3px 8px',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:'rgba(220,38,38,.1)',color:'#DC2626',border:'1px solid rgba(220,38,38,.25)'}}>Close</button>
-                       }
-                     </td>
-                   </tr>
-                 )
-               })}</tbody>
-             </table>
-          )}
-
-          {tab==='history'&&(closedTrades.length===0
-            ?<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'#8FA3BF',fontSize:11}}>No history</div>
-            :<table style={{width:'100%',borderCollapse:'collapse',fontSize:10}}>
-               <thead><tr style={{borderBottom:'1px solid rgba(26,58,107,.06)'}}>
-                 {['Symbol','Dir','Lots','Open','Close','Pips','P&L','Reason','Date'].map(h=>(
-                   <th key={h} style={{padding:'5px 8px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',textAlign:'left' as const,fontWeight:600}}>{h}</th>
-                 ))}
-               </tr></thead>
-               <tbody>{closedTrades.map(t=>(
-                 <tr key={t.id} style={{borderBottom:'1px solid rgba(34,85,204,.03)'}}>
-                   <td style={{padding:'5px 8px',fontWeight:700}}>{t.symbol}</td>
-                   <td style={{padding:'5px 8px'}}><span style={{fontSize:8,fontWeight:'bold',color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction.toUpperCase()}</span></td>
-                   <td style={{padding:'5px 8px',fontFamily:'monospace'}}>{t.lots}</td>
-                   <td style={{padding:'5px 8px',fontFamily:'monospace'}}>{t.open_price}</td>
-                   <td style={{padding:'5px 8px',fontFamily:'monospace'}}>{t.close_price??'—'}</td>
-                   <td style={{padding:'5px 8px',fontFamily:'monospace',color:(t.pips??0)>=0?'#16A34A':'#DC2626'}}>{t.pips!=null?`${t.pips>0?'+':''}${t.pips}`:'—'}</td>
-                   <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:700,color:(t.net_pnl??0)>=0?'#16A34A':'#DC2626'}}>{t.net_pnl!=null?`${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}`:'—'}</td>
-                   <td style={{padding:'5px 8px',fontSize:9,color:t.close_reason==='breach'?'#DC2626':'#8FA3BF'}}>{t.close_reason==='breach'?'🚨 Breach':'Manual'}</td>
-                   <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:9,color:'#8FA3BF'}}>{t.closed_at?new Date(t.closed_at).toLocaleString():'—'}</td>
-                 </tr>
-               ))}</tbody>
-             </table>
-          )}
-
-          {tab==='account'&&(
-            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,padding:16}}>
-              {([
-                ['Balance',    fmt(balance),                           '#2255CC'],
-                ['Equity',     fmt(equity),                            equity>=balance?'#16A34A':'#DC2626'],
-                ['Open P&L',   `${openPnl>=0?'+':''}${fmt(openPnl)}`, openPnl>=0?'#16A34A':'#DC2626'],
-                ['Free Margin',fmt(freeMargin),                         freeMargin<0?'#DC2626':'#1A3A6B'],
-                ['Used Margin',fmt(usedMargin),                         '#1A3A6B'],
-                ['Margin Lvl', usedMargin>0?`${(Number(marginLvl) || 0).toFixed(0)}%`:'∞', marginLvl<150&&usedMargin>0?'#DC2626':'#16A34A'],
-                ['Leverage',   `1:${LEVERAGE}`,                         '#5C7A9E'],
-                ['Open Pos.',  String(openTrades.length),               '#1A3A6B'],
-                ['Account',    primary?.account_number??'—',            '#2255CC'],
-                ['Phase',      primary?.phase??'—',                     '#5C7A9E'],
-              ] as [string,string,string][]).map(([l,v,c])=>(
-                <div key={l}>
-                  <div style={{fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:4}}>{l}</div>
-                  <div style={{fontFamily:'monospace',fontSize:12,color:c}}>{v}</div>
-                </div>
+      <div style={S.row}>
+        {/* ── WATCHLIST ── */}
+        <div style={S.watch}>
+          <div style={{ padding:'8px', borderBottom:'1px solid #E8EEF8', flexShrink:0 }}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
+              style={{ width:'100%', padding:'5px 8px', background:'#F4F7FD', border:'1px solid #E8EEF8', borderRadius:'6px', fontSize:'11px', color:'#1A3A6B', outline:'none' }}/>
+            <div style={{ display:'flex', gap:'3px', marginTop:'6px' }}>
+              {CATS.map(c => (
+                <button key={c} onClick={() => setCatFilter(c)}
+                  style={{ flex:1, padding:'3px 0', fontSize:'8px', fontWeight:700, border:'none', borderRadius:'4px', cursor:'pointer', background: catFilter===c ? '#2255CC':'#F4F7FD', color: catFilter===c ? '#fff':'#8FA3BF', textTransform:'uppercase', letterSpacing:'0.5px' }}>
+                  {c}
+                </button>
               ))}
             </div>
+          </div>
+          <div style={{ flex:1, overflowY:'auto' }}>
+            {filtered.map(i => {
+              const price = prices[i.sym] || SEEDS[i.sym]
+              const pv    = prevRef.current[i.sym] || price
+              const isUp  = price >= pv
+              const active = sym === i.sym
+              return (
+                <div key={i.sym} onClick={() => setSym(i.sym)}
+                  style={{ padding:'8px 10px', borderBottom:'1px solid #F0F4FB', cursor:'pointer', background: active ? '#EEF3FF':'transparent', borderLeft: active ? '3px solid #2255CC':'3px solid transparent', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <div>
+                    <div style={{ fontSize:'11px', fontWeight:600, color: active ? '#2255CC':'#1A3A6B' }}>{i.sym}</div>
+                    <div style={{ fontSize:'9px', color:'#8FA3BF', marginTop:'1px' }}>{(i as any).cat}</div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', fontWeight:500, color: isUp ? '#16A34A':'#DC2626' }}>
+                      {price.toFixed(i.dec)}
+                    </div>
+                    <div style={{ fontSize:'9px', color: isUp ? '#16A34A':'#DC2626' }}>
+                      {isUp ? '▲' : '▼'} {Math.abs(price - pv).toFixed(i.dec)}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ── CENTER: Chart ── */}
+        <div style={S.center}>
+          {/* Chart topbar */}
+          <div style={{ height:'40px', background:'#fff', borderBottom:'1px solid #E8EEF8', display:'flex', alignItems:'center', padding:'0 12px', gap:'8px', flexShrink:0 }}>
+            <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'18px', fontWeight:700, color: up ? '#16A34A':'#DC2626' }}>
+              {live.toFixed(inst.dec)}
+            </div>
+            <div style={{ fontSize:'11px', color: up ? '#16A34A':'#DC2626' }}>
+              {up ? '▲' : '▼'} {Math.abs(live - prev).toFixed(inst.dec)}
+            </div>
+            <div style={{ marginLeft:'8px', fontSize:'12px', fontWeight:600, color:'#1A3A6B' }}>{sym}</div>
+            {!FINNHUB && <div style={{ fontSize:'10px', color:'#DC2626', background:'#FEF2F2', padding:'2px 8px', borderRadius:'4px' }}>⚠ Add VITE_FINNHUB_KEY</div>}
+            <div style={{ marginLeft:'auto', display:'flex', gap:'3px' }}>
+              {Object.keys(TF).map(t => (
+                <button key={t} onClick={() => setTf(t)}
+                  style={{ padding:'3px 8px', fontSize:'10px', fontWeight:600, border:'none', borderRadius:'4px', cursor:'pointer', background: tf===t ? '#2255CC':'#F4F7FD', color: tf===t ? '#fff':'#5C7A9E' }}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div style={S.chart}>
+            <CandleChart inst={inst} tf={tf} livePrice={live} openTrades={openTrades}/>
+          </div>
+        </div>
+
+        {/* ── RIGHT: Order panel ── */}
+        <div style={S.right}>
+          <div style={{ padding:'12px', borderBottom:'1px solid #E8EEF8', flexShrink:0 }}>
+            <div style={{ fontSize:'11px', fontWeight:700, color:'#1A3A6B', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'1px' }}>New Order</div>
+
+            {/* Symbol */}
+            <div style={{ marginBottom:'8px' }}>
+              <div style={{ fontSize:'9px', color:'#8FA3BF', marginBottom:'3px', fontWeight:600, textTransform:'uppercase' }}>Symbol</div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'13px', fontWeight:600, color:'#1A3A6B' }}>{sym}</div>
+            </div>
+
+            {/* Buy/Sell */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px', marginBottom:'10px' }}>
+              <button onClick={() => setDir('buy')}
+                style={{ padding:'10px', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:700, fontSize:'12px', background: dir==='buy' ? '#16A34A':'#F4F7FD', color: dir==='buy' ? '#fff':'#5C7A9E', transition:'all .15s' }}>
+                BUY
+              </button>
+              <button onClick={() => setDir('sell')}
+                style={{ padding:'10px', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:700, fontSize:'12px', background: dir==='sell' ? '#DC2626':'#F4F7FD', color: dir==='sell' ? '#fff':'#5C7A9E', transition:'all .15s' }}>
+                SELL
+              </button>
+            </div>
+
+            {/* Exec price */}
+            <div style={{ background: dir==='buy' ? 'rgba(22,163,74,.08)':'rgba(220,38,38,.08)', border:`1px solid ${dir==='buy'?'rgba(22,163,74,.2)':'rgba(220,38,38,.2)'}`, borderRadius:'6px', padding:'8px', marginBottom:'10px', textAlign:'center' }}>
+              <div style={{ fontSize:'9px', color:'#8FA3BF', textTransform:'uppercase', letterSpacing:'1px' }}>Execution Price</div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'18px', fontWeight:700, color: dir==='buy' ? '#16A34A':'#DC2626' }}>{exec.toFixed(inst.dec)}</div>
+            </div>
+
+            {/* Lots */}
+            <div style={{ marginBottom:'8px' }}>
+              <div style={{ fontSize:'9px', color:'#8FA3BF', marginBottom:'3px', fontWeight:600, textTransform:'uppercase' }}>Lots</div>
+              <div style={{ display:'flex', border:'1px solid #E8EEF8', borderRadius:'6px', overflow:'hidden' }}>
+                <button onClick={() => setLots(l => String(Math.max(0.01, +l - 0.01).toFixed(2)))}
+                  style={{ padding:'0 12px', background:'#F4F7FD', border:'none', borderRight:'1px solid #E8EEF8', cursor:'pointer', color:'#5C7A9E', fontSize:'16px', fontWeight:300 }}>−</button>
+                <input value={lots} onChange={e => setLots(e.target.value)} type="number" min="0.01" step="0.01"
+                  style={{ flex:1, padding:'6px', background:'#fff', border:'none', textAlign:'center', fontFamily:"'JetBrains Mono',monospace", fontSize:'13px', fontWeight:500, color:'#1A3A6B', outline:'none' }}/>
+                <button onClick={() => setLots(l => String((+l + 0.01).toFixed(2)))}
+                  style={{ padding:'0 12px', background:'#F4F7FD', border:'none', borderLeft:'1px solid #E8EEF8', cursor:'pointer', color:'#5C7A9E', fontSize:'16px', fontWeight:300 }}>+</button>
+              </div>
+            </div>
+
+            {/* SL / TP */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px', marginBottom:'10px' }}>
+              <div>
+                <div style={{ fontSize:'9px', color:'#DC2626', marginBottom:'3px', fontWeight:600, textTransform:'uppercase' }}>Stop Loss</div>
+                <input value={sl} onChange={e => setSl(e.target.value)} placeholder={`e.g. ${(exec - inst.pip * 20).toFixed(inst.dec)}`}
+                  style={{ width:'100%', padding:'6px 8px', background:'#FEF2F2', border:'1px solid rgba(220,38,38,.2)', borderRadius:'6px', fontSize:'11px', color:'#1A3A6B', outline:'none', fontFamily:"'JetBrains Mono',monospace" }}/>
+              </div>
+              <div>
+                <div style={{ fontSize:'9px', color:'#16A34A', marginBottom:'3px', fontWeight:600, textTransform:'uppercase' }}>Take Profit</div>
+                <input value={tp} onChange={e => setTp(e.target.value)} placeholder={`e.g. ${(exec + inst.pip * 20).toFixed(inst.dec)}`}
+                  style={{ width:'100%', padding:'6px 8px', background:'#F0FDF4', border:'1px solid rgba(22,163,74,.2)', borderRadius:'6px', fontSize:'11px', color:'#1A3A6B', outline:'none', fontFamily:"'JetBrains Mono',monospace" }}/>
+              </div>
+            </div>
+
+            {/* Margin info */}
+            <div style={{ background:'#F4F7FD', borderRadius:'6px', padding:'8px', marginBottom:'10px', fontSize:'11px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'3px' }}>
+                <span style={{ color:'#8FA3BF' }}>Req. margin</span>
+                <span style={{ fontFamily:"'JetBrains Mono',monospace", color:'#1A3A6B', fontWeight:500 }}>${(Number(reqMargin)||0).toFixed(2)}</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between' }}>
+                <span style={{ color:'#8FA3BF' }}>Free margin</span>
+                <span style={{ fontFamily:"'JetBrains Mono',monospace", color: freeMargin > reqMargin ? '#16A34A':'#DC2626', fontWeight:500 }}>${(Number(freeMargin)||0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Place button */}
+            <button onClick={placeOrder} disabled={placing || !primary || primary.status==='breached'}
+              style={{ width:'100%', padding:'11px', fontSize:'12px', fontWeight:700, border:'none', borderRadius:'8px', cursor:'pointer', background: dir==='buy'?'#16A34A':'#DC2626', color:'#fff', opacity: placing || !primary || primary.status==='breached' ? 0.5 : 1, transition:'all .15s', letterSpacing:'.5px', textTransform:'uppercase' }}>
+              {placing ? '…' : `${dir.toUpperCase()} ${lotsNum} ${sym}`}
+            </button>
+          </div>
+
+          {/* Account summary */}
+          <div style={{ padding:'10px 12px', flex:1, overflowY:'auto' }}>
+            <div style={{ fontSize:'9px', color:'#8FA3BF', textTransform:'uppercase', letterSpacing:'1.5px', fontWeight:600, marginBottom:'8px' }}>Account</div>
+            {[
+              ['Account', primary?.account_number ?? '—', '#1A3A6B'],
+              ['Phase',   primary?.phase ?? '—', '#2255CC'],
+              ['Margin Lvl', usedMargin > 0 ? `${(Number(marginLvl)||0).toFixed(0)}%` : '∞', marginLvl < 150 && usedMargin > 0 ? '#DC2626' : '#16A34A'],
+              ['Open Trades', String(openTrades.length), '#1A3A6B'],
+            ].map(([l,v,c]) => (
+              <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #F4F7FD', fontSize:'11px' }}>
+                <span style={{ color:'#8FA3BF' }}>{l}</span>
+                <span style={{ fontFamily:"'JetBrains Mono',monospace", color:c, fontWeight:500 }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── BOTTOM: Positions ── */}
+      <div style={S.bottom}>
+        <div style={{ display:'flex', alignItems:'center', gap:'0', borderBottom:'1px solid #E8EEF8', height:'36px', padding:'0 12px' }}>
+          {(['positions','history'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              style={{ padding:'0 16px', height:'36px', fontSize:'11px', fontWeight:600, border:'none', borderBottom: tab===t ? '2px solid #2255CC':'2px solid transparent', background:'transparent', color: tab===t ? '#2255CC':'#8FA3BF', cursor:'pointer', textTransform:'capitalize' }}>
+              {t} {t==='positions' && openTrades.length > 0 && `(${openTrades.length})`}
+            </button>
+          ))}
+          <div style={{ marginLeft:'auto', fontSize:'11px', color: openPnl >= 0 ? '#16A34A':'#DC2626', fontFamily:"'JetBrains Mono',monospace", fontWeight:600 }}>
+            Float: {openPnl >= 0 ? '+' : ''}${(Number(openPnl)||0).toFixed(2)}
+          </div>
+        </div>
+
+        <div style={{ overflowY:'auto', height:'calc(100% - 36px)' }}>
+          {tab === 'positions' ? (
+            openTrades.length === 0
+              ? <div style={{ padding:'16px', textAlign:'center', fontSize:'12px', color:'#8FA3BF' }}>No open positions</div>
+              : <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'11px' }}>
+                  <thead>
+                    <tr style={{ borderBottom:'1px solid #F0F4FB' }}>
+                      {['Symbol','Dir','Lots','Open','Current','P&L','Pips','SL','TP',''].map(h => (
+                        <th key={h} style={{ padding:'4px 10px', fontSize:'9px', textTransform:'uppercase', letterSpacing:'1.5px', color:'#8FA3BF', fontWeight:600, textAlign:'left', background:'#FAFBFF' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {openTrades.map(t => {
+                      const cur = prices[t.symbol] || SEEDS[t.symbol] || t.open_price
+                      const pnl = calcPnl(t, cur)
+                      const i   = INSTRUMENTS.find(x => x.sym === t.symbol) as any
+                      const pipDiff = i ? (t.direction==='buy' ? cur - t.open_price : t.open_price - cur) / (i.pip ?? 0.0001) : 0
+                      return (
+                        <tr key={t.id} style={{ borderBottom:'1px solid #F0F4FB' }}>
+                          <td style={{ padding:'5px 10px', fontWeight:600, color:'#1A3A6B' }}>{t.symbol}</td>
+                          <td style={{ padding:'5px 10px', fontWeight:700, color: t.direction==='buy'?'#16A34A':'#DC2626' }}>{t.direction.toUpperCase()}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace" }}>{t.lots}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", color:'#5C7A9E' }}>{(Number(t.open_price)||0).toFixed(i?.dec??5)}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", color: cur>=t.open_price?'#16A34A':'#DC2626' }}>{cur.toFixed(i?.dec??5)}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color: pnl>=0?'#16A34A':'#DC2626' }}>{pnl>=0?'+':''}${(Number(pnl)||0).toFixed(2)}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", color: pipDiff>=0?'#16A34A':'#DC2626' }}>{pipDiff>=0?'+':''}{(Number(pipDiff)||0).toFixed(1)}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", color:'#DC2626', fontSize:'10px' }}>{t.sl ?? '—'}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", color:'#16A34A', fontSize:'10px' }}>{t.tp ?? '—'}</td>
+                          <td style={{ padding:'5px 10px' }}>
+                            <button onClick={() => closeTrade(t)} style={{ padding:'3px 10px', fontSize:'10px', fontWeight:600, background:'#FEF2F2', border:'1px solid rgba(220,38,38,.2)', borderRadius:'5px', cursor:'pointer', color:'#DC2626' }}>Close</button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+          ) : (
+            closedTrades.length === 0
+              ? <div style={{ padding:'16px', textAlign:'center', fontSize:'12px', color:'#8FA3BF' }}>No closed trades</div>
+              : <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'11px' }}>
+                  <thead>
+                    <tr style={{ borderBottom:'1px solid #F0F4FB' }}>
+                      {['Symbol','Dir','Lots','Open','Close','P&L','Pips','Closed'].map(h => (
+                        <th key={h} style={{ padding:'4px 10px', fontSize:'9px', textTransform:'uppercase', letterSpacing:'1.5px', color:'#8FA3BF', fontWeight:600, textAlign:'left', background:'#FAFBFF' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {closedTrades.map(t => {
+                      const i = INSTRUMENTS.find(x => x.sym === t.symbol) as any
+                      return (
+                        <tr key={t.id} style={{ borderBottom:'1px solid #F0F4FB' }}>
+                          <td style={{ padding:'5px 10px', fontWeight:600, color:'#1A3A6B' }}>{t.symbol}</td>
+                          <td style={{ padding:'5px 10px', fontWeight:700, color: t.direction==='buy'?'#16A34A':'#DC2626' }}>{t.direction.toUpperCase()}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace" }}>{t.lots}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", color:'#5C7A9E' }}>{(Number(t.open_price)||0).toFixed(i?.dec??5)}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", color:'#5C7A9E' }}>{(Number(t.close_price)||0).toFixed(i?.dec??5)}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color: (t.net_pnl??0)>=0?'#16A34A':'#DC2626' }}>{(t.net_pnl??0)>=0?'+':''}${(Number(t.net_pnl)||0).toFixed(2)}</td>
+                          <td style={{ padding:'5px 10px', fontFamily:"'JetBrains Mono',monospace", color: (t.pips??0)>=0?'#16A34A':'#DC2626' }}>{(t.pips??0)>=0?'+':''}{(Number(t.pips)||0).toFixed(1)}</td>
+                          <td style={{ padding:'5px 10px', color:'#8FA3BF', fontSize:'10px' }}>{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
           )}
         </div>
       </div>
     </div>
-
-    {/* ── Order Panel ── */}
-    <div style={{width:215,flexShrink:0,background:'#fff',borderLeft:'1px solid #E8EEF8',display:'flex',flexDirection:'column'}}>
-      <div style={{padding:'10px 12px',borderBottom:'1px solid #E8EEF8'}}>
-        <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:8}}>Order Panel</div>
-        <div style={{marginBottom:8,padding:'5px 8px',background:ms.open?'rgba(22,163,74,.07)':'rgba(220,38,38,.07)',border:`1px solid ${ms.open?'rgba(22,163,74,.2)':'rgba(220,38,38,.2)'}`,display:'flex',alignItems:'center',gap:6}}>
-          <div style={{width:5,height:5,borderRadius:'50%',background:ms.open?'#16A34A':'#DC2626',flexShrink:0}}/>
-          <span style={{fontSize:8,color:ms.open?'#16A34A':'#DC2626',fontWeight:600}}>{ms.label}</span>
-        </div>
-        <div style={{display:'flex'}}>
-          <button onClick={()=>setDir('buy')}  disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='buy'?'#16A34A':'rgba(22,163,74,.08)',color:dir==='buy'?'#000':'#16A34A'}}>Buy</button>
-          <button onClick={()=>setDir('sell')} disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='sell'?'#DC2626':'rgba(220,38,38,.08)',color:dir==='sell'?'#fff':'#DC2626'}}>Sell</button>
-        </div>
-      </div>
-      <div style={{flex:1,overflowY:'auto',padding:12,display:'flex',flexDirection:'column',gap:8}}>
-        {/* Price */}
-        <div style={{textAlign:'center' as const,padding:'10px 8px',border:`1px solid ${up?'rgba(22,163,74,.25)':'rgba(220,38,38,.25)'}`,background:'#F4F7FD'}}>
-          <div style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:3}}>{dir==='buy'?'Ask':'Bid'}</div>
-          <div style={{fontFamily:'monospace',fontSize:22,fontWeight:700,letterSpacing:-1,color:up?'#16A34A':'#DC2626'}}>{execPrice.toFixed(inst.dec)}</div>
-          <div style={{fontSize:8,color:'#8FA3BF',marginTop:3}}>spread {inst.spread.toFixed(inst.dec)}</div>
-        </div>
-        {/* Order type */}
-        <div>
-          <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:4}}>Order Type</div>
-          <div style={{display:'flex',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)'}}>
-            {['Market','Limit','Stop'].map(t=><button key={t} onClick={()=>setOrdType(t)} style={{flex:1,padding:'6px 0',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',border:'none',background:ordType===t?'rgba(34,85,204,.1)':'transparent',color:ordType===t?'#2255CC':'#8FA3BF'}}>{t}</button>)}
-          </div>
-        </div>
-        {/* Lot size */}
-        <div>
-          <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:4}}>Lot Size <span style={{fontWeight:400}}>max {maxLots}</span></div>
-          <div style={{display:'flex',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)'}}>
-            <button onClick={()=>setLots(l=>String(Math.max(0.01,+l-0.01).toFixed(2)))} style={{padding:'0 10px',background:'transparent',border:'none',borderRight:'1px solid rgba(26,58,107,.06)',cursor:'pointer',color:'#8FA3BF',fontSize:16}}>−</button>
-            <input value={lots} onChange={e=>setLots(e.target.value)} type="number" step="0.01" min="0.01" style={{flex:1,textAlign:'center' as const,padding:'8px 0',background:'transparent',border:'none',outline:'none',color:'#1A3A6B',fontFamily:'monospace',fontSize:13}}/>
-            <button onClick={()=>setLots(l=>String((+l+0.01).toFixed(2)))} style={{padding:'0 10px',background:'transparent',border:'none',borderLeft:'1px solid rgba(26,58,107,.06)',cursor:'pointer',color:'#8FA3BF',fontSize:16}}>+</button>
-          </div>
-        </div>
-        {/* SL / TP */}
-        {['Stop Loss','Take Profit'].map((l,i)=>{
-          const v=i===0?sl:tp;const sv=i===0?setSl:setTp
-          return(
-            <div key={l}>
-              <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:4}}>{l}</div>
-              <input value={v} onChange={e=>sv(e.target.value)} placeholder="Optional" type="number" style={{width:'100%',padding:'8px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',outline:'none',color:'#1A3A6B',fontFamily:'monospace',fontSize:12,boxSizing:'border-box' as const}}/>
-            </div>
-          )
-        })}
-        {/* Margin info */}
-        <div style={{background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',padding:'8px 10px'}}>
-          {([
-            ['Notional',    `$${(notionalPerLot*lotsNum).toLocaleString('en',{maximumFractionDigits:0})}`, '#5C7A9E'],
-            ['Req. Margin', `$${reqMargin.toLocaleString('en',{maximumFractionDigits:2})}`,               reqMargin>freeMargin?'#DC2626':'#1A3A6B'],
-            ['Free Margin', `$${freeMargin.toLocaleString('en',{maximumFractionDigits:2})}`,              freeMargin<reqMargin?'#DC2626':'#16A34A'],
-            ['Leverage',    `1:${LEVERAGE}`,                                                               '#8FA3BF'],
-          ] as [string,string,string][]).map(([l,v,c])=>(
-            <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-              <span style={{fontSize:8,color:'#8FA3BF'}}>{l}</span>
-              <span style={{fontSize:9,fontFamily:'monospace',fontWeight:600,color:c}}>{v}</span>
-            </div>
-          ))}
-        </div>
-        <button onClick={()=>setConfirm(true)} disabled={!canTrade||placing||reqMargin>freeMargin} style={{width:'100%',padding:'12px 0',fontSize:11,letterSpacing:2,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade&&!placing&&reqMargin<=freeMargin?'pointer':'not-allowed',border:'none',opacity:canTrade&&!placing&&reqMargin<=freeMargin?1:0.35,background:dir==='buy'?'#16A34A':'#DC2626',color:dir==='buy'?'#000':'#fff'}}>
-          {!ms.open?'Market Closed':placing?'Placing…':`${dir.toUpperCase()} ${lotsNum} ${sym}`}
-        </button>
-      </div>
-    </div>
-  </div>
-
-  {/* Confirm modal */}
-  {confirm&&(
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.8)',backdropFilter:'blur(4px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{background:'#fff',border:'1px solid #C5D5EA',padding:24,minWidth:300}}>
-        <div style={{fontFamily:'serif',fontSize:19,fontWeight:'bold',marginBottom:4}}>Confirm Order</div>
-        <div style={{fontSize:11,color:'#5C7A9E',marginBottom:16}}>Review before executing</div>
-        <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16}}>
-          {([
-            ['Symbol',sym],['Direction',dir.toUpperCase()],['Type',ordType],
-            ['Lots',String(lotsNum)],['Price',execPrice.toFixed(inst.dec)],
-            ['Notional',`$${(notionalPerLot*lotsNum).toLocaleString('en',{maximumFractionDigits:0})}`],
-            ['Req. Margin',`$${reqMargin.toLocaleString('en',{maximumFractionDigits:2})}`],
-            ['Account',primary?.account_number??'—'],
-          ] as [string,string][]).map(([l,v])=>(
-            <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'6px 10px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)'}}>
-              <span style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600}}>{l}</span>
-              <span style={{fontFamily:'monospace',fontSize:12,color:v==='BUY'?'#16A34A':v==='SELL'?'#DC2626':'#1A3A6B'}}>{v}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
-          <button onClick={()=>setConfirm(false)} style={{padding:'8px 18px',background:'transparent',border:'1px solid #C5D5EA',color:'#5C7A9E',fontSize:9,letterSpacing:2,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer'}}>Cancel</button>
-          <button onClick={placeOrder} style={{padding:'8px 22px',border:'none',fontSize:9,letterSpacing:2,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:dir==='buy'?'#16A34A':'#DC2626',color:dir==='buy'?'#000':'#fff'}}>Confirm {dir.toUpperCase()}</button>
-        </div>
-      </div>
-    </div>
-  )}
-  <ToastContainer toasts={toasts} dismiss={dismiss}/>
-  </>
   )
 }
