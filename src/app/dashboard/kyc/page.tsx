@@ -13,7 +13,7 @@ type KycStatus = 'not_started' | 'pending' | 'approved' | 'declined' | 'needs_re
 const STATUS_CFG: Record<KycStatus, { label: string; color: string; bg: string; border: string; icon: string; desc: string }> = {
   not_started:  { label: 'Not Verified',  color: '#8FA3BF', bg: '#F4F7FD',                     border: '#E8EEF8',   icon: '○', desc: 'Complete identity verification to unlock payouts and higher limits.' },
   pending:      { label: 'Under Review',  color: '#D97706', bg: 'rgba(217,119,6,.06)',           border: 'rgba(217,119,6,.3)',  icon: '⏳', desc: 'Your documents are being reviewed. Usually takes 1–2 business days.' },
-  in_review:    { label: 'Under Review',  color: '#D97706', bg: 'rgba(217,119,6,.06)',           border: 'rgba(217,119,6,.3)',  icon: '⏳', desc: 'Your documents are being reviewed. Usually takes 1–2 business days.' },
+  in_review:    { label: 'In Progress',   color: '#2255CC', bg: 'rgba(34,85,204,.06)',            border: 'rgba(34,85,204,.3)',  icon: '→',  desc: 'Verification session is open. Complete it in the Didit window to continue.' },
   approved:     { label: 'Verified',      color: '#16A34A', bg: 'rgba(22,163,74,.06)',           border: 'rgba(22,163,74,.3)', icon: '✓',  desc: 'Your identity has been verified. All features are unlocked.' },
   declined:     { label: 'Declined',      color: '#DC2626', bg: 'rgba(220,38,38,.06)',           border: 'rgba(220,38,38,.3)', icon: '✕',  desc: 'Your verification was declined. Please re-submit with valid documents.' },
   needs_review: { label: 'Needs Review',  color: '#D97706', bg: 'rgba(217,119,6,.06)',           border: 'rgba(217,119,6,.3)',  icon: '⚠', desc: 'Additional information required. Please contact support.' },
@@ -42,68 +42,49 @@ export function KycPage() {
     setStarting(true)
 
     try {
-      // Create Didit session via Vercel API route (to keep API key server-side)
       const res = await fetch('/api/kyc-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: profile.id }),
       })
 
-      if (!res.ok) throw new Error('Could not create verification session')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Could not create session')
 
-      const { verification_url, session_id } = await res.json()
+      const { verification_url, session_id } = data
+      if (!verification_url) throw new Error('No verification URL from Didit')
 
-      // Save session to DB
-      await supabase.from('kyc_verifications').upsert({
-        user_id:    profile.id,
-        provider:   'didit',
-        inquiry_id: session_id,
-        status:     'pending',
-      }, { onConflict: 'user_id' })
+      // Save to DB as in_review (session open, not yet submitted)
+      try {
+        await supabase.from('kyc_verifications').upsert({
+          user_id:    profile.id,
+          provider:   'didit',
+          inquiry_id: session_id,
+          status:     'in_review',
+        }, { onConflict: 'user_id' })
+        await supabase.from('users').update({ kyc_status: 'pending' }).eq('id', profile.id)
+      } catch {}
 
-      await supabase.from('users').update({ kyc_status: 'pending' }).eq('id', profile.id)
+      setKycRecord({ provider: 'didit', inquiry_id: session_id, status: 'in_review', created_at: new Date().toISOString() })
 
-      setKycRecord({ provider: 'didit', inquiry_id: session_id, status: 'pending', created_at: new Date().toISOString() })
-
-      // Open Didit hosted verification page
-      window.open(verification_url, '_blank', 'width=500,height=700,noopener')
-      toast('success', '✅', 'Session Started', 'Complete the verification in the new window. This page will update automatically.')
-
-      // Poll for status updates every 15 seconds (no webhook needed)
-      let attempts = 0
-      const poll = setInterval(async () => {
-        attempts++
-        if (attempts > 40) { clearInterval(poll); return } // stop after 10 min
-        try {
-          const statusRes = await fetch(`/api/kyc-status?sessionId=${session_id}`)
-          if (!statusRes.ok) return
-          const { status: newStatus } = await statusRes.json()
-          if (newStatus && newStatus !== 'pending') {
-            clearInterval(poll)
-            setKycRecord((prev: any) => ({ ...prev, status: newStatus }))
-            await supabase.from('kyc_verifications').update({ status: newStatus }).eq('user_id', profile.id)
-            await supabase.from('users').update({ kyc_status: newStatus }).eq('id', profile.id)
-            if (newStatus === 'approved') toast('success', '✅', 'Verified!', 'Your identity has been confirmed.')
-            else if (newStatus === 'declined') toast('error', '❌', 'Declined', 'Please re-submit with valid documents.')
-          }
-        } catch {}
-      }, 15000)
+      // Redirect current tab to Didit — most reliable, no popup blocker issues
+      window.location.href = verification_url
 
     } catch (err: any) {
       const msg = err.message ?? ''
-      if (msg.includes('not configured') || msg.includes('500')) {
-        toast('info', '📋', 'Manual KYC', 'Please open a support ticket and attach a photo of your government ID + selfie.')
+      if (msg.includes('not configured')) {
+        toast('info', '📋', 'Manual KYC', 'Please open a support ticket and attach your government ID + selfie.')
       } else {
-        toast('error', '❌', 'Error', msg || 'Could not start verification. Please try again.')
+        toast('error', '❌', 'Error', msg || 'Could not start verification.')
       }
-    } finally {
       setStarting(false)
     }
   }
 
+
   const status: KycStatus = (kycRecord?.status ?? 'not_started') as KycStatus
   const cfg = STATUS_CFG[status] ?? STATUS_CFG.not_started
-  const canStart = ['not_started', 'declined', 'expired', 'abandoned'].includes(status)
+  const canStart = ['not_started', 'declined', 'expired', 'abandoned', 'in_review'].includes(status)
 
   if (loading) return (
     <DashboardLayout title="Identity Verification (KYC)" nav={TRADER_NAV} accentColor="gold">

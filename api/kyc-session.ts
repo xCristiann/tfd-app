@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       body: JSON.stringify({
         workflow_id: DIDIT_WORKFLOW,
-        callback:    `${APP_URL}/dashboard/kyc?verified=1`,
+        callback:    `${APP_URL}/dashboard/kyc`,
         vendor_data: userId,
       }),
     })
