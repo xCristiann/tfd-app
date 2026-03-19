@@ -5,8 +5,7 @@ import { useAccount } from '@/hooks/useAccount'
 import { ToastContainer } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 
-const FCS_KEY  = (import.meta as any).env?.VITE_FCS_KEY ?? 'aDYGsykSwMkm8K0Ra3RirW3Ayek'
-const FINNHUB  = (import.meta as any).env?.VITE_FINNHUB_KEY ?? ''
+const FCS_KEY  = (import.meta as any).env?.VITE_FCS_KEY ?? 'wE4n2JGyRpoSReYfXS3UlA8DxP9z3tTM'
 const LEVERAGE = 50
 const LOT_SIZE = 100_000
 
@@ -17,25 +16,25 @@ function lsSet(key: string, v: unknown) { try { localStorage.setItem(key, JSON.s
 
 /* ══ INSTRUMENTS ══════════════════════════════════════════════════ */
 const INSTRUMENTS = [
-  { sym:'EUR/USD', fcs:'EUR/USD', fh:'OANDA:EUR_USD', dec:5, pip:0.0001, spread:0.00010, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', fcs:'GBP/USD', fh:'OANDA:GBP_USD', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/JPY', fcs:'USD/JPY', fh:'OANDA:USD_JPY', dec:3, pip:0.01,   spread:0.010,   cat:'Forex',       lotUSD:(_:number)=>LOT_SIZE },
-  { sym:'USD/CHF', fcs:'USD/CHF', fh:'OANDA:USD_CHF', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'AUD/USD', fcs:'AUD/USD', fh:'OANDA:AUD_USD', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/CAD', fcs:'USD/CAD', fh:'OANDA:USD_CAD', dec:5, pip:0.0001, spread:0.00020, cat:'Forex',       lotUSD:(p:number)=>LOT_SIZE/p },
-  { sym:'NZD/USD', fcs:'NZD/USD', fh:'OANDA:NZD_USD', dec:5, pip:0.0001, spread:0.00020, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'EUR/JPY', fcs:'EUR/JPY', fh:'OANDA:EUR_JPY', dec:3, pip:0.01,   spread:0.025,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'GBP/JPY', fcs:'GBP/JPY', fh:'OANDA:GBP_JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'EUR/GBP', fcs:'EUR/GBP', fh:'OANDA:EUR_GBP', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*1.27*LOT_SIZE },
-  { sym:'AUD/JPY', fcs:'AUD/JPY', fh:'OANDA:AUD_JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'CAD/JPY', fcs:'CAD/JPY', fh:'OANDA:CAD_JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'XAU/USD', fcs:'XAU/USD', fh:'OANDA:XAU_USD', dec:2, pip:0.10,   spread:0.30,    cat:'Metals',      lotUSD:(p:number)=>p*100 },
-  { sym:'XAG/USD', fcs:'XAG/USD', fh:'OANDA:XAG_USD', dec:4, pip:0.001,  spread:0.030,   cat:'Metals',      lotUSD:(p:number)=>p*5000 },
-  { sym:'NAS100',  fcs:'NAS100',  fh:'NASDAQ:QQQ',    dec:2, pip:1.0,    spread:1.5,     cat:'Indices',     lotUSD:(p:number)=>p*400 },
-  { sym:'US500',   fcs:'US500',   fh:'AMEX:SPY',      dec:2, pip:0.10,   spread:0.50,    cat:'Indices',     lotUSD:(p:number)=>p*500 },
-  { sym:'US30',    fcs:'US30',    fh:'AMEX:DIA',      dec:1, pip:1.0,    spread:2.0,     cat:'Indices',     lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   fcs:'GER40',   fh:'XETRA:EXS1',   dec:1, pip:1.0,    spread:1.0,     cat:'Indices',     lotUSD:(p:number)=>p*25 },
-  { sym:'WTI',     fcs:'USOIL',   fh:'OANDA:BCO_USD', dec:2, pip:0.01,   spread:0.03,    cat:'Commodities', lotUSD:(p:number)=>p*1000 },
+  { sym:'EUR/USD', fcs:'EUR/USD', dec:5, pip:0.0001, spread:0.00010, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', fcs:'GBP/USD', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/JPY', fcs:'USD/JPY', dec:3, pip:0.01,   spread:0.010,   cat:'Forex',       lotUSD:(_:number)=>LOT_SIZE },
+  { sym:'USD/CHF', fcs:'USD/CHF', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'AUD/USD', fcs:'AUD/USD', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/CAD', fcs:'USD/CAD', dec:5, pip:0.0001, spread:0.00020, cat:'Forex',       lotUSD:(p:number)=>LOT_SIZE/p },
+  { sym:'NZD/USD', fcs:'NZD/USD', dec:5, pip:0.0001, spread:0.00020, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'EUR/JPY', fcs:'EUR/JPY', dec:3, pip:0.01,   spread:0.025,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'GBP/JPY', fcs:'GBP/JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'EUR/GBP', fcs:'EUR/GBP', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*1.27*LOT_SIZE },
+  { sym:'AUD/JPY', fcs:'AUD/JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'CAD/JPY', fcs:'CAD/JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'XAU/USD', fcs:'XAU/USD', dec:2, pip:0.10,   spread:0.30,    cat:'Metals',      lotUSD:(p:number)=>p*100 },
+  { sym:'XAG/USD', fcs:'XAG/USD', dec:4, pip:0.001,  spread:0.030,   cat:'Metals',      lotUSD:(p:number)=>p*5000 },
+  { sym:'NAS100',  fcs:'NAS100',  dec:2, pip:1.0,    spread:1.5,     cat:'Indices',     lotUSD:(p:number)=>p*400 },
+  { sym:'US500',   fcs:'US500',   dec:2, pip:0.10,   spread:0.50,    cat:'Indices',     lotUSD:(p:number)=>p*500 },
+  { sym:'US30',    fcs:'US30',    dec:1, pip:1.0,    spread:2.0,     cat:'Indices',     lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   fcs:'GER40',   dec:1, pip:1.0,    spread:1.0,     cat:'Indices',     lotUSD:(p:number)=>p*25 },
+  { sym:'WTI',     fcs:'USOIL',   dec:2, pip:0.01,   spread:0.03,    cat:'Commodities', lotUSD:(p:number)=>p*1000 },
 ] as const
 
 const SEEDS: Record<string,number> = {
@@ -262,25 +261,7 @@ function usePriceFeed() {
   },[])
   useEffect(()=>{
     let dead=false,ws:WebSocket,wsT:any,pollT:any
-    const connect=()=>{
-      if(dead||!FINNHUB) return
-      try{
-        ws=new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB}`)
-        ws.onopen=()=>INSTRUMENTS.forEach(i=>ws.send(JSON.stringify({type:'subscribe',symbol:(i as any).fh})))
-        ws.onmessage=({data})=>{
-          try{
-            const msg=JSON.parse(data)
-            if(msg.type==='trade'&&msg.data)
-              for(const t of msg.data){
-                const inst=INSTRUMENTS.find(i=>(i as any).fh===t.s) as any
-                if(inst&&t.p) push(inst.sym,+t.p.toFixed(inst.dec))
-              }
-          }catch{}
-        }
-        ws.onclose=()=>{if(!dead)wsT=setTimeout(connect,2000)}
-        ws.onerror=()=>{try{ws.close()}catch{}}
-      }catch{if(!dead)wsT=setTimeout(connect,3000)}
-    }
+    // Finnhub removed - using FCS only
     // FCS latest prices poll
     const poll=async()=>{
       if(dead) return
@@ -318,29 +299,11 @@ function usePriceFeed() {
           }
         }
       } catch(e){ console.warn('[FCS latest]',e) }
-      // Finnhub forex rates as backup
-      if(FINNHUB) try{
-        const r=await fetch(`https://finnhub.io/api/v1/forex/rates?base=USD&token=${FINNHUB}`)
-        const d=await r.json()
-        if(d.quote){
-          const q=d.quote
-          if(q.EUR) push('EUR/USD',+((1/q.EUR).toFixed(5)))
-          if(q.GBP) push('GBP/USD',+((1/q.GBP).toFixed(5)))
-          if(q.JPY) push('USD/JPY',+(q.JPY.toFixed(3)))
-          if(q.CHF) push('USD/CHF',+(q.CHF.toFixed(5)))
-          if(q.AUD) push('AUD/USD',+((1/q.AUD).toFixed(5)))
-          if(q.CAD) push('USD/CAD',+(q.CAD.toFixed(5)))
-          if(q.NZD) push('NZD/USD',+((1/q.NZD).toFixed(5)))
-          if(q.EUR&&q.JPY) push('EUR/JPY',+((q.JPY/q.EUR).toFixed(3)))
-          if(q.GBP&&q.JPY) push('GBP/JPY',+((q.JPY/q.GBP).toFixed(3)))
-          if(q.XAU) push('XAU/USD',+((1/q.XAU).toFixed(2)))
-          if(q.XAG) push('XAG/USD',+((1/q.XAG).toFixed(4)))
-        }
-      }catch{}
+      // Finnhub removed
     }
-    connect(); poll()
+    poll()
     pollT=setInterval(poll,5000)
-    return()=>{dead=true;clearTimeout(wsT);clearInterval(pollT);try{ws?.close()}catch{}}
+    return()=>{dead=true;clearInterval(pollT)}
   },[push])
   return {prices,prevRef,priceRef,push}
 }
