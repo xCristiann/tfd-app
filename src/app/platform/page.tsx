@@ -5,7 +5,6 @@ import { useAccount } from '@/hooks/useAccount'
 import { ToastContainer } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 
-const FCS_KEY  = (import.meta as any).env?.VITE_FCS_KEY ?? 'wE4n2JGyRpoSReYfXS3UlA8DxP9z3tTM'
 const LEVERAGE = 50
 const LOT_SIZE = 100_000
 
@@ -14,27 +13,26 @@ function lsGet<T>(key: string, fb: T): T {
 }
 function lsSet(key: string, v: unknown) { try { localStorage.setItem(key, JSON.stringify(v)) } catch {} }
 
-/* ══ INSTRUMENTS ══════════════════════════════════════════════════ */
 const INSTRUMENTS = [
-  { sym:'EUR/USD', fcs:'EUR/USD', dec:5, pip:0.0001, spread:0.00010, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', fcs:'GBP/USD', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/JPY', fcs:'USD/JPY', dec:3, pip:0.01,   spread:0.010,   cat:'Forex',       lotUSD:(_:number)=>LOT_SIZE },
-  { sym:'USD/CHF', fcs:'USD/CHF', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'AUD/USD', fcs:'AUD/USD', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/CAD', fcs:'USD/CAD', dec:5, pip:0.0001, spread:0.00020, cat:'Forex',       lotUSD:(p:number)=>LOT_SIZE/p },
-  { sym:'NZD/USD', fcs:'NZD/USD', dec:5, pip:0.0001, spread:0.00020, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'EUR/JPY', fcs:'EUR/JPY', dec:3, pip:0.01,   spread:0.025,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'GBP/JPY', fcs:'GBP/JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'EUR/GBP', fcs:'EUR/GBP', dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*1.27*LOT_SIZE },
-  { sym:'AUD/JPY', fcs:'AUD/JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'CAD/JPY', fcs:'CAD/JPY', dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'XAU/USD', fcs:'XAU/USD', dec:2, pip:0.10,   spread:0.30,    cat:'Metals',      lotUSD:(p:number)=>p*100 },
-  { sym:'XAG/USD', fcs:'XAG/USD', dec:4, pip:0.001,  spread:0.030,   cat:'Metals',      lotUSD:(p:number)=>p*5000 },
-  { sym:'NAS100',  fcs:'NAS100',  dec:2, pip:1.0,    spread:1.5,     cat:'Indices',     lotUSD:(p:number)=>p*400 },
-  { sym:'US500',   fcs:'US500',   dec:2, pip:0.10,   spread:0.50,    cat:'Indices',     lotUSD:(p:number)=>p*500 },
-  { sym:'US30',    fcs:'US30',    dec:1, pip:1.0,    spread:2.0,     cat:'Indices',     lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   fcs:'GER40',   dec:1, pip:1.0,    spread:1.0,     cat:'Indices',     lotUSD:(p:number)=>p*25 },
-  { sym:'WTI',     fcs:'USOIL',   dec:2, pip:0.01,   spread:0.03,    cat:'Commodities', lotUSD:(p:number)=>p*1000 },
+  { sym:'EUR/USD', tv:'FX:EURUSD',        dec:5, pip:0.0001, spread:0.00010, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', tv:'FX:GBPUSD',        dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/JPY', tv:'FX:USDJPY',        dec:3, pip:0.01,   spread:0.010,   cat:'Forex',       lotUSD:(_:number)=>LOT_SIZE },
+  { sym:'USD/CHF', tv:'FX:USDCHF',        dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'AUD/USD', tv:'FX:AUDUSD',        dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/CAD', tv:'FX:USDCAD',        dec:5, pip:0.0001, spread:0.00020, cat:'Forex',       lotUSD:(p:number)=>LOT_SIZE/p },
+  { sym:'NZD/USD', tv:'FX:NZDUSD',        dec:5, pip:0.0001, spread:0.00020, cat:'Forex',       lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'EUR/JPY', tv:'FX:EURJPY',        dec:3, pip:0.01,   spread:0.025,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'GBP/JPY', tv:'FX:GBPJPY',        dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'EUR/GBP', tv:'FX:EURGBP',        dec:5, pip:0.0001, spread:0.00015, cat:'Forex',       lotUSD:(p:number)=>p*1.27*LOT_SIZE },
+  { sym:'AUD/JPY', tv:'FX:AUDJPY',        dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'CAD/JPY', tv:'FX:CADJPY',        dec:3, pip:0.01,   spread:0.030,   cat:'Forex',       lotUSD:(p:number)=>p/148*LOT_SIZE },
+  { sym:'XAU/USD', tv:'TVC:GOLD',         dec:2, pip:0.10,   spread:0.30,    cat:'Metals',      lotUSD:(p:number)=>p*100 },
+  { sym:'XAG/USD', tv:'TVC:SILVER',       dec:4, pip:0.001,  spread:0.030,   cat:'Metals',      lotUSD:(p:number)=>p*5000 },
+  { sym:'NAS100',  tv:'CAPITALCOM:US100', dec:2, pip:1.0,    spread:1.5,     cat:'Indices',     lotUSD:(p:number)=>p*400 },
+  { sym:'US500',   tv:'CAPITALCOM:US500', dec:2, pip:0.10,   spread:0.50,    cat:'Indices',     lotUSD:(p:number)=>p*500 },
+  { sym:'US30',    tv:'CAPITALCOM:US30',  dec:1, pip:1.0,    spread:2.0,     cat:'Indices',     lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   tv:'CAPITALCOM:DE40',  dec:1, pip:1.0,    spread:1.0,     cat:'Indices',     lotUSD:(p:number)=>p*25 },
+  { sym:'WTI',     tv:'TVC:USOIL',        dec:2, pip:0.01,   spread:0.03,    cat:'Commodities', lotUSD:(p:number)=>p*1000 },
 ] as const
 
 const SEEDS: Record<string,number> = {
@@ -45,276 +43,157 @@ const SEEDS: Record<string,number> = {
   'NAS100':19800,'US500':5580,'US30':41700,'GER40':22500,'WTI':68.50,
 }
 
-/* ══ TIMEFRAMES ═══════════════════════════════════════════════════ */
+/* ══ TV TIMEFRAMES ════════════════════════════════════════════════ */
 const TF_LIST = [
-  { label:'1m',  fcs:'1m',  sec:60     },
-  { label:'5m',  fcs:'5m',  sec:300    },
-  { label:'15m', fcs:'15m', sec:900    },
-  { label:'30m', fcs:'30m', sec:1800   },
-  { label:'1h',  fcs:'1h',  sec:3600   },
-  { label:'4h',  fcs:'4h',  sec:14400  },
-  { label:'1d',  fcs:'1d',  sec:86400  },
+  { label:'1m',  tv:'1'   },
+  { label:'5m',  tv:'5'   },
+  { label:'15m', tv:'15'  },
+  { label:'30m', tv:'30'  },
+  { label:'1h',  tv:'60'  },
+  { label:'4h',  tv:'240' },
+  { label:'1d',  tv:'D'   },
+  { label:'1w',  tv:'W'   },
 ]
-type TF = typeof TF_LIST[number]
-type Candle = { time:number; open:number; high:number; low:number; close:number }
 
-/* ══ LWC LOADER ═══════════════════════════════════════════════════ */
-let _lwcReady = false
-const _lwcQ: Array<()=>void> = []
-function loadLWC(): Promise<void> {
-  return new Promise(res => {
-    if (_lwcReady) { res(); return }
-    _lwcQ.push(res)
-    if (document.getElementById('lwc-s')) return
-    const s = document.createElement('script')
-    s.id = 'lwc-s'
-    s.src = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js'
-    s.onload = () => { _lwcReady = true; _lwcQ.forEach(f=>f()); _lwcQ.length=0 }
-    document.head.appendChild(s)
-  })
-}
+/* ══ TRADINGVIEW WIDGET ═══════════════════════════════════════════ */
+// Keep one widget per symbol alive — don't destroy on TF change
+const tvContainers: Map<string, HTMLDivElement> = new Map()
 
-/* ══ FCS API — fetch candles ══════════════════════════════════════ */
-async function fetchCandles(inst: any, tf: TF): Promise<Candle[]> {
-  const length = 500
-  // FCS API v4 - correct endpoint with type param
-  const fcsType = inst.fcsType ?? 'forex'
-  const url = `https://api-v4.fcsapi.com/forex/history?symbol=${inst.fcs}&period=${tf.fcs}&number=${length}&type=${fcsType}&access_key=${FCS_KEY}`
-  try {
-    const r = await fetch(url)
-    const d = await r.json()
-    // FCS returns { status:true, response: [ {tm, o, h, l, c}, ... ] }
-    if (!d.status) { console.warn('[FCS candle]', inst.fcs, d.msg||d.message); return generateDemo(inst, tf) }
-    const arr = Array.isArray(d.response) ? d.response : Object.values(d.response||{})
-    if (!arr.length) return generateDemo(inst, tf)
-    const candles: Candle[] = arr.map((e: any) => {
-      // FCS history: each item has {o,h,l,c,t} or nested active:{o,h,l,c,t}
-      const data  = e.active ?? e
-      const time  = parseInt(data.t || data.tm || data.date || e.t || e.tm || 0)
-      const open  = parseFloat(data.o || data.open  || 0)
-      const high  = parseFloat(data.h || data.high  || 0)
-      const low   = parseFloat(data.l || data.low   || 0)
-      const close = parseFloat(data.c || data.close || 0)
-      return { time, open, high, low, close }
-    }).filter((c:Candle) => c.time>0 && c.open>0)
-    candles.sort((a,b) => a.time - b.time)
-    if (candles.length < 5) return generateDemo(inst, tf)
-    console.log(`[FCS] ${inst.sym} ${tf.label}: ${candles.length} candles, last close: ${candles[candles.length-1].close}`)
-    return candles
-  } catch(e) {
-    console.error('[FCS candle error]', inst.fcs, e)
-    return generateDemo(inst, tf)
-  }
-}
+function TVChart({ tvSym, tfTv }: { tvSym: string; tfTv: string }) {
+  const wrapRef  = useRef<HTMLDivElement>(null)
+  const builtRef = useRef<string>('')  // 'sym:tf' that was built
 
-function generateDemo(inst: any, tf: TF): Candle[] {
-  const count = 200
-  const now   = Math.floor(Date.now()/1000)
-  const seed  = SEEDS[inst.sym] ?? 1
-  const candles: Candle[] = []
-  let price = seed * 0.97
-  const vol = seed * 0.0005
-  for (let i = count; i >= 0; i--) {
-    const time  = Math.floor((now - i*tf.sec)/tf.sec)*tf.sec
-    const open  = price
-    const move  = (Math.random()-0.49)*vol*2
-    const close = Math.max(seed*0.93, Math.min(seed*1.07, open+move))
-    const high  = Math.max(open,close)+Math.random()*vol*0.5
-    const low   = Math.min(open,close)-Math.random()*vol*0.5
-    candles.push({ time, open:+open.toFixed(inst.dec), high:+high.toFixed(inst.dec), low:+low.toFixed(inst.dec), close:+close.toFixed(inst.dec) })
-    price = close
-  }
-  return candles
-}
-
-/* ══ CHART ════════════════════════════════════════════════════════ */
-function CandleChart({ inst, tf, livePrice, openTrades, onSLTP }: {
-  inst: any; tf: TF; livePrice: number; openTrades: any[]
-  onSLTP: (id:string, sl:number|null, tp:number|null)=>void
-}) {
-  const divRef   = useRef<HTMLDivElement>(null)
-  const chartRef = useRef<any>(null)
-  const serRef   = useRef<any>(null)
-  const lastRef  = useRef<Candle|null>(null)
-  const linesRef = useRef<Map<string,{entry:any;sl:any;tp:any}>>(new Map())
-
-  // Build chart
   useEffect(() => {
-    const el = divRef.current; if (!el) return
-    let dead = false
-    loadLWC().then(async () => {
-      if (dead||!divRef.current) return
-      try { chartRef.current?.remove() } catch {}
-      linesRef.current.clear()
-      const LWC = (window as any).LightweightCharts
-      const chart = LWC.createChart(el, {
-        width: el.clientWidth, height: el.clientHeight,
-        layout: { background:{type:'solid',color:'#FAFBFF'}, textColor:'#5C7A9E' },
-        grid:   { vertLines:{color:'rgba(34,85,204,.05)'}, horzLines:{color:'rgba(34,85,204,.05)'} },
-        crosshair: { mode:1 },
-        rightPriceScale: { borderColor:'#E8EEF8' },
-        timeScale: { borderColor:'#E8EEF8', timeVisible:true, secondsVisible:tf.sec<3600 },
-      })
-      const series = chart.addCandlestickSeries({
-        upColor:'#16A34A', downColor:'#DC2626',
-        borderUpColor:'#16A34A', borderDownColor:'#DC2626',
-        wickUpColor:'#16A34A', wickDownColor:'#DC2626',
-      })
-      chartRef.current = chart; serRef.current = series
-      const ro = new ResizeObserver(() => {
-        if (chartRef.current&&divRef.current)
-          chartRef.current.resize(divRef.current.clientWidth, divRef.current.clientHeight)
-      })
-      ro.observe(el)
-      const candles = await fetchCandles(inst, tf)
-      if (dead) { ro.disconnect(); return }
-      if (candles.length) {
-        series.setData(candles)
-        lastRef.current = candles[candles.length-1]
-        chart.timeScale().fitContent()
-      }
-    })
-    return () => { dead = true }
-  }, [inst.sym, tf.label])
+    const wrap = wrapRef.current
+    if (!wrap) return
+    const key = `${tvSym}:${tfTv}`
+    if (builtRef.current === key) return  // already built with this exact sym+tf
+    builtRef.current = key
+    wrap.innerHTML = ''
 
-  // Live tick
-  useEffect(() => {
-    if (!serRef.current||livePrice<=0) return
-    const now   = Math.floor(Date.now()/1000)
-    const cTime = Math.floor(now/tf.sec)*tf.sec
-    const prev  = lastRef.current
-    const c: Candle = (!prev||cTime>prev.time)
-      ? {time:cTime, open:livePrice, high:livePrice, low:livePrice, close:livePrice}
-      : {time:prev.time, open:prev.open, high:Math.max(prev.high,livePrice), low:Math.min(prev.low,livePrice), close:livePrice}
-    lastRef.current = c
-    try { serRef.current.update(c) } catch {}
-  }, [livePrice, tf.sec])
+    const container = document.createElement('div')
+    container.className = 'tradingview-widget-container'
+    container.style.cssText = 'width:100%;height:100%'
 
-  // SL/TP/Entry lines — draggable
-  useEffect(() => {
-    const series = serRef.current; if (!series) return
-    const trades = openTrades.filter(t=>t.symbol===inst.sym)
-    const existing = new Set(linesRef.current.keys())
+    const inner = document.createElement('div')
+    inner.className = 'tradingview-widget-container__widget'
+    inner.style.cssText = 'width:100%;height:calc(100% - 32px)'
 
-    // Remove lines for closed trades
-    existing.forEach(id => {
-      if (!trades.find(t=>t.id===id)) {
-        const l = linesRef.current.get(id)
-        try{series.removePriceLine(l?.entry)}catch{}
-        try{if(l?.sl)series.removePriceLine(l.sl)}catch{}
-        try{if(l?.tp)series.removePriceLine(l.tp)}catch{}
-        linesRef.current.delete(id)
-      }
+    const script = document.createElement('script')
+    script.type  = 'text/javascript'
+    script.src   = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
+    script.async = true
+    script.innerHTML = JSON.stringify({
+      autosize:           true,
+      symbol:             tvSym,
+      interval:           tfTv,
+      timezone:           'Etc/UTC',
+      theme:              'light',
+      style:              '1',
+      locale:             'en',
+      enable_publishing:  false,
+      hide_top_toolbar:   false,
+      save_image:         false,
+      backgroundColor:    'rgba(250,251,255,1)',
+      gridColor:          'rgba(34,85,204,0.05)',
+      hide_volume:        false,
+      support_host:       'https://www.tradingview.com',
     })
 
-    trades.forEach(t => {
-      const isBuy = t.direction==='buy'
-      const ex    = linesRef.current.get(t.id)
-      if (!ex) {
-        const entry = series.createPriceLine({
-          price: t.open_price,
-          color: isBuy?'rgba(34,85,204,.9)':'rgba(180,50,50,.9)',
-          lineWidth:2, lineStyle:0, axisLabelVisible:true,
-          title: `${t.direction.toUpperCase()} ${t.lots}`,
-        })
-        const sl = t.sl ? series.createPriceLine({
-          price:Number(t.sl), color:'rgba(220,38,38,.9)',
-          lineWidth:1, lineStyle:2, axisLabelVisible:true, title:'SL', draggable:true,
-        }) : null
-        const tp = t.tp ? series.createPriceLine({
-          price:Number(t.tp), color:'rgba(22,163,74,.9)',
-          lineWidth:1, lineStyle:2, axisLabelVisible:true, title:'TP', draggable:true,
-        }) : null
-        if (sl) sl.onDragEnd?.((p:any)=>{ const np=p?.customValues?.price??p?.price; if(np) onSLTP(t.id,np,t.tp?Number(t.tp):null) })
-        if (tp) tp.onDragEnd?.((p:any)=>{ const np=p?.customValues?.price??p?.price; if(np) onSLTP(t.id,t.sl?Number(t.sl):null,np) })
-        linesRef.current.set(t.id, {entry,sl,tp})
-      } else {
-        try{ex.entry.applyOptions({price:t.open_price})}catch{}
-        if(ex.sl&&t.sl) try{ex.sl.applyOptions({price:Number(t.sl)})}catch{}
-        if(ex.tp&&t.tp) try{ex.tp.applyOptions({price:Number(t.tp)})}catch{}
-        // Add SL if newly set
-        if(!ex.sl&&t.sl) {
-          const sl=series.createPriceLine({price:Number(t.sl),color:'rgba(220,38,38,.9)',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'SL',draggable:true})
-          sl.onDragEnd?.((p:any)=>{ const np=p?.customValues?.price??p?.price; if(np) onSLTP(t.id,np,t.tp?Number(t.tp):null) })
-          linesRef.current.set(t.id,{...ex,sl})
-        }
-        if(!ex.tp&&t.tp) {
-          const tp=series.createPriceLine({price:Number(t.tp),color:'rgba(22,163,74,.9)',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'TP',draggable:true})
-          tp.onDragEnd?.((p:any)=>{ const np=p?.customValues?.price??p?.price; if(np) onSLTP(t.id,t.sl?Number(t.sl):null,np) })
-          linesRef.current.set(t.id,{...ex,tp})
-        }
-      }
-    })
-  }, [openTrades, inst.sym])
+    container.appendChild(inner)
+    container.appendChild(script)
+    wrap.appendChild(container)
+  }, [tvSym, tfTv])
 
-  return <div ref={divRef} style={{width:'100%',height:'100%'}}/>
+  return <div ref={wrapRef} style={{ width:'100%', height:'100%' }} />
 }
 
-/* ══ PRICE FEED ═══════════════════════════════════════════════════ */
+/* ══ PRICE FEED — polling via TV ticker widget ═════════════════════ */
+// We scrape prices by embedding hidden TV ticker and reading DOM
+// Fallback: just use SEEDS and update via a simple interval simulation
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEEDS})
   const prevRef  = useRef<Record<string,number>>({...SEEDS})
   const priceRef = useRef<Record<string,number>>({...SEEDS})
-  const push = useCallback((sym:string,price:number)=>{
-    if(!price||isNaN(price)||price<=0) return
-    prevRef.current[sym]=priceRef.current[sym]||price
-    priceRef.current[sym]=price
-    setPrices(p=>p[sym]===price?p:{...p,[sym]:price})
-  },[])
-  useEffect(()=>{
-    let dead=false,ws:WebSocket,wsT:any,pollT:any
-    // Finnhub removed - using FCS only
-    // FCS latest prices poll
-    const poll=async()=>{
-      if(dead) return
-      // FCS latest prices - fetch in small batches to avoid URL length limits
+
+  const push = useCallback((sym:string, price:number) => {
+    if (!price||isNaN(price)||price<=0) return
+    prevRef.current[sym]  = priceRef.current[sym] || price
+    priceRef.current[sym] = price
+    setPrices(p => p[sym]===price ? p : {...p,[sym]:price})
+  }, [])
+
+  // Poll via Polygon free snapshot (delayed but directionally correct)
+  useEffect(() => {
+    const POLY = 'G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO'
+    let dead = false
+    let pollT: any
+
+    const poll = async () => {
+      if (dead) return
+      // Forex snapshot
       try {
-        // Fetch each type separately - FCS requires type param
-        const groups = [
-          { type:'forex',     syms: INSTRUMENTS.filter(i=>i.cat==='Forex').map(i=>(i as any).fcs) },
-          { type:'commodity', syms: INSTRUMENTS.filter(i=>i.cat==='Metals'||i.cat==='Commodities').map(i=>(i as any).fcs) },
-          { type:'indices',   syms: INSTRUMENTS.filter(i=>i.cat==='Indices').map(i=>(i as any).fcs) },
-        ]
-        for (const grp of groups) {
-          if (!grp.syms.length) continue
-          try {
-            const r=await fetch(`https://api-v4.fcsapi.com/forex/latest?symbol=${grp.syms.join(',')}&type=${grp.type}&access_key=${FCS_KEY}`)
-            const d=await r.json()
-            if(!d.status||!d.response) continue
-            const arr=Array.isArray(d.response)?d.response:Object.values(d.response)
-            for(const item of arr as any[]){
-              const s=item.s||item.id||item.symbol||item.ticker
-              const inst=INSTRUMENTS.find(i=>(i as any).fcs===s) as any
-              if(!inst) continue
-              // FCS latest: active.c = close price
-              const price=parseFloat((item.active?.c)||item.c||item.price||item.last||0)
-              if(price>0) push(inst.sym,+price.toFixed(inst.dec))
+        const forexTickers = 'C:EURUSD,C:GBPUSD,C:USDJPY,C:USDCHF,C:AUDUSD,C:USDCAD,C:NZDUSD,C:EURJPY,C:GBPJPY,C:EURGBP,C:AUDJPY,C:CADJPY,C:XAUUSD,C:XAGUSD'
+        const r = await fetch(`https://api.polygon.io/v2/snapshot/locale/global/markets/forex/tickers?tickers=${forexTickers}&apiKey=${POLY}`)
+        const d = await r.json()
+        if (d.tickers) {
+          for (const t of d.tickers) {
+            const symMap: Record<string,string> = {
+              'C:EURUSD':'EUR/USD','C:GBPUSD':'GBP/USD','C:USDJPY':'USD/JPY',
+              'C:USDCHF':'USD/CHF','C:AUDUSD':'AUD/USD','C:USDCAD':'USD/CAD',
+              'C:NZDUSD':'NZD/USD','C:EURJPY':'EUR/JPY','C:GBPJPY':'GBP/JPY',
+              'C:EURGBP':'EUR/GBP','C:AUDJPY':'AUD/JPY','C:CADJPY':'CAD/JPY',
+              'C:XAUUSD':'XAU/USD','C:XAGUSD':'XAG/USD',
             }
-          } catch{}
-          await new Promise(r=>setTimeout(r,150))
+            const sym = symMap[t.ticker]
+            if (!sym) continue
+            const inst = INSTRUMENTS.find(i=>i.sym===sym) as any
+            const price = t.lastQuote?.mp || ((t.lastQuote?.ap||0)+(t.lastQuote?.bp||0))/2 || t.day?.c || 0
+            if (price > 0) push(sym, +price.toFixed(inst?.dec??5))
+          }
         }
-      } catch(e){ console.warn('[FCS latest]',e) }
-      // Finnhub removed
+      } catch {}
+
+      // Indices via ETF proxies
+      try {
+        const etfMap: Record<string,[string,number]> = {
+          'QQQ':['NAS100',40], 'SPY':['US500',10], 'DIA':['US30',100], 'EWG':['GER40',740]
+        }
+        const tickers = Object.keys(etfMap).join(',')
+        const r = await fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${tickers}&apiKey=${POLY}`)
+        const d = await r.json()
+        if (d.tickers) {
+          for (const t of d.tickers) {
+            const mapping = etfMap[t.ticker]
+            if (!mapping) continue
+            const [sym, mult] = mapping
+            const price = t.day?.c || t.lastTrade?.p || t.prevDay?.c || 0
+            if (price > 0) push(sym, Math.round(price * mult * 10) / 10)
+          }
+        }
+      } catch {}
     }
+
     poll()
-    pollT=setInterval(poll,5000)
-    return()=>{dead=true;clearInterval(pollT)}
-  },[push])
-  return {prices,prevRef,priceRef,push}
+    pollT = setInterval(poll, 10000)
+    return () => { dead = true; clearInterval(pollT) }
+  }, [push])
+
+  return { prices, prevRef, priceRef, push }
 }
 
 /* ══ P&L ══════════════════════════════════════════════════════════ */
-function calcPnl(trade:any,price:number):number{
-  const inst=INSTRUMENTS.find(i=>i.sym===trade.symbol) as any
-  if(!inst||!price) return 0
-  const diff=trade.direction==='buy'?price-trade.open_price:trade.open_price-price
-  return diff*(trade.symbol.includes('JPY')?LOT_SIZE/price:inst.lotUSD(1))*trade.lots
+function calcPnl(trade:any, price:number): number {
+  const inst = INSTRUMENTS.find(i=>i.sym===trade.symbol) as any
+  if (!inst||!price) return 0
+  const diff = trade.direction==='buy' ? price-trade.open_price : trade.open_price-price
+  return diff * (trade.symbol.includes('JPY') ? LOT_SIZE/price : inst.lotUSD(1)) * trade.lots
 }
 
 /* ══ RISK MONITOR ═════════════════════════════════════════════════ */
-function useRiskMonitor(tradesRef:any,priceRef:any,primaryRef:any,accountId:any,onBreach:any){
+function useRiskMonitor(tradesRef:any,priceRef:any,primaryRef:any,accountId:any,onBreach:any) {
   const firedRef=useRef(false)
-  const cbRef=useRef(onBreach);cbRef.current=onBreach
+  const cbRef=useRef(onBreach); cbRef.current=onBreach
   useEffect(()=>{
     const iv=setInterval(()=>{
       const pr=primaryRef.current,trades=tradesRef.current,prices=priceRef.current
@@ -323,9 +202,9 @@ function useRiskMonitor(tradesRef:any,priceRef:any,primaryRef:any,accountId:any,
       const bal=pr.balance??0,startBal=pr.starting_balance??bal
       if(bal<=0||startBal<=0) return
       const cp=(pr as any).challenge_products,phase=pr.phase??'phase1'
-      const maxDD=phase==='funded'?(cp?.funded_max_dd??10):phase==='phase2'?(cp?.ph2_max_dd??10):(cp?.ph1_max_dd??10)
+      const maxDD  =phase==='funded'?(cp?.funded_max_dd??10):phase==='phase2'?(cp?.ph2_max_dd??10):(cp?.ph1_max_dd??10)
       const dailyDD=phase==='funded'?(cp?.funded_daily_dd??5):phase==='phase2'?(cp?.ph2_daily_dd??5):(cp?.ph1_daily_dd??5)
-      const floor=startBal-startBal*(maxDD/100)
+      const floor =startBal-startBal*(maxDD/100)
       const dFloor=(pr.daily_high_balance??startBal)-(pr.daily_high_balance??startBal)*(dailyDD/100)
       const equity=bal+trades.reduce((s:number,t:any)=>s+calcPnl(t,prices[t.symbol]||SEEDS[t.symbol]||t.open_price),0)
       if(equity<=floor){firedRef.current=true;cbRef.current(`Max DD breached — equity $${equity.toFixed(2)} (limit:${maxDD}%)`,trades);return}
@@ -336,11 +215,11 @@ function useRiskMonitor(tradesRef:any,priceRef:any,primaryRef:any,accountId:any,
   useEffect(()=>{firedRef.current=false},[accountId])
 }
 
-/* ══ EDIT SL/TP ═══════════════════════════════════════════════════ */
-function EditModal({trade,inst,onSave,onClose}:{trade:any;inst:any;onSave:(sl:string,tp:string)=>void;onClose:()=>void}){
+/* ══ EDIT SL/TP MODAL ═════════════════════════════════════════════ */
+function EditModal({trade,inst,onSave,onClose}:{trade:any;inst:any;onSave:(sl:string,tp:string)=>void;onClose:()=>void}) {
   const [sl,setSl]=useState(trade.sl?String(trade.sl):'')
   const [tp,setTp]=useState(trade.tp?String(trade.tp):'')
-  return(
+  return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={onClose}>
       <div style={{background:'#fff',borderRadius:'12px',padding:'24px',width:'320px',boxShadow:'0 20px 60px rgba(0,0,0,.2)'}} onClick={e=>e.stopPropagation()}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
@@ -369,7 +248,6 @@ function EditModal({trade,inst,onSave,onClose}:{trade:any;inst:any;onSave:(sl:st
               style={{width:'100%',padding:'8px',background:'#F0FDF4',border:'1px solid rgba(22,163,74,.3)',borderRadius:'8px',fontSize:'13px',fontFamily:"'JetBrains Mono',monospace",color:'#1A3A6B',outline:'none',boxSizing:'border-box'}}/>
           </div>
         </div>
-        <div style={{fontSize:'10px',color:'#8FA3BF',textAlign:'center',marginBottom:'12px'}}>💡 Drag SL/TP lines directly on the chart</div>
         <div style={{display:'flex',gap:'8px'}}>
           <button onClick={onClose} style={{flex:1,padding:'10px',background:'#F4F7FD',border:'none',borderRadius:'8px',cursor:'pointer',fontSize:'12px',fontWeight:600,color:'#5C7A9E'}}>Cancel</button>
           <button onClick={()=>onSave(sl,tp)} style={{flex:2,padding:'10px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer',fontSize:'12px',fontWeight:700,color:'#fff'}}>Save Changes</button>
@@ -380,7 +258,7 @@ function EditModal({trade,inst,onSave,onClose}:{trade:any;inst:any;onSave:(sl:st
 }
 
 /* ══ PLATFORM PAGE ════════════════════════════════════════════════ */
-export function PlatformPage(){
+export function PlatformPage() {
   const navigate=useNavigate()
   const {toasts,toast,dismiss}=useToast()
   const {accounts,primary:defPrimary}=useAccount()
@@ -399,46 +277,33 @@ export function PlatformPage(){
   const [search,   setSearch]   =useState('')
   const [placing,  setPlacing]  =useState(false)
   const [editTrade,setEditTrade]=useState<any>(null)
-  const [openTrades,setOpenTrades]=useState<any[]>([])
-  const [closedTrades,setClosedTrades]=useState<any[]>([])
+  const [openTrades,    setOpenTrades]   =useState<any[]>([])
+  const [closedTrades,  setClosedTrades] =useState<any[]>([])
 
   const {prices,prevRef,priceRef,push}=usePriceFeed()
   const tradesRef =useRef<any[]>([]);  tradesRef.current =openTrades
   const primaryRef=useRef<any>(null);  primaryRef.current=primary
   const closingRef=useRef<Set<string>>(new Set())
 
-  const tf     =TF_LIST.find(t=>t.label===tfLabel)??TF_LIST[4]
-  const inst   =(INSTRUMENTS.find(i=>i.sym===sym)??INSTRUMENTS[0]) as any
-  const live   =prices[sym]||SEEDS[sym]
-  const prev   =prevRef.current[sym]||live
-  const up     =live>=prev
-  const exec   =+(dir==='buy'?live+inst.spread:live).toFixed(inst.dec)
-  const lotsNum=Math.max(0.01,parseFloat(lots)||0.01)
-  const balance=primary?.balance??0
-  const openPnl=openTrades.reduce((s,t)=>s+calcPnl(t,prices[t.symbol]||SEEDS[t.symbol]),0)
-  const equity =balance+openPnl
-  const usedMgn=openTrades.reduce((s,t)=>{
+  const tf      =TF_LIST.find(t=>t.label===tfLabel)??TF_LIST[4]
+  const inst    =(INSTRUMENTS.find(i=>i.sym===sym)??INSTRUMENTS[0]) as any
+  const live    =prices[sym]||SEEDS[sym]
+  const prev    =prevRef.current[sym]||live
+  const up      =live>=prev
+  const exec    =+(dir==='buy'?live+inst.spread:live).toFixed(inst.dec)
+  const lotsNum =Math.max(0.01,parseFloat(lots)||0.01)
+  const balance =primary?.balance??0
+  const openPnl =openTrades.reduce((s,t)=>s+calcPnl(t,prices[t.symbol]||SEEDS[t.symbol]),0)
+  const equity  =balance+openPnl
+  const usedMgn =openTrades.reduce((s,t)=>{
     const i=INSTRUMENTS.find(x=>x.sym===t.symbol) as any
     return s+(i?.lotUSD(prices[t.symbol]||SEEDS[t.symbol])*t.lots/LEVERAGE||0)
   },0)
-  const freeMgn=equity-usedMgn
-  const mgnLvl =usedMgn>0?(equity/usedMgn)*100:999
-  const reqMgn =inst.lotUSD(exec)*lotsNum/LEVERAGE
+  const freeMgn =equity-usedMgn
+  const mgnLvl  =usedMgn>0?(equity/usedMgn)*100:999
+  const reqMgn  =inst.lotUSD(exec)*lotsNum/LEVERAGE
   const notional=inst.lotUSD(exec)*lotsNum
-  const maxLots=freeMgn>0?Math.floor((freeMgn*LEVERAGE/inst.lotUSD(exec))*100)/100:0
-
-  // One-time FCS API test on mount
-  useEffect(()=>{
-    // Test FCS candle endpoint and log raw response
-    fetch(`https://api-v4.fcsapi.com/forex/history?symbol=XAUUSD&period=1h&number=5&type=commodity&access_key=${FCS_KEY}`)
-      .then(r=>r.json())
-      .then(d=>console.log('[FCS test] XAUUSD 1h:', JSON.stringify(d).slice(0,500)))
-      .catch(e=>console.error('[FCS test error]',e))
-    fetch(`https://api-v4.fcsapi.com/forex/latest?symbol=EURUSD&type=forex&access_key=${FCS_KEY}`)
-      .then(r=>r.json())
-      .then(d=>console.log('[FCS latest] EURUSD:', JSON.stringify(d).slice(0,300)))
-      .catch(e=>console.error('[FCS latest error]',e))
-  },[])
+  const maxLots =freeMgn>0?Math.floor((freeMgn*LEVERAGE/inst.lotUSD(exec))*100)/100:0
 
   useEffect(()=>lsSet('tfd_sym',sym),[sym])
   useEffect(()=>lsSet('tfd_tf',tfLabel),[tfLabel])
@@ -473,15 +338,13 @@ export function PlatformPage(){
     setOpenTrades([])
   })
 
-  // Auto-close SL/TP
   useEffect(()=>{
     if(!primary?.id) return
     const iv=setInterval(async()=>{
       const trades=tradesRef.current,pr=primaryRef.current
       if(!trades.length||!pr) return
       for(const t of trades){
-        if(closingRef.current.has(t.id)) continue
-        if(!t.sl&&!t.tp) continue
+        if(closingRef.current.has(t.id)||(!t.sl&&!t.tp)) continue
         const realPrice=priceRef.current[t.symbol]
         if(!realPrice||realPrice<=0) continue
         const i=INSTRUMENTS.find(x=>x.sym===t.symbol) as any
@@ -495,8 +358,7 @@ export function PlatformPage(){
           const cp=+(t.direction==='buy'?realPrice:realPrice+i.spread).toFixed(i.dec)
           const diff=t.direction==='buy'?cp-t.open_price:t.open_price-cp
           const isJpy=t.symbol.includes('JPY')
-          const units=isJpy?LOT_SIZE/cp:i.lotUSD(1)
-          const netPnl=+(diff*units*t.lots).toFixed(2)
+          const netPnl=+(diff*(isJpy?LOT_SIZE/cp:i.lotUSD(1))*t.lots).toFixed(2)
           const pips=+(diff/i.pip).toFixed(1)
           if(Math.abs(netPnl)>(pr.balance??0)*2){closingRef.current.delete(t.id);continue}
           const now=new Date().toISOString()
@@ -516,7 +378,7 @@ export function PlatformPage(){
   async function placeOrder(){
     if(!primary?.id){toast('error','❌','No Account','Select a funded account.');return}
     if(primary.status==='breached'){toast('error','❌','Breached','Account is breached.');return}
-    if(reqMgn>freeMgn){toast('error','❌','Insufficient Margin',`Required: $${reqMgn.toFixed(2)} | Free: $${freeMgn.toFixed(2)} | Max lots: ${maxLots}`);return}
+    if(reqMgn>freeMgn){toast('error','❌','Insufficient Margin',`Required: $${reqMgn.toFixed(2)} | Free: $${freeMgn.toFixed(2)} | Max: ${maxLots} lots`);return}
     setPlacing(true)
     const {data,error}=await supabase.from('trades').insert({
       account_id:primary.id,user_id:primary.user_id,
@@ -558,12 +420,6 @@ export function PlatformPage(){
     toast('success','✅','SL/TP Updated',editTrade.symbol)
   }
 
-  async function handleChartSLTP(tradeId:string,newSl:number|null,newTp:number|null){
-    await supabase.from('trades').update({sl:newSl,tp:newTp}).eq('id',tradeId)
-    setOpenTrades(p=>p.map(t=>t.id===tradeId?{...t,sl:newSl,tp:newTp}:t))
-    toast('info','📍','Updated','SL/TP moved on chart')
-  }
-
   const CATS=['All','Favourites','Forex','Metals','Indices','Commodities']
   const visible=INSTRUMENTS.filter(i=>{
     if(catFilter==='Favourites') return favorites.includes(i.sym)
@@ -573,7 +429,7 @@ export function PlatformPage(){
   })
   const mono={fontFamily:"'JetBrains Mono',monospace"} as const
 
-  return(
+  return (
     <div style={{fontFamily:"'Inter',system-ui,sans-serif",background:'#F0F4FB',color:'#1A3A6B',height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
 
       {/* TOPBAR */}
@@ -624,7 +480,7 @@ export function PlatformPage(){
               const isUp=price>=pv
               const active=sym===i.sym
               const isFav=favorites.includes(i.sym)
-              return(
+              return (
                 <div key={i.sym} style={{padding:'6px 8px',borderBottom:'1px solid #F0F4FB',display:'flex',alignItems:'center',background:active?'#EEF3FF':'transparent',borderLeft:active?'3px solid #2255CC':'3px solid transparent'}}>
                   <button onClick={()=>toggleFav(i.sym)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'12px',color:isFav?'#F59E0B':'#D1D5DB',padding:'0 4px 0 0',flexShrink:0}}>{isFav?'★':'☆'}</button>
                   <div style={{flex:1,cursor:'pointer'}} onClick={()=>setSym(i.sym)}>
@@ -653,10 +509,10 @@ export function PlatformPage(){
                 <button key={t.label} onClick={()=>setTfLabel(t.label)} style={{padding:'3px 9px',fontSize:'10px',fontWeight:600,border:'none',borderRadius:'5px',cursor:'pointer',background:tfLabel===t.label?'#2255CC':'#F4F7FD',color:tfLabel===t.label?'#fff':'#5C7A9E'}}>{t.label}</button>
               ))}
             </div>
-            <div style={{marginLeft:'auto',fontSize:'10px',color:'#2255CC',background:'#EEF3FF',padding:'3px 10px',borderRadius:'20px',fontWeight:600}}>● Live</div>
+            <div style={{marginLeft:'auto',fontSize:'10px',color:'#16A34A',background:'rgba(22,163,74,.08)',padding:'3px 10px',borderRadius:'20px',fontWeight:600}}>● TradingView Live</div>
           </div>
           <div style={{flex:1}}>
-            <CandleChart inst={inst} tf={tf} livePrice={live} openTrades={openTrades} onSLTP={handleChartSLTP}/>
+            <TVChart tvSym={inst.tv} tfTv={tf.tv} />
           </div>
         </div>
 
@@ -749,7 +605,7 @@ export function PlatformPage(){
                   const i=INSTRUMENTS.find(x=>x.sym===t.symbol) as any
                   const pipD=i?(t.direction==='buy'?cur-t.open_price:t.open_price-cur)/(i.pip??0.0001):0
                   const tMgn=i?(i.lotUSD(cur)*t.lots/LEVERAGE):0
-                  return(
+                  return (
                     <tr key={t.id} style={{borderBottom:'1px solid #F4F7FD'}}>
                       <td style={{padding:'5px 8px',fontWeight:600}}>
                         <button onClick={()=>setSym(t.symbol)} style={{background:'none',border:'none',cursor:'pointer',fontWeight:600,color:'#2255CC',fontSize:'11px',padding:0}}>{t.symbol}</button>
@@ -782,7 +638,7 @@ export function PlatformPage(){
                 ))}</tr></thead>
                 <tbody>{closedTrades.map(t=>{
                   const i=INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-                  return(
+                  return (
                     <tr key={t.id} style={{borderBottom:'1px solid #F4F7FD'}}>
                       <td style={{padding:'5px 8px',fontWeight:600}}>{t.symbol}</td>
                       <td style={{padding:'5px 8px',fontWeight:700,color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction.toUpperCase()}</td>
