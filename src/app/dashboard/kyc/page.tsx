@@ -49,10 +49,12 @@ export function KycPage() {
       })
 
       const data = await res.json()
+      console.log('[KYC] API response:', data)
       if (!res.ok) throw new Error(data.error ?? 'Could not create session')
 
-      const { verification_url, session_id } = data
-      if (!verification_url) throw new Error('No verification URL from Didit')
+      const { verification_url, session_id, _raw } = data
+      if (_raw) console.log('[KYC] Didit raw:', _raw)
+      if (!verification_url) throw new Error(`No verification URL from Didit. Raw: ${JSON.stringify(_raw ?? data)}`)
 
       // Save to DB as in_review (session open, not yet submitted)
       try {

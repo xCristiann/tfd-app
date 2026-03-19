@@ -37,10 +37,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const session = await response.json()
-    res.status(200).json({
-      session_id:       session.session_id,
-      verification_url: session.verification_url,
-    })
+    console.log('[kyc-session] Didit response:', JSON.stringify(session))
+    
+    // Didit may use different field names - try all variants
+    const session_id = session.session_id ?? session.id ?? session.sessionId ?? ''
+    const verification_url = session.verification_url 
+      ?? session.url 
+      ?? session.redirect_url 
+      ?? session.link
+      ?? session.session_url
+      ?? `https://verification.didit.me/session/${session_id}`
+    
+    res.status(200).json({ session_id, verification_url, _raw: session })
   } catch (err: any) {
     res.status(500).json({ error: err.message ?? String(err) })
   }
