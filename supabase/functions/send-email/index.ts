@@ -7,11 +7,15 @@ const FROM_NOREPLY  = 'The Funded Diaries <noreply@thefundeddiaries.com>'
 const SITE_URL      = 'https://tfd-app.vercel.app'
 
 Deno.serve(async (req) => {
+  // CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
+    return new Response(null, {
+      status: 204,
       headers: {
         'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Max-Age': '86400',
       },
     })
   }

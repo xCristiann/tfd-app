@@ -55,12 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 last_login_ip: ip,
                 last_login_at: now,
               }).eq('id', s.user.id).then(() => {})
-              // Append to history via RPC
-              supabase.rpc('append_login_history', {
-                p_user_id: s.user.id,
-                p_ip: ip,
-                p_at: now,
-              }).then(() => {}).catch(() => {})
+              // login history tracking removed (RPC not configured)
             })
             .catch(() => {})
         }
