@@ -32,10 +32,48 @@ export function KycPage() {
 
   useEffect(() => {
     if (!profile?.id) return
-    supabase.from('kyc_verifications').select('*').eq('user_id', profile.id).limit(1)
-      .then(({ data }) => { setKycRecord(data?.[0] ?? null); setLoading(false) })
-      .catch(() => setLoading(false))
+    loadAndSync()
   }, [profile?.id])
+
+  async function loadAndSync() {
+    setLoading(true)
+    try {
+      const { data } = await supabase
+        .from('kyc_verifications').select('*').eq('user_id', profile!.id).limit(1)
+      const record = data?.[0] ?? null
+      setKycRecord(record)
+
+      // If we have a pending/in_review session, sync status from Didit immediately
+      if (record?.inquiry_id && ['pending','in_review','in_progress'].includes(record.status)) {
+        await syncFromDidit(record.inquiry_id, record)
+      }
+    } catch {}
+    setLoading(false)
+  }
+
+  async function syncFromDidit(sessionId: string, currentRecord: any) {
+    try {
+      const res = await fetch(`/api/kyc-status?sessionId=${sessionId}`)
+      if (!res.ok) return
+      const { status: newStatus, raw } = await res.json()
+      console.log('[KYC sync] Didit status:', raw, '→', newStatus)
+
+      if (newStatus && newStatus !== currentRecord.status) {
+        // Update DB
+        await supabase.from('kyc_verifications')
+          .update({ status: newStatus, updated_at: new Date().toISOString() })
+          .eq('user_id', profile!.id)
+        await supabase.from('users')
+          .update({ kyc_status: newStatus })
+          .eq('id', profile!.id)
+        setKycRecord((prev: any) => ({ ...prev, status: newStatus }))
+        if (newStatus === 'approved') toast('success', '✅', 'Verified!', 'Your identity has been confirmed. Payouts unlocked.')
+        else if (newStatus === 'declined') toast('error', '❌', 'Declined', 'Please re-submit with valid documents.')
+      }
+    } catch (e) {
+      console.error('[KYC sync error]', e)
+    }
+  }
 
   async function startVerification() {
     if (!profile) return
@@ -212,12 +250,20 @@ export function KycPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3 py-2">
-                <span className="text-2xl">⏳</span>
-                <div>
-                  <div className="font-semibold text-[#D97706] mb-0.5">Review In Progress</div>
-                  <div className="text-[12px] text-[#5C7A9E]">We'll notify you once the review is complete. Usually 1–2 business days.</div>
+              <div className="flex flex-col gap-3 py-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">⏳</span>
+                  <div>
+                    <div className="font-semibold text-[#D97706] mb-0.5">Review In Progress</div>
+                    <div className="text-[12px] text-[#5C7A9E]">We'll notify you once the review is complete. Usually 1–2 business days.</div>
+                  </div>
                 </div>
+                <button
+                  onClick={() => kycRecord?.inquiry_id && syncFromDidit(kycRecord.inquiry_id, kycRecord)}
+                  className="text-[11px] text-[#2255CC] bg-[#EEF3FF] border border-[#C5D5FA] rounded-lg px-4 py-2 cursor-pointer font-medium hover:bg-[#E0EAFF] transition-colors"
+                >
+                  🔄 Check Status Now
+                </button>
               </div>
             )}
           </Card>
