@@ -42,6 +42,18 @@ export function CheckoutPage() {
   const [agree, setAgree] = useState(false)
   const [selectedPlatform] = useState('cft')
 
+  // Address fields
+  const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [postal, setPostal] = useState('')
+
+  // Coupon
+  const [couponCode, setCouponCode] = useState('')
+  const [couponInput, setCouponInput] = useState('')
+  const [couponData, setCouponData] = useState<any>(null)
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [couponError, setCouponError] = useState('')
+
   // Affiliate ref code
   const refCode = searchParams.get('ref') ?? localStorage.getItem('tfd_ref_code') ?? null
 
@@ -112,6 +124,28 @@ export function CheckoutPage() {
       country: country || profile.country,
     }).eq('id', profile.id)
 
+    // Create order record
+    const orderNum = `TFD-${Date.now().toString().slice(-8)}`
+    await supabase.from('orders').insert({
+      user_id: profile.id,
+      product_id: product.id,
+      order_number: orderNum,
+      amount_usd: product.price_usd,
+      discount_usd: discountAmount,
+      final_amount_usd: finalPrice,
+      coupon_code: couponCode || null,
+      status: 'completed',
+      payment_method: 'stripe',
+      billing_address: address,
+      billing_city: city,
+      billing_postal: postal,
+    }).catch(() => {})
+
+    // Increment coupon uses
+    if (couponCode) {
+      await supabase.from('coupons').update({ uses_count: (couponData?.uses_count ?? 0) + 1 }).eq('code', couponCode).catch(() => {})
+    }
+
     if (refCode) {
       await supabase.rpc('record_affiliate_referral', {
         p_code: refCode,
@@ -129,6 +163,28 @@ export function CheckoutPage() {
     setStep(3)
   }
 
+  async function applyCoupon() {
+    if (!couponInput.trim() || !product) return
+    setCouponLoading(true); setCouponError('')
+    const { data, error } = await supabase.from('coupons')
+      .select('*').eq('code', couponInput.toUpperCase().trim()).eq('is_active', true).single()
+    if (error || !data) { setCouponError('Invalid or expired coupon code.'); setCouponData(null); setCouponLoading(false); return }
+    if (data.expires_at && new Date(data.expires_at) < new Date()) { setCouponError('This coupon has expired.'); setCouponData(null); setCouponLoading(false); return }
+    if (data.max_uses && data.uses_count >= data.max_uses) { setCouponError('This coupon has reached its usage limit.'); setCouponData(null); setCouponLoading(false); return }
+    if (data.min_order_usd && product.price_usd < data.min_order_usd) { setCouponError(`Minimum order $${data.min_order_usd} required.`); setCouponData(null); setCouponLoading(false); return }
+    setCouponData(data); setCouponCode(data.code)
+    setCouponLoading(false)
+  }
+
+  function removeCoupon() { setCouponData(null); setCouponCode(''); setCouponInput(''); setCouponError('') }
+
+  const discountAmount = couponData
+    ? couponData.discount_type === 'percent'
+      ? Math.round(product?.price_usd * couponData.discount_value / 100 * 100) / 100
+      : Math.min(couponData.discount_value, product?.price_usd ?? 0)
+    : 0
+  const finalPrice = Math.max(0, (product?.price_usd ?? 0) - discountAmount)
+
   async function proceedToPayment() {
     if (!product || !profile) return
     if (!agree) { toast('warning','⚠️','Required','Please agree to the terms.'); return }
@@ -137,6 +193,13 @@ export function CheckoutPage() {
 
     // Save profile first
     await supabase.from('users').update({ first_name: firstName, last_name: lastName, country }).eq('id', profile.id)
+
+    // Demo mode if no coupon brings price to 0
+    if (finalPrice === 0) {
+      await handleStripeSuccess()
+      setPlacing(false)
+      return
+    }
 
     // Check if Stripe is configured via env var
     const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
@@ -239,6 +302,25 @@ export function CheckoutPage() {
                   </select>
                 </div>
 
+                {/* Address */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="col-span-3">
+                    <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Street Address</label>
+                    <input value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main Street"
+                      className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none focus:border-[var(--gold)] transition-colors"/>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">City</label>
+                    <input value={city} onChange={e => setCity(e.target.value)} placeholder="London"
+                      className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none focus:border-[var(--gold)] transition-colors"/>
+                  </div>
+                  <div>
+                    <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Postal Code</label>
+                    <input value={postal} onChange={e => setPostal(e.target.value)} placeholder="SW1A 1AA"
+                      className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none focus:border-[var(--gold)] transition-colors"/>
+                  </div>
+                </div>
+
                 {/* Platform */}
                 <div className="mb-6">
                   <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Trading Platform</label>
@@ -316,7 +398,7 @@ export function CheckoutPage() {
                   </button>
                   <button onClick={proceedToPayment} disabled={placing}
                     className="flex-1 py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                    {placing ? 'Redirecting to Stripe…' : `Pay $${product?.price_usd} Securely →`}
+                    {placing ? 'Redirecting to Stripe…' : `Pay $${finalPrice.toFixed(2)} Securely →`}
                   </button>
                 </div>
               </div>
@@ -400,9 +482,44 @@ export function CheckoutPage() {
                 ))}
               </div>
 
+              {/* Coupon */}
+              <div className="mb-4">
+                <div className="text-[7px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold mb-2">Coupon Code</div>
+                {couponData ? (
+                  <div className="flex items-center justify-between p-2 bg-[rgba(0,217,126,.06)] border border-[rgba(0,217,126,.2)]">
+                    <div>
+                      <div className="font-mono font-bold text-[var(--green)] text-[11px]">{couponData.code}</div>
+                      <div className="text-[9px] text-[var(--green)]">-{couponData.discount_type==='percent'?`${couponData.discount_value}%`:`$${couponData.discount_value}`} applied</div>
+                    </div>
+                    <button onClick={removeCoupon} className="text-[var(--text3)] hover:text-[var(--red)] cursor-pointer bg-transparent border-none text-[14px]">✕</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input value={couponInput} onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Enter code"
+                      className="flex-1 px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] font-mono text-[11px] uppercase outline-none focus:border-[var(--gold)] transition-colors"/>
+                    <button onClick={applyCoupon} disabled={couponLoading || !couponInput}
+                      className="px-3 py-2 bg-[rgba(212,168,67,.1)] border border-[var(--bdr2)] text-[var(--gold)] text-[9px] font-bold uppercase cursor-pointer hover:bg-[rgba(212,168,67,.2)] transition-colors disabled:opacity-40">
+                      {couponLoading ? '...' : 'Apply'}
+                    </button>
+                  </div>
+                )}
+                {couponError && <div className="text-[9px] text-[var(--red)] mt-1">{couponError}</div>}
+              </div>
+
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-[11px] text-[var(--green)] mb-2">
+                  <span>Discount</span>
+                  <span className="font-mono">-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between items-center mb-4">
                 <span className="text-[11px] font-semibold">Total Due</span>
-                <span className="font-mono text-[18px] font-bold text-[var(--gold)]">${product?.price_usd}</span>
+                <div className="text-right">
+                  {discountAmount > 0 && <div className="text-[10px] text-[var(--text3)] line-through font-mono">${product?.price_usd}</div>}
+                  <span className="font-mono text-[18px] font-bold text-[var(--gold)]">${finalPrice.toFixed(2)}</span>
+                </div>
               </div>
 
               <div className="text-[9px] text-[var(--text3)] leading-[1.6]">

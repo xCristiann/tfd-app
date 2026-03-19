@@ -12,6 +12,8 @@ export const TRADER_NAV: { section?: string; items: NavItem[] }[] = [
     { label: 'Analytics',  icon: '📊', path: '/dashboard/analytics' },
     { label: 'Challenges', icon: '🎯', path: '/dashboard/challenges' },
     { label: 'Accounts',   icon: '🗂', path: '/dashboard/accounts' },
+    { label: 'Billing',    icon: '🧾', path: '/dashboard/billing' },
+    { label: 'KYC / ID',  icon: '🪪', path: '/dashboard/kyc' },
   ]},
   { section: 'Grow', items: [
     { label: 'Affiliates', icon: '🔗', path: '/dashboard/affiliates' },
@@ -40,6 +42,8 @@ export const ADMIN_NAV: { section?: string; items: NavItem[] }[] = [
   { section: 'Operations', items: [
     { label: 'Support Tickets',    icon: '💬', path: '/admin/support' },
     { label: 'Challenge Products', icon: '🎯', path: '/admin/challenges' },
+    { label: 'Coupon Codes',       icon: '🏷️', path: '/admin/coupons' },
+    { label: 'KYC Verification',   icon: '🪪', path: '/admin/kyc' },
     { label: 'Affiliates',         icon: '🔗', path: '/admin/affiliates' },
     { label: 'Settings',           icon: '⚙',  path: '/admin/settings' },
   ]},
