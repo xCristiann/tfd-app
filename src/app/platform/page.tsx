@@ -50,17 +50,32 @@ const SEEDS: Record<string,number> = {
 }
 
 /* ══ TRADINGVIEW CHART ═════════════════════════════════════════════ */
-function TVChart({ tvSym, openTrades, prices }: {
-  tvSym: string
-  openTrades: any[]
-  prices: Record<string,number>
+// TV timeframe map: our label -> TV interval
+const TF_MAP: Record<string,string> = {
+  '1m':'1','5m':'5','15m':'15','30m':'30','1h':'60','4h':'240','1d':'D','1w':'W'
+}
+const TF_LABELS = Object.keys(TF_MAP)
+
+function TVChart({ tvSym, openTrades, prices, tf, onTfChange }: {
+  tvSym:       string
+  openTrades:  any[]
+  prices:      Record<string,number>
+  tf:          string
+  onTfChange:  (tf:string)=>void
 }) {
-  const ref = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  // Keep widget alive - only recreate when tvSym changes, NOT on tf/trades change
+  const iframeRef    = useRef<HTMLIFrameElement|null>(null)
+  const createdSym   = useRef<string>('')
 
   useEffect(() => {
-    const el = ref.current
+    const el = containerRef.current
     if (!el) return
+    // Only rebuild if symbol changed
+    if (createdSym.current === tvSym && el.querySelector('iframe')) return
+
     el.innerHTML = ''
+    createdSym.current = tvSym
 
     const container = document.createElement('div')
     container.className = 'tradingview-widget-container'
@@ -75,50 +90,93 @@ function TVChart({ tvSym, openTrades, prices }: {
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
     script.async = true
     script.innerHTML = JSON.stringify({
-      autosize:          true,
-      symbol:            tvSym,
-      interval:          lsGet('tfd_tf', '60'),
-      timezone:          'Etc/UTC',
-      theme:             'light',
-      style:             '1',
-      locale:            'en',
-      enable_publishing: false,
-      hide_top_toolbar:  false,
-      save_image:        false,
-      backgroundColor:   'rgba(250,251,255,1)',
-      gridColor:         'rgba(34,85,204,0.05)',
-      hide_volume:       false,
-      studies:           [],
-      support_host:      'https://www.tradingview.com',
+      autosize:           true,
+      symbol:             tvSym,
+      interval:           TF_MAP[tf] ?? '60',
+      timezone:           'Etc/UTC',
+      theme:              'light',
+      style:              '1',
+      locale:             'en',
+      enable_publishing:  false,
+      hide_top_toolbar:   false,
+      save_image:         false,
+      backgroundColor:    'rgba(250,251,255,1)',
+      gridColor:          'rgba(34,85,204,0.05)',
+      hide_volume:        false,
+      support_host:       'https://www.tradingview.com',
+      // These make TV remember its own state (indicators etc.) per symbol
+      withdateranges:     true,
+      allow_symbol_change:false,
     })
 
     container.appendChild(widget)
     container.appendChild(script)
     el.appendChild(container)
-    return () => { el.innerHTML = '' }
+
+    // Listen for TV postMessage to capture timeframe changes
+    const handleMsg = (e: MessageEvent) => {
+      if (!e.data) return
+      try {
+        const d = typeof e.data==='string' ? JSON.parse(e.data) : e.data
+        // TV sends interval changes as { name: 'tv-widget-interval-changed', data: '60' } etc.
+        if (d?.name === 'tv-widget-interval-changed' || d?.data?.interval) {
+          const interval = d?.data?.interval ?? d?.data
+          // Map TV interval back to our label
+          const label = Object.entries(TF_MAP).find(([,v])=>v===String(interval))?.[0]
+          if (label) { onTfChange(label); lsSet('tfd_tf_label', label) }
+        }
+      } catch {}
+    }
+    window.addEventListener('message', handleMsg)
+    return () => window.removeEventListener('message', handleMsg)
   }, [tvSym])
 
-  // SL/TP/Entry overlay lines on top of TV iframe
+  // SL/TP lines overlay - drawn as absolute positioned bars on chart right edge
   const sym = INSTRUMENTS.find(i => i.tv === tvSym)?.sym ?? ''
   const tradesHere = openTrades.filter(t => t.symbol === sym)
 
   return (
     <div style={{ width:'100%', height:'100%', position:'relative' }}>
-      <div ref={ref} style={{ width:'100%', height:'100%' }} />
-      {/* Overlay badge for each open trade on this symbol */}
+      {/* TF selector row - sits above TV */}
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:'36px', background:'#fff', borderBottom:'1px solid #E8EEF8', display:'flex', alignItems:'center', padding:'0 12px', gap:'4px', zIndex:5 }}>
+        {TF_LABELS.map(t => (
+          <button key={t} onClick={()=>{ onTfChange(t); lsSet('tfd_tf_label',t)
+            // Post message to TV iframe to change interval
+            const iframe = containerRef.current?.querySelector('iframe') as HTMLIFrameElement|null
+            if (iframe?.contentWindow) {
+              iframe.contentWindow.postMessage({ name:'set-interval', data: TF_MAP[t] }, '*')
+            }
+          }}
+            style={{ padding:'3px 9px', fontSize:'10px', fontWeight:600, border:'none', borderRadius:'5px', cursor:'pointer', background:tf===t?'#2255CC':'#F4F7FD', color:tf===t?'#fff':'#5C7A9E' }}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* TV widget - offset 36px for TF bar */}
+      <div ref={containerRef} style={{ position:'absolute', top:'36px', left:0, right:0, bottom:0 }} />
+
+      {/* SL/TP/Entry overlay - right side price ladder */}
       {tradesHere.length > 0 && (
-        <div style={{ position:'absolute', top:'48px', left:'8px', display:'flex', flexDirection:'column', gap:'4px', zIndex:10, pointerEvents:'none' }}>
+        <div style={{ position:'absolute', top:'36px', left:'8px', display:'flex', flexDirection:'column', gap:'4px', zIndex:10, pointerEvents:'none', maxWidth:'320px' }}>
           {tradesHere.map(t => {
             const cur = prices[t.symbol] || SEEDS[t.symbol] || t.open_price
             const i   = INSTRUMENTS.find(x => x.sym === t.symbol) as any
             const pnl = calcPnl(t, cur)
+            const dec = i?.dec ?? 5
             return (
-              <div key={t.id} style={{ background:'rgba(255,255,255,.95)', border:`1px solid ${t.direction==='buy'?'#16A34A':'#DC2626'}`, borderLeft:`4px solid ${t.direction==='buy'?'#16A34A':'#DC2626'}`, borderRadius:'6px', padding:'5px 10px', fontSize:'11px', boxShadow:'0 2px 8px rgba(0,0,0,.08)' }}>
-                <span style={{ fontWeight:700, color:t.direction==='buy'?'#16A34A':'#DC2626', marginRight:'8px' }}>{t.direction.toUpperCase()} {t.lots}</span>
-                <span style={{ color:'#5C7A9E', marginRight:'8px' }}>@ {(Number(t.open_price)||0).toFixed(i?.dec??5)}</span>
-                {t.sl && <span style={{ color:'#DC2626', marginRight:'6px' }}>SL: {t.sl}</span>}
-                {t.tp && <span style={{ color:'#16A34A', marginRight:'6px' }}>TP: {t.tp}</span>}
-                <span style={{ fontWeight:700, color:pnl>=0?'#16A34A':'#DC2626', fontFamily:"'JetBrains Mono',monospace" }}>{pnl>=0?'+':''}${(Number(pnl)||0).toFixed(2)}</span>
+              <div key={t.id} style={{ background:'rgba(255,255,255,.97)', border:`1.5px solid ${t.direction==='buy'?'#16A34A':'#DC2626'}`, borderLeft:`4px solid ${t.direction==='buy'?'#16A34A':'#DC2626'}`, borderRadius:'6px', padding:'6px 10px', fontSize:'11px', boxShadow:'0 2px 12px rgba(0,0,0,.1)' }}>
+                <div style={{ display:'flex', gap:'8px', alignItems:'center', marginBottom:'4px' }}>
+                  <span style={{ fontWeight:700, color:t.direction==='buy'?'#16A34A':'#DC2626', fontSize:'12px' }}>{t.direction.toUpperCase()} {t.lots}</span>
+                  <span style={{ color:'#8FA3BF', fontSize:'10px' }}>{t.symbol}</span>
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:700, color:pnl>=0?'#16A34A':'#DC2626', marginLeft:'auto' }}>{pnl>=0?'+':''}${(Number(pnl)||0).toFixed(2)}</span>
+                </div>
+                <div style={{ display:'flex', gap:'12px', fontSize:'10px' }}>
+                  <span style={{ color:'#5C7A9E' }}>Entry: <b style={{ color:'#1A3A6B', fontFamily:"'JetBrains Mono',monospace" }}>{(Number(t.open_price)||0).toFixed(dec)}</b></span>
+                  {t.sl && <span style={{ color:'#DC2626' }}>SL: <b style={{ fontFamily:"'JetBrains Mono',monospace" }}>{t.sl}</b></span>}
+                  {t.tp && <span style={{ color:'#16A34A' }}>TP: <b style={{ fontFamily:"'JetBrains Mono',monospace" }}>{t.tp}</b></span>}
+                  <span style={{ color:'#8FA3BF', marginLeft:'auto' }}>{cur.toFixed(dec)} live</span>
+                </div>
               </div>
             )
           })}
@@ -341,6 +399,7 @@ export function PlatformPage() {
   const [search,     setSearch]    = useState('')
   const [placing,    setPlacing]   = useState(false)
   const [editTrade,  setEditTrade] = useState<any>(null)
+  const [tf,         setTf]        = useState<string>(()=>lsGet('tfd_tf_label','1h'))
   const [openTrades, setOpenTrades]     = useState<any[]>([])
   const [closedTrades, setClosedTrades] = useState<any[]>([])
 
@@ -372,6 +431,7 @@ export function PlatformPage() {
 
   /* ── Persist on change ── */
   useEffect(()=>lsSet('tfd_sym', sym), [sym])
+  useEffect(()=>lsSet('tfd_tf_label', tf), [tf])
   useEffect(()=>lsSet('tfd_favs', favorites), [favorites])
   useEffect(()=>lsSet('tfd_cat', catFilter), [catFilter])
 
@@ -406,6 +466,46 @@ export function PlatformPage() {
     await supabase.from('accounts').update({status:'breached',phase:'breached',balance:newBal,equity:newBal}).eq('id',primary.id)
     setOpenTrades([])
   })
+
+  /* ── Auto-close SL/TP hit ── */
+  useEffect(() => {
+    if (!primary?.id || openTrades.length === 0) return
+    const iv = setInterval(async () => {
+      for (const t of openTrades) {
+        const cur = priceRef.current[t.symbol] || SEEDS[t.symbol] || t.open_price
+        const i   = INSTRUMENTS.find(x => x.sym === t.symbol) as any
+        let hitReason = ''
+
+        // SL hit
+        if (t.sl) {
+          const slHit = t.direction==='buy' ? cur <= t.sl : cur >= t.sl
+          if (slHit) hitReason = `SL hit @ ${cur.toFixed(i?.dec??5)}`
+        }
+        // TP hit
+        if (!hitReason && t.tp) {
+          const tpHit = t.direction==='buy' ? cur >= t.tp : cur <= t.tp
+          if (tpHit) hitReason = `TP hit @ ${cur.toFixed(i?.dec??5)}`
+        }
+
+        if (hitReason) {
+          // Close the trade
+          const cp     = +(t.direction==='buy' ? cur : cur+(i?.spread??0)).toFixed(i?.dec??5)
+          const diff   = t.direction==='buy' ? cp-t.open_price : t.open_price-cp
+          const isJpy  = t.symbol.includes('JPY')
+          const netPnl = +(diff*(isJpy?LOT_SIZE/cp:i?.lotUSD(1)??LOT_SIZE)*t.lots).toFixed(2)
+          const pips   = +(diff/(i?.pip??0.0001)).toFixed(1)
+          const now    = new Date().toISOString()
+          await supabase.from('trades').update({ status:'closed', close_price:cp, net_pnl:netPnl, pips, closed_at:now }).eq('id', t.id)
+          const newBal = +((primary?.balance??0)+netPnl).toFixed(2)
+          await supabase.from('accounts').update({ balance:newBal, equity:newBal }).eq('id', primary!.id)
+          setOpenTrades(p => p.filter(x => x.id !== t.id))
+          setClosedTrades(p => [{ ...t, status:'closed', close_price:cp, net_pnl:netPnl, pips, closed_at:now }, ...p])
+          toast(netPnl>=0?'success':'error', netPnl>=0?'🎯':'🛑', `${hitReason} — ${t.symbol}`, `${netPnl>=0?'+':''}$${netPnl.toFixed(2)} | ${pips>=0?'+':''}${pips} pips`)
+        }
+      }
+    }, 1000)
+    return () => clearInterval(iv)
+  }, [openTrades, primary?.id])
 
   /* ── Toggle favourite ── */
   function toggleFav(s: string) {
@@ -574,11 +674,11 @@ export function PlatformPage() {
               {favorites.includes(sym)?'★':'☆'}
             </button>
             <div style={{ marginLeft:'auto', fontSize:'10px', color:'#16A34A', background:'rgba(22,163,74,.08)', padding:'3px 10px', borderRadius:'20px' }}>
-              ● TradingView Live
+              ● TradingView Live · {tf}
             </div>
           </div>
           <div style={{ flex:1 }}>
-            <TVChart tvSym={inst.tv} openTrades={openTrades} prices={prices} />
+            <TVChart tvSym={inst.tv} openTrades={openTrades} prices={prices} tf={tf} onTfChange={setTf} />
           </div>
         </div>
 
