@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { sendEmail } from './email'
 import type { User } from '@/types/database'
 
 export const auth = {
