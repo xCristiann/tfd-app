@@ -23,6 +23,8 @@ export const auth = {
         role: 'trader',
       })
       if (pe) throw pe
+      // Send welcome email
+      sendEmail('welcome', email, { first_name: profile.first_name }).catch(() => {})
     }
     return data
   },

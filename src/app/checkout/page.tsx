@@ -94,8 +94,13 @@ export function CheckoutPage() {
   }, [paymentStatus, profile?.id])
 
   async function handleStripeSuccess() {
-    if (!product || !profile) return
+    if (!product || !profile) { setLoading(false); return }
     setLoading(true)
+    try {
+
+    // Calculate inside function to avoid stale closure issues
+    const _discountAmount = couponData?._discount ?? 0
+    const _finalPrice = Math.max(0, (product?.price_usd ?? 0) - _discountAmount)
 
     const login = generateLogin()
     const password = generatePassword()
@@ -132,8 +137,8 @@ export function CheckoutPage() {
       product_id: product.id,
       order_number: orderNum,
       amount_usd: product.price_usd,
-      discount_usd: discountAmount,
-      final_amount_usd: finalPrice,
+      discount_usd: _discountAmount,
+      final_amount_usd: _finalPrice,
       coupon_code: couponCode || null,
       status: 'completed',
       payment_method: 'stripe',
@@ -172,12 +177,18 @@ export function CheckoutPage() {
       login,
       password,
       server:         'CFT-Live-01',
-      amount:         finalPrice.toFixed(2),
+      amount:         _finalPrice.toFixed(2),
       phase:          'Phase 1',
     })
 
     setLoading(false)
     setStep(3)
+    } catch (err: any) {
+      console.error('[handleStripeSuccess]', err)
+      toast('error','❌','Error', 'Something went wrong activating your account. Contact support.')
+      setLoading(false)
+      setPlacing(false)
+    }
   }
 
   async function applyCoupon() {
@@ -213,42 +224,58 @@ export function CheckoutPage() {
     setPlacing(true)
 
     // Save profile first
-    await supabase.from('users').update({ first_name: firstName, last_name: lastName, country }).eq('id', profile.id)
+    await supabase.from('users').update({ first_name: firstName, last_name: lastName, country }).eq('id', profile.id).catch(() => {})
 
-    // Demo mode if no coupon brings price to 0
+    // If final price is 0 (100% coupon) — skip payment
     if (finalPrice === 0) {
       await handleStripeSuccess()
       setPlacing(false)
       return
     }
 
-    // Check if Stripe is configured via env var
+    // Check if Stripe is configured
     const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
-    if (!stripeKey || stripeKey === 'pk_test_placeholder') {
-      // Stripe not configured — demo mode
-      toast('info','💳','Demo Mode','Stripe not configured. Activating account directly.')
+    const hasStripe = stripeKey && stripeKey !== 'pk_test_placeholder' && stripeKey.startsWith('pk_')
+
+    if (!hasStripe) {
+      // No Stripe — activate directly (demo / internal use)
+      toast('info','💳','Processing','Activating your account…')
       await handleStripeSuccess()
       setPlacing(false)
       return
     }
 
-    // Create Stripe Checkout Session via Supabase Edge Function
+    // Try Stripe via Edge Function
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: {
-          productId: product.id,
+          productId:   product.id,
           productName: product.name,
-          priceUsd: product.price_usd,
-          userId: profile.id,
-          userEmail: email,
-          successUrl: `${window.location.origin}/checkout?product=${product.id}&payment=success`,
-          cancelUrl: `${window.location.origin}/checkout?product=${product.id}&payment=cancel`,
+          priceUsd:    finalPrice,
+          userId:      profile.id,
+          userEmail:   email || session?.user?.email,
+          successUrl:  `${window.location.origin}/checkout?product=${product.id}&payment=success`,
+          cancelUrl:   `${window.location.origin}/checkout?product=${product.id}&payment=cancel`,
         }
       })
-      if (error || !data?.url) throw new Error(error?.message ?? 'No checkout URL')
+
+      if (error) {
+        console.error('[checkout] Edge function error:', error)
+        throw new Error(error.message ?? 'Payment service unavailable')
+      }
+
+      if (!data?.url) {
+        console.error('[checkout] No URL in response:', data)
+        throw new Error('No checkout URL returned from payment service')
+      }
+
+      // Redirect to Stripe
       window.location.href = data.url
+
     } catch (err: any) {
-      toast('error','❌','Error', err.message ?? 'Could not start payment.')
+      console.error('[checkout] Stripe error:', err)
+      const msg = err?.message ?? 'Could not connect to payment service'
+      toast('error','❌','Payment Error', msg)
       setPlacing(false)
     }
   }
