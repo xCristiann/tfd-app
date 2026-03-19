@@ -1,407 +1,267 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { fmt } from '@/lib/utils'
 
-const TESTIMONIALS = [
-  { q:'"Passed Phase 1 in 11 days. Platform is clean, payout same day. TFD is the real deal."', av:'SK', name:'Sofia Kowalski', detail:'$200K Funded · Withdrawn $35,020' },
-  { q:'"Signup to funded in under two weeks. Proprietary platform is faster and cleaner than MT5."', av:'MT', name:'Marcus Thompson', detail:'$100K Funded · Withdrawn $24,174' },
-  { q:'"First payout was $19,200. Submitted Sunday, crypto in wallet Monday afternoon."', av:'DM', name:'Daniel Moreira', detail:'$200K Funded · Withdrawn $19,200' },
-  { q:'"Best prop firm I\'ve tried. Rules are clear, risk dashboard is transparent, team actually replies."', av:'YC', name:'Yuki Chen', detail:'$25K Funded · Withdrawn $8,400' },
+const NAV_LINKS = [
+  ['How It Works', '#how'],
+  ['Challenge Plans', '#plans'],
+  ['Payouts', '#payouts'],
+  ['Features', '#features'],
+  ['FAQ', '#faq'],
 ]
-
-const FAQS = [
-  ['What is a funded trading account?','A funded account lets you trade using The Funded Diaries\' capital. You keep up to 90% of profits with zero personal risk beyond your challenge fee.'],
-  ["How long does the challenge take?","Most traders pass Phase 1 in 7–14 days. There's no maximum time limit — take as long as you need."],
-  ['When do I get paid?','Payouts are processed within 24 hours of approval. Crypto (USDT/BTC) typically arrives same day.'],
-  ['What instruments can I trade?','Forex, Gold, Indices (NAS100, SPX500, DE40), Crypto (BTC, ETH) — all on our proprietary platform.'],
-  ['Is news trading allowed?','Yes. We allow news trading with no time restrictions, unlike most prop firms.'],
-  ['What if I breach the rules?','Your challenge is terminated. You can repurchase at a 10% discount. Breached accounts cannot be appealed.'],
-]
-
-const LIVE_PAYOUTS = [
-  { trader:'Marcus T.', amount:'+$12,840', acct:'Funded' },
-  { trader:'Sofia K.',  amount:'+$31,500', acct:'Funded' },
-  { trader:'Daniel M.', amount:'+$19,200', acct:'Funded' },
-  { trader:'Yuki C.',   amount:'+$8,400',  acct:'Funded' },
-  { trader:'Lucia R.',  amount:'+$4,200',  acct:'Funded' },
-  { trader:'Tom B.',    amount:'+$6,840',  acct:'Funded' },
-]
-
-const HOW_STEPS = [
-  { n:'01', title:'Choose Your Challenge', desc:'Select your account size and challenge type. Pay a one-time fee — no subscriptions, no hidden costs.' },
-  { n:'02', title:'Pass the Evaluation', desc:'Hit your profit target while respecting daily and maximum drawdown limits. Take your time — no deadline.' },
-  { n:'03', title:'Get Funded', desc:'Pass both phases and receive your funded account credentials. Start trading with real capital immediately.' },
-  { n:'04', title:'Withdraw Profits', desc:'Request payouts anytime. Crypto payouts processed within 24 hours. Keep up to 90% of every dollar you earn.' },
-]
-
-const FEATURES = [
-  { ico:'📈', title:'Proprietary Terminal', desc:'Our custom-built platform with real-time charts, advanced order types, and instant execution.' },
-  { ico:'🔒', title:'Transparent Risk Rules', desc:'Live drawdown gauges in your dashboard. Know exactly where you stand at every moment.' },
-  { ico:'⚡', title:'Same-Day Payouts', desc:'Crypto payouts dispatched within hours of approval. No waiting 5–10 business days.' },
-  { ico:'📰', title:'News Trading Allowed', desc:'Trade through economic events without restriction. No blackout windows, no forced closures.' },
-  { ico:'🎯', title:'Realistic Targets', desc:'8–10% Phase 1 targets with generous drawdown rules. Built for real traders, not to fail you.' },
-  { ico:'💬', title:'Human Support', desc:'Real agents, not bots. Average 2.4h response time. Ticket system with guaranteed SLA.' },
-]
-
-const CAT_LABELS: Record<string,string> = {
-  'all':      '⚡ All Plans',
-  '1step':    '1 Step',
-  '2step':    '2 Step',
-  'instant':  '⚡ Instant Funded',
-  'pay_after':'💎 Pay After You Pass',
-}
-
-const CAT_ORDER = ['all','1step','2step','instant','pay_after']
 
 export function MarketingPage() {
   const navigate = useNavigate()
-  const { session, profile } = useAuth()
-  const isLoggedIn = !!session
-  const [faqOpen, setFaqOpen] = useState<number|null>(null)
-  const [testIdx, setTestIdx] = useState(0)
-  const [mobileMenu, setMobileMenu] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
+  const { profile, session } = useAuth()
   const [products, setProducts] = useState<any[]>([])
-  const [loadingProducts, setLoadingProducts] = useState(true)
-  const [activeCategory, setActiveCategory] = useState('all')
 
   useEffect(() => {
-    supabase.from('challenge_products').select('*').eq('is_active', true)
-      .order('account_size', { ascending: true })
-      .then(({ data }) => {
-        setProducts(data ?? [])
-        setLoadingProducts(false)
-      })
+    supabase.from('challenge_products').select('*').eq('is_active', true).order('account_size').then(({ data }) => setProducts(data ?? []))
   }, [])
 
-  useEffect(() => {
-    const iv = setInterval(() => setTestIdx(i => (i+1) % TESTIMONIALS.length), 5000)
-    const onScroll = () => setScrolled(window.scrollY > 40)
-    window.addEventListener('scroll', onScroll)
-    return () => { clearInterval(iv); window.removeEventListener('scroll', onScroll) }
-  }, [])
-
-  const SectionEyebrow = ({ text }: { text:string }) => (
-    <div className="flex items-center gap-3 justify-center mb-4">
-      <div className="w-8 h-[1px] bg-[var(--gold)]"/>
-      <span className="text-[9px] tracking-[3px] uppercase text-[var(--gold)] font-semibold">{text}</span>
-      <div className="w-8 h-[1px] bg-[var(--gold)]"/>
-    </div>
-  )
-
-  // Build categories from actual products
-  const availableCats = CAT_ORDER.filter(c =>
-    c === 'all' || products.some(p => p.challenge_type === c)
-  )
-  const filtered = activeCategory === 'all' ? products : products.filter(p => p.challenge_type === activeCategory)
+  const isLoggedIn = !!session
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans">
+    <div style={{fontFamily:"'Inter',system-ui,sans-serif",background:'#fff',color:'#1A3A6B',minHeight:'100vh'}}>
 
-      {/* Nav */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[rgba(10,10,15,.95)] backdrop-blur border-b border-[var(--bdr)]' : ''}`}>
-        <div className="max-w-[1200px] mx-auto px-6 h-[64px] flex items-center justify-between">
-          <div className="font-serif text-[18px] font-bold tracking-tight">
-            The Funded <span className="text-[var(--gold)]">Diaries</span>
-          </div>
-          <div className="hidden md:flex items-center gap-8">
-            {[['How It Works','#how'],['Challenge Plans','#plans'],['Payouts','#payouts'],['Features','#features'],['FAQ','#faq']].map(([l,h])=>(
-              <a key={l} href={h} className="text-[11px] tracking-[1px] uppercase text-[var(--text2)] hover:text-[var(--gold)] transition-colors no-underline">{l}</a>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            {isLoggedIn ? (
-              <button onClick={()=>navigate('/dashboard')} className="px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all">
-                Dashboard →
-              </button>
-            ) : (
-              <>
-                <button onClick={()=>navigate('/login')} className="hidden md:block px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-transparent border border-[var(--bdr2)] text-[var(--text2)] hover:text-[var(--gold)] hover:border-[var(--gold)] cursor-pointer transition-all">Log In</button>
-                <button onClick={()=>navigate('/login')} className="px-[16px] py-[8px] text-[9px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all">Get Started</button>
-              </>
-            )}
-          </div>
+      {/* NAV */}
+      <nav style={{height:'64px',display:'flex',alignItems:'center',padding:'0 48px',borderBottom:'1px solid #E8EEF8',background:'#fff',position:'sticky',top:0,zIndex:100}}>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:'18px',fontWeight:700,color:'#1A3A6B',marginRight:'auto',letterSpacing:'-0.3px'}}>
+          The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span>
         </div>
-      </nav>
-
-      {/* Hero */}
-      <section className="min-h-screen flex items-center justify-center px-6 pt-[64px] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(212,168,67,.08)_0%,transparent_60%)]"/>
-        <div className="text-center max-w-[760px] relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-[6px] border border-[rgba(212,168,67,.3)] bg-[rgba(212,168,67,.06)] mb-8">
-            <span className="w-[5px] h-[5px] rounded-full bg-[var(--green)] animate-pulse"/>
-            <span className="text-[9px] tracking-[2px] uppercase text-[var(--gold)] font-semibold">14,281 Traders Funded</span>
-          </div>
-          <h1 className="font-serif text-[64px] md:text-[80px] font-bold leading-[1.05] mb-6">
-            Write Your<br/><em className="text-[var(--gold)] not-italic">Trading Story</em>
-          </h1>
-          <p className="text-[16px] text-[var(--text2)] leading-[1.7] mb-10 max-w-[520px] mx-auto">
-            Get funded up to $200,000. Keep up to 90% of your profits. No subscriptions, no hidden fees — just pure trading.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={()=>navigate('/login')} className="px-[28px] py-[14px] text-[10px] tracking-[2.5px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all">
-              Start Your Challenge →
-            </button>
-            <a href="#how" className="px-[28px] py-[14px] text-[10px] tracking-[2.5px] uppercase font-bold bg-transparent border border-[var(--bdr2)] text-[var(--text2)] hover:text-[var(--gold)] hover:border-[var(--gold)] cursor-pointer transition-all no-underline">
-              How It Works
-            </a>
-          </div>
-          <div className="flex justify-center gap-8 mt-12">
-            {[['$4.8M+','Total Payouts'],['14,281','Traders Funded'],['90%','Max Profit Split'],['24h','Avg Payout Time']].map(([v,l])=>(
-              <div key={l} className="text-center">
-                <div className="font-serif text-[22px] font-bold text-[var(--gold)]">{v}</div>
-                <div className="text-[9px] tracking-[1px] uppercase text-[var(--text3)] mt-1">{l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how" className="py-[88px] px-6 max-w-[1200px] mx-auto">
-        <SectionEyebrow text="How It Works"/>
-        <h2 className="font-serif text-[42px] font-bold text-center mb-3">From Challenge to <em className="text-[var(--gold)] not-italic">Funded</em></h2>
-        <p className="text-[14px] text-[var(--text2)] text-center max-w-[480px] mx-auto mb-14 leading-[1.7]">Four simple steps between you and a funded trading account.</p>
-        <div className="grid grid-cols-4 gap-6">
-          {HOW_STEPS.map(s=>(
-            <div key={s.n} className="text-center">
-              <div className="w-[44px] h-[44px] border border-[var(--bdr2)] bg-[var(--dim)] flex items-center justify-center font-mono text-[11px] font-bold text-[var(--gold)] mx-auto mb-4">{s.n}</div>
-              <div className="font-serif text-[17px] font-semibold mb-2">{s.title}</div>
-              <p className="text-[12px] text-[var(--text2)] leading-[1.7]">{s.desc}</p>
-            </div>
+        <div style={{display:'flex'}}>
+          {NAV_LINKS.map(([l, h]) => (
+            <a key={l} href={h} style={{fontSize:'12px',fontWeight:500,color:'#5C7A9E',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',cursor:'pointer',textDecoration:'none',transition:'color .15s'}}
+              onMouseEnter={e=>(e.currentTarget.style.color='#1A3A6B')} onMouseLeave={e=>(e.currentTarget.style.color='#5C7A9E')}>{l}</a>
           ))}
         </div>
-      </section>
-
-      {/* Challenge Plans */}
-      <section id="plans" className="py-[88px] px-6 bg-[var(--bg2)] border-y border-[var(--bdr)]">
-        <div className="max-w-[1200px] mx-auto">
-          <SectionEyebrow text="Challenge Plans"/>
-          <h2 className="font-serif text-[42px] font-bold text-center mb-3">Choose Your <em className="text-[var(--gold)] not-italic">Challenge Type</em></h2>
-          <p className="text-[14px] text-[var(--text2)] text-center max-w-[560px] mx-auto mb-10 leading-[1.7]">All plans include our proprietary trading platform, real-time risk monitoring, and same-day crypto payouts.</p>
-
-          {loadingProducts ? (
-            <div className="flex justify-center py-16">
-              <div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-16 text-[var(--text3)] text-[13px]">No challenge plans available at the moment.</div>
+        <div style={{display:'flex',gap:'10px',marginLeft:'32px'}}>
+          {isLoggedIn ? (
+            <button onClick={() => navigate('/dashboard')} style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>
+              Dashboard →
+            </button>
           ) : (
             <>
-              {/* Category tabs */}
-              {availableCats.length > 1 && (
-                <div className="flex justify-center gap-[6px] mb-10 flex-wrap">
-                  {availableCats.map(c => (
-                    <button key={c} onClick={() => setActiveCategory(c)}
-                      className={`px-[16px] py-[7px] text-[9px] tracking-[1.5px] uppercase font-bold cursor-pointer transition-all border ${
-                        activeCategory === c
-                          ? 'bg-[var(--gold)] text-[var(--bg)] border-[var(--gold)]'
-                          : 'bg-[var(--bg3)] text-[var(--text2)] border-[var(--bdr2)] hover:border-[var(--gold)] hover:text-[var(--gold)]'
-                      }`}>
-                      {CAT_LABELS[c] ?? c}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className={`grid gap-6 ${filtered.length === 1 ? 'grid-cols-1 max-w-[400px] mx-auto' : filtered.length === 2 ? 'grid-cols-2 max-w-[800px] mx-auto' : filtered.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                {filtered.map((p, i) => {
-                  const isPopular = filtered.length > 1 && i === Math.floor(filtered.length / 2)
-                  const size = Number(p.account_size)
-                  const is2step = p.challenge_type === '2step'
-                  const isInstant = p.challenge_type === 'instant'
-                  const isPayAfter = p.challenge_type === 'pay_after'
-
-                  return (
-                    <div key={p.id} className={`relative flex flex-col border p-[28px] transition-all ${
-                      isPopular
-                        ? 'border-[var(--gold)] bg-[rgba(212,168,67,.04)] shadow-[0_0_40px_rgba(212,168,67,.12)]'
-                        : 'border-[var(--bdr)] bg-[var(--bg)]'
-                    }`}>
-                      {isPopular && (
-                        <div className="absolute -top-[10px] left-1/2 -translate-x-1/2 px-[14px] py-[3px] bg-[var(--gold)] text-[var(--bg)] text-[8px] tracking-[2px] uppercase font-bold whitespace-nowrap">Most Popular</div>
-                      )}
-                      {isInstant && (
-                        <div className="absolute -top-[10px] left-1/2 -translate-x-1/2 px-[14px] py-[3px] bg-[var(--green)] text-[var(--bg)] text-[8px] tracking-[2px] uppercase font-bold whitespace-nowrap">⚡ Instant Access</div>
-                      )}
-                      {isPayAfter && (
-                        <div className="absolute -top-[10px] left-1/2 -translate-x-1/2 px-[14px] py-[3px] bg-[rgba(59,130,246,1)] text-white text-[8px] tracking-[2px] uppercase font-bold whitespace-nowrap">💎 Pay After Passing</div>
-                      )}
-
-                      <div className="mb-3">
-                        <span className="text-[7px] tracking-[2px] uppercase font-bold px-2 py-1 border border-[var(--dim)] text-[var(--text3)]">
-                          {CAT_LABELS[p.challenge_type]?.replace(/^[^\s]+\s/,'') ?? p.challenge_type ?? 'Challenge'}
-                        </span>
-                      </div>
-
-                      <div className="mb-4">
-                        <div className="font-serif text-[32px] font-bold text-[var(--gold)] mb-1">
-                          ${size >= 1000 ? `${size/1000}K` : size.toLocaleString()}
-                        </div>
-                        <div className="text-[11px] text-[var(--text2)]">{p.name}</div>
-                      </div>
-
-                      <div className="font-serif text-[38px] font-bold mb-1">${p.price_usd}</div>
-                      <div className="text-[10px] text-[var(--text3)] mb-5">
-                        {isPayAfter ? 'Fee charged after passing · No upfront cost' : 'One-time fee · No subscriptions'}
-                      </div>
-
-                      <div className="flex flex-col gap-[6px] mb-5 pb-5 border-b border-[var(--bdr)]">
-                        {isInstant ? (
-                          <>
-                            <div className="flex justify-between text-[11px]"><span className="text-[var(--text3)]">Daily DD</span><span className="font-mono text-[var(--gold)]">{p.funded_daily_dd}%</span></div>
-                            <div className="flex justify-between text-[11px]"><span className="text-[var(--text3)]">Max DD</span><span className="font-mono text-[var(--gold)]">{p.funded_max_dd}%</span></div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex justify-between text-[11px]"><span className="text-[var(--text3)]">Phase 1 Target</span><span className="font-mono text-[var(--gold)]">{p.ph1_profit_target}%</span></div>
-                            <div className="flex justify-between text-[11px]"><span className="text-[var(--text3)]">Phase 1 Daily DD</span><span className="font-mono text-[var(--gold)]">{p.ph1_daily_dd}%</span></div>
-                            {is2step && <div className="flex justify-between text-[11px]"><span className="text-[var(--text3)]">Phase 2 Target</span><span className="font-mono text-[var(--gold)]">{p.ph2_profit_target}%</span></div>}
-                          </>
-                        )}
-                        <div className="flex justify-between text-[11px]"><span className="text-[var(--text3)]">Profit Split</span><span className="font-mono text-[var(--gold)]">{p.funded_profit_split}%</span></div>
-                      </div>
-
-                      <div className="flex flex-col gap-[6px] mb-8 flex-1">
-                        {[
-                          'Proprietary CFT Trade platform',
-                          'Real-time risk dashboard',
-                          'Same-day crypto payouts',
-                          'News trading allowed',
-                          ...(isPopular ? ['Priority support (4h SLA)'] : []),
-                          ...(p.funded_profit_split >= 90 ? ['90% profit split'] : []),
-                        ].map(f=>(
-                          <div key={f} className="flex items-start gap-2 text-[11px] text-[var(--text2)]">
-                            <span className="text-[var(--green)] mt-[1px] flex-shrink-0">✓</span>{f}
-                          </div>
-                        ))}
-                      </div>
-
-                      <button onClick={()=>navigate('/login')}
-                        className={`w-full py-[13px] text-[9px] tracking-[2px] uppercase font-bold cursor-pointer border-none transition-all ${
-                          isPopular
-                            ? 'bg-[var(--gold)] text-[var(--bg)] hover:bg-[var(--gold2)]'
-                            : 'bg-[var(--bg3)] text-[var(--text)] border border-[var(--bdr2)] hover:bg-[var(--dim)]'
-                        }`}>
-                        Get {p.name} →
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+              <button onClick={() => navigate('/login')} style={{fontSize:'12px',fontWeight:500,color:'#1A3A6B',padding:'8px 18px',border:'1.5px solid #C5D5EA',background:'#fff',borderRadius:'8px',cursor:'pointer'}}>
+                Log in
+              </button>
+              <button onClick={() => navigate('/login')} style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>
+                Get started
+              </button>
             </>
           )}
         </div>
-      </section>
+      </nav>
 
-      {/* Live Payouts */}
-      <section id="payouts" className="py-[88px] px-6 max-w-[1200px] mx-auto">
-        <SectionEyebrow text="Recent Payouts"/>
-        <h2 className="font-serif text-[42px] font-bold text-center mb-3">Real Traders. <em className="text-[var(--gold)] not-italic">Real Withdrawals.</em></h2>
-        <p className="text-[14px] text-[var(--text2)] text-center max-w-[480px] mx-auto mb-14 leading-[1.7]">Every payout is processed and verified. This is a live feed.</p>
-        <div className="grid grid-cols-3 gap-4">
-          {LIVE_PAYOUTS.map((p,i)=>(
-            <div key={i} className="flex items-center gap-4 bg-[var(--bg2)] border border-[var(--bdr)] px-[18px] py-[14px]">
-              <div className="w-[36px] h-[36px] bg-[rgba(0,217,126,.1)] border border-[rgba(0,217,126,.2)] flex items-center justify-center font-serif text-[13px] font-bold text-[var(--green)] flex-shrink-0">{p.trader.charAt(0)}</div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[12px]">{p.trader}</div>
-                <div className="text-[9px] text-[var(--text3)]">{p.acct} Account</div>
-              </div>
-              <div className="font-mono text-[16px] font-semibold text-[var(--green)]">{p.amount}</div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-6 text-center">
-          <div className="text-[10px] text-[var(--text3)]">+ 4,812 more payouts processed · <span className="text-[var(--gold)]">$4.8M total</span></div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="py-[88px] px-6 bg-[var(--bg2)] border-y border-[var(--bdr)]">
-        <div className="max-w-[1200px] mx-auto">
-          <SectionEyebrow text="Platform Features"/>
-          <h2 className="font-serif text-[42px] font-bold text-center mb-3">Built for <em className="text-[var(--gold)] not-italic">Serious Traders</em></h2>
-          <p className="text-[14px] text-[var(--text2)] text-center max-w-[480px] mx-auto mb-14 leading-[1.7]">Every feature designed to give you an edge, not take it away.</p>
-          <div className="grid grid-cols-3 gap-6">
-            {FEATURES.map(f=>(
-              <div key={f.title} className="p-[24px] border border-[var(--bdr)] bg-[var(--bg)] hover:border-[var(--bdr2)] transition-all">
-                <div className="text-[28px] mb-4">{f.ico}</div>
-                <div className="font-serif text-[16px] font-semibold mb-2">{f.title}</div>
-                <p className="text-[12px] text-[var(--text2)] leading-[1.7]">{f.desc}</p>
+      {/* HERO */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 440px',minHeight:'440px',borderBottom:'1px solid #E8EEF8'}}>
+        <div style={{padding:'64px 48px',display:'flex',flexDirection:'column',justifyContent:'center',background:'#fff'}}>
+          <div style={{display:'inline-flex',alignItems:'center',gap:'7px',background:'#EEF3FF',border:'1px solid #C5D5FA',borderRadius:'20px',padding:'5px 14px',marginBottom:'24px',width:'fit-content'}}>
+            <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#22C55E'}}/>
+            <span style={{fontSize:'10px',fontWeight:700,color:'#2255CC',letterSpacing:'0.5px',textTransform:'uppercase'}}>14,281 traders funded worldwide</span>
+          </div>
+          <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:'52px',fontWeight:700,color:'#1A3A6B',lineHeight:1.03,letterSpacing:'-0.8px',marginBottom:'16px'}}>
+            Trade our capital.<br/>Keep your <span style={{color:'#2255CC',fontStyle:'italic'}}>profits.</span>
+          </h1>
+          <p style={{fontSize:'15px',fontWeight:300,color:'#5C7A9E',lineHeight:1.75,marginBottom:'32px',maxWidth:'420px'}}>
+            Get funded up to $200,000. Keep up to 90% of what you earn. One payment — no subscriptions, no recurring fees.
+          </p>
+          <div style={{display:'flex',gap:'12px',alignItems:'center',marginBottom:'44px'}}>
+            <button onClick={() => navigate('/login')} style={{fontSize:'13px',fontWeight:600,color:'#fff',background:'#2255CC',border:'none',padding:'13px 28px',borderRadius:'8px',cursor:'pointer',boxShadow:'0 4px 16px rgba(34,85,204,.25)'}}>
+              Start your challenge
+            </button>
+            <button onClick={() => document.getElementById('plans')?.scrollIntoView({behavior:'smooth'})} style={{fontSize:'13px',fontWeight:500,color:'#2255CC',background:'#EEF3FF',border:'none',padding:'13px 20px',borderRadius:'8px',cursor:'pointer'}}>
+              View plans
+            </button>
+          </div>
+          <div style={{display:'flex',gap:'0',paddingTop:'28px',borderTop:'1px solid #E8EEF8'}}>
+            {[['$4.8M+','Paid out'],['90%','Max split'],['24h','Payouts'],['$200K','Max account']].map(([v,l],i,arr)=>(
+              <div key={l} style={{paddingRight: i<arr.length-1 ? '28px':'0', marginRight: i<arr.length-1 ? '28px':'0', borderRight: i<arr.length-1 ? '1px solid #E8EEF8':'none'}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:'26px',fontWeight:700,color:'#1A3A6B'}}>{v}</div>
+                <div style={{fontSize:'11px',color:'#8FA3BF',marginTop:'2px',letterSpacing:'0.3px'}}>{l}</div>
               </div>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* Testimonials */}
-      <section className="py-[88px] px-6 max-w-[800px] mx-auto text-center">
-        <SectionEyebrow text="Trader Stories"/>
-        <h2 className="font-serif text-[42px] font-bold mb-14">What Our <em className="text-[var(--gold)] not-italic">Traders Say</em></h2>
-        <div className="relative min-h-[160px]">
-          {TESTIMONIALS.map((t,i)=>(
-            <div key={i} className={`absolute inset-0 transition-opacity duration-700 flex flex-col items-center ${i===testIdx?'opacity-100':'opacity-0 pointer-events-none'}`}>
-              <p className="text-[16px] leading-[1.8] text-[var(--text2)] italic mb-6">{t.q}</p>
-              <div className="w-[40px] h-[40px] bg-[rgba(212,168,67,.1)] border border-[var(--bdr2)] flex items-center justify-center font-serif text-[14px] font-bold text-[var(--gold)] mb-3">{t.av}</div>
-              <div className="font-semibold text-[13px]">{t.name}</div>
-              <div className="text-[10px] text-[var(--green)] mt-1">{t.detail}</div>
+        {/* Hero right - live account card */}
+        <div style={{background:'#1A3A6B',padding:'40px 36px',display:'flex',flexDirection:'column',gap:'0'}}>
+          <div style={{background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:'12px',padding:'22px',marginBottom:'12px'}}>
+            <div style={{fontSize:'10px',fontWeight:700,color:'rgba(255,255,255,.4)',letterSpacing:'2px',textTransform:'uppercase',marginBottom:'12px'}}>Live funded account</div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:'38px',fontWeight:700,color:'#fff',letterSpacing:'-0.5px',lineHeight:1}}>$10,842</div>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'12px',color:'#4ADE80',marginTop:'4px',marginBottom:'18px'}}>+$842.00 · +8.42% this phase</div>
+            <div style={{height:'52px',display:'flex',alignItems:'flex-end',gap:'3px'}}>
+              {[30,36,33,44,48,52,47,58,54,64,70,62,72,78,74,82,80,88,84,92,96,100].map((v,i,arr)=>(
+                <div key={i} style={{flex:1,borderRadius:'3px 3px 0 0',background: i===arr.length-1 ? '#60A5FA' : v>80 ? 'rgba(96,165,250,.5)' : 'rgba(255,255,255,.1)',height:`${Math.round(v/100*100)}%`}}/>
+              ))}
+            </div>
+          </div>
+          <div style={{background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:'12px',padding:'18px'}}>
+            <div style={{marginBottom:'14px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
+                <span style={{fontSize:'11px',color:'rgba(255,255,255,.4)'}}>Phase 1 target</span>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'11px',color:'#60A5FA',fontWeight:500}}>8.4% / 10%</span>
+              </div>
+              <div style={{height:'4px',background:'rgba(255,255,255,.1)',borderRadius:'2px',overflow:'hidden'}}>
+                <div style={{height:'100%',width:'84%',background:'#60A5FA',borderRadius:'2px'}}/>
+              </div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+              {[['Daily DD','0.8% / 5%','#4ADE80'],['Max DD','4.2% / 10%','#60A5FA'],['Win rate','68%','#fff'],['Open P&L','+$368','#4ADE80']].map(([l,v,c])=>(
+                <div key={l}>
+                  <div style={{fontSize:'10px',color:'rgba(255,255,255,.4)',fontWeight:500,letterSpacing:'0.5px',marginBottom:'3px'}}>{l}</div>
+                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'14px',fontWeight:500,color:c}}>{v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* HOW IT WORKS */}
+      <div id="how" style={{padding:'64px 48px',background:'#F4F7FD',borderBottom:'1px solid #E8EEF8'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+          <div style={{width:'28px',height:'2px',background:'#2255CC',borderRadius:'1px'}}/>
+          <span style={{fontSize:'10px',fontWeight:700,color:'#2255CC',letterSpacing:'2.5px',textTransform:'uppercase'}}>How it works</span>
+        </div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'36px',fontWeight:700,color:'#1A3A6B',letterSpacing:'-0.4px',marginBottom:'36px'}}>
+          From challenge to <span style={{color:'#2255CC',fontStyle:'italic'}}>funded</span> in four steps.
+        </h2>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'16px'}}>
+          {[
+            ['01','Choose your challenge','Select your account size and pay a one-time fee. No subscriptions, no recurring costs ever.'],
+            ['02','Pass the evaluation','Hit the profit target while respecting drawdown rules. No time pressure — trade at your pace.'],
+            ['03','Get funded','Receive your funded account credentials and start trading our capital immediately.'],
+            ['04','Withdraw profits','Request payouts whenever you want. Crypto delivered within 24 hours.'],
+          ].map(([n,t,d])=>(
+            <div key={n} style={{background:'#fff',border:'1px solid #E8EEF8',borderRadius:'12px',padding:'24px'}}>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'11px',fontWeight:500,color:'#2255CC',letterSpacing:'1px',marginBottom:'14px'}}>{n} —</div>
+              <div style={{fontSize:'14px',fontWeight:600,color:'#1A3A6B',marginBottom:'8px',lineHeight:1.3}}>{t}</div>
+              <div style={{fontSize:'12px',fontWeight:300,color:'#5C7A9E',lineHeight:1.65}}>{d}</div>
             </div>
           ))}
         </div>
-        <div className="flex justify-center gap-2 mt-4">
-          {TESTIMONIALS.map((_,i)=>(
-            <button key={i} onClick={()=>setTestIdx(i)}
-              className={`w-[6px] h-[6px] rounded-full cursor-pointer border-none transition-all ${i===testIdx?'bg-[var(--gold)]':'bg-[var(--dim)]'}`}/>
+      </div>
+
+      {/* CHALLENGE PLANS */}
+      <div id="plans" style={{padding:'64px 48px',background:'#fff',borderBottom:'1px solid #E8EEF8'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+          <div style={{width:'28px',height:'2px',background:'#2255CC',borderRadius:'1px'}}/>
+          <span style={{fontSize:'10px',fontWeight:700,color:'#2255CC',letterSpacing:'2.5px',textTransform:'uppercase'}}>Challenge plans</span>
+        </div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'36px',fontWeight:700,color:'#1A3A6B',letterSpacing:'-0.4px',marginBottom:'32px'}}>
+          Pick your <span style={{color:'#2255CC',fontStyle:'italic'}}>account size.</span>
+        </h2>
+        <div style={{display:'grid',gridTemplateColumns:`repeat(${Math.min(products.length||3,4)},1fr)`,gap:'16px'}}>
+          {(products.length ? products : [
+            {id:'1',name:'Starter',account_size:25000,price_usd:199,ph1_profit_target:8,ph1_daily_dd:5,funded_profit_split:80},
+            {id:'2',name:'Professional',account_size:100000,price_usd:549,ph1_profit_target:10,ph1_daily_dd:5,funded_profit_split:85},
+            {id:'3',name:'Elite',account_size:200000,price_usd:999,ph1_profit_target:10,ph1_daily_dd:5,funded_profit_split:90},
+          ]).map((p:any, i:number) => {
+            const featured = i === 1
+            return (
+              <div key={p.id} style={{border: featured ? '2px solid #2255CC' : '1.5px solid #E8EEF8',borderRadius:'12px',padding:'26px',background: featured ? '#F0F5FF' : '#fff',position:'relative'}}>
+                {featured && <div style={{position:'absolute',top:'-1px',right:'20px',background:'#2255CC',color:'#fff',fontSize:'9px',fontWeight:700,padding:'4px 12px',borderRadius:'0 0 8px 8px',letterSpacing:'1px',textTransform:'uppercase'}}>Most popular</div>}
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:'32px',fontWeight:700,color:'#1A3A6B',marginBottom:'2px'}}>${(p.account_size/1000).toFixed(0)}K</div>
+                <div style={{fontSize:'11px',fontWeight:600,color:'#8FA3BF',letterSpacing:'1.5px',textTransform:'uppercase',marginBottom:'16px'}}>{p.name}</div>
+                <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'30px',fontWeight:500,color:'#2255CC',marginBottom:'2px'}}>${p.price_usd}</div>
+                <div style={{fontSize:'11px',color:'#8FA3BF',marginBottom:'20px'}}>One-time · no subscriptions</div>
+                <div style={{height:'1px',background:'#E8EEF8',marginBottom:'16px'}}/>
+                {[['Phase 1 target',`${p.ph1_profit_target}%`],['Daily drawdown',`${p.ph1_daily_dd}%`],['Profit split',`${p.funded_profit_split}%`]].map(([l,v])=>(
+                  <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'8px',fontSize:'12px'}}>
+                    <span style={{color:'#5C7A9E'}}>{l}</span>
+                    <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:500,color:'#1A3A6B'}}>{v}</span>
+                  </div>
+                ))}
+                <button onClick={() => navigate(`/checkout?product=${p.id}`)} style={{width:'100%',padding:'11px',fontSize:'11px',fontWeight:600,letterSpacing:'0.5px',borderRadius:'8px',cursor:'pointer',border:'none',marginTop:'18px',background: featured ? '#2255CC' : '#F4F7FD',color: featured ? '#fff' : '#1A3A6B',transition:'all .2s'}}>
+                  Get started
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* FEATURES */}
+      <div id="features" style={{padding:'64px 48px',background:'#F4F7FD',borderBottom:'1px solid #E8EEF8'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+          <div style={{width:'28px',height:'2px',background:'#2255CC',borderRadius:'1px'}}/>
+          <span style={{fontSize:'10px',fontWeight:700,color:'#2255CC',letterSpacing:'2.5px',textTransform:'uppercase'}}>Features</span>
+        </div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'36px',fontWeight:700,color:'#1A3A6B',letterSpacing:'-0.4px',marginBottom:'36px'}}>
+          Everything you need to <span style={{color:'#2255CC',fontStyle:'italic'}}>succeed.</span>
+        </h2>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'16px'}}>
+          {[
+            ['Real-time Risk Monitor','Live drawdown tracking, breach alerts, and daily P&L — all updated automatically.'],
+            ['CFT Trade Platform','Professional-grade trading terminal with full MT4/MT5 compatibility.'],
+            ['Same-day Payouts','Request your profits anytime. Crypto payouts processed within 24 hours.'],
+            ['Trade Journal','Log and analyze every trade. Build discipline with structured performance reviews.'],
+            ['Affiliate Program','Earn 10% commission on every referral. Track your earnings in real time.'],
+            ['24/7 Support','Our team is available around the clock to help with any questions.'],
+          ].map(([t,d])=>(
+            <div key={t} style={{background:'#fff',border:'1px solid #E8EEF8',borderRadius:'12px',padding:'24px'}}>
+              <div style={{width:'36px',height:'36px',background:'#EEF3FF',borderRadius:'8px',marginBottom:'14px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{width:'12px',height:'12px',background:'#2255CC',borderRadius:'3px'}}/>
+              </div>
+              <div style={{fontSize:'14px',fontWeight:600,color:'#1A3A6B',marginBottom:'6px'}}>{t}</div>
+              <div style={{fontSize:'12px',fontWeight:300,color:'#5C7A9E',lineHeight:1.65}}>{d}</div>
+            </div>
           ))}
         </div>
-      </section>
+      </div>
 
       {/* FAQ */}
-      <section id="faq" className="py-[88px] px-6 bg-[var(--bg2)] border-y border-[var(--bdr)]">
-        <div className="max-w-[720px] mx-auto">
-          <SectionEyebrow text="FAQ"/>
-          <h2 className="font-serif text-[42px] font-bold text-center mb-14">Common <em className="text-[var(--gold)] not-italic">Questions</em></h2>
-          <div className="flex flex-col gap-2">
-            {FAQS.map(([q,a],i)=>(
-              <div key={i} className="border border-[var(--bdr)] bg-[var(--bg)]">
-                <button onClick={()=>setFaqOpen(faqOpen===i?null:i)}
-                  className="w-full px-5 py-4 flex justify-between items-center text-left cursor-pointer bg-transparent border-none text-[var(--text)]">
-                  <span className="font-semibold text-[13px]">{q}</span>
-                  <span className={`text-[var(--gold)] transition-transform ${faqOpen===i?'rotate-45':''} text-[18px] ml-4 flex-shrink-0`}>+</span>
-                </button>
-                {faqOpen===i && (
-                  <div className="px-5 pb-4 text-[12px] text-[var(--text2)] leading-[1.7]">{a}</div>
-                )}
-              </div>
-            ))}
-          </div>
+      <div id="faq" style={{padding:'64px 48px',background:'#fff',borderBottom:'1px solid #E8EEF8'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+          <div style={{width:'28px',height:'2px',background:'#2255CC',borderRadius:'1px'}}/>
+          <span style={{fontSize:'10px',fontWeight:700,color:'#2255CC',letterSpacing:'2.5px',textTransform:'uppercase'}}>FAQ</span>
         </div>
-      </section>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'36px',fontWeight:700,color:'#1A3A6B',letterSpacing:'-0.4px',marginBottom:'36px'}}>
+          Common <span style={{color:'#2255CC',fontStyle:'italic'}}>questions.</span>
+        </h2>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px',maxWidth:'900px'}}>
+          {[
+            ['Is there a time limit on challenges?','No. Take as long as you need to reach the profit target while respecting drawdown rules.'],
+            ['How are payouts processed?','Payouts are made via cryptocurrency. Once approved, funds arrive within 24 hours.'],
+            ['Can I trade any instrument?','Yes — forex, indices, gold, and more. All instruments available on CFT Trade.'],
+            ['What happens if I breach?','Your account is locked. You can purchase a new challenge at any time to try again.'],
+            ['Is there a free trial?','We do not offer free trials, but our one-time fee is the only cost — no subscriptions.'],
+            ['How does the affiliate program work?','Share your referral link and earn 10% commission on every successful challenge purchase.'],
+          ].map(([q,a])=>(
+            <div key={q} style={{background:'#F4F7FD',border:'1px solid #E8EEF8',borderRadius:'10px',padding:'20px'}}>
+              <div style={{fontSize:'13px',fontWeight:600,color:'#1A3A6B',marginBottom:'6px'}}>{q}</div>
+              <div style={{fontSize:'12px',fontWeight:300,color:'#5C7A9E',lineHeight:1.65}}>{a}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-      {/* CTA */}
-      <section className="py-[88px] px-6 text-center max-w-[600px] mx-auto">
-        <SectionEyebrow text="Get Started"/>
-        <h2 className="font-serif text-[48px] font-bold mb-4">Ready to Get <em className="text-[var(--gold)] not-italic">Funded?</em></h2>
-        <p className="text-[15px] text-[var(--text2)] max-w-[440px] mx-auto mb-10 leading-[1.7]">Join 14,281 traders who have already started. Challenges from $199. No subscriptions.</p>
-        <button onClick={()=>navigate('/login')}
-          className="px-[32px] py-[16px] text-[10px] tracking-[2.5px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all">
-          Start Your Challenge →
+      {/* CTA FOOTER */}
+      <div style={{background:'#1A3A6B',padding:'64px 48px',textAlign:'center'}}>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'40px',fontWeight:700,color:'#fff',letterSpacing:'-0.5px',marginBottom:'14px'}}>
+          Ready to write your <span style={{color:'#60A5FA',fontStyle:'italic'}}>story?</span>
+        </h2>
+        <p style={{fontSize:'14px',fontWeight:300,color:'rgba(255,255,255,.5)',marginBottom:'32px'}}>Join 14,000+ funded traders worldwide.</p>
+        <button onClick={() => navigate('/login')} style={{fontSize:'13px',fontWeight:600,color:'#1A3A6B',background:'#fff',border:'none',padding:'14px 32px',borderRadius:'8px',cursor:'pointer',boxShadow:'0 4px 20px rgba(0,0,0,.2)'}}>
+          Start your challenge today
         </button>
-      </section>
+      </div>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--bdr)] py-[40px] px-6">
-        <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="font-serif text-[16px] font-bold">The Funded <span className="text-[var(--gold)]">Diaries</span></div>
-          <div className="text-[10px] text-[var(--text3)]">© 2025 The Funded Diaries. All rights reserved.</div>
-          <div className="flex gap-6">
-            {['Terms','Privacy','Risk Disclosure'].map(l=>(
-              <a key={l} href="#" className="text-[10px] text-[var(--text3)] hover:text-[var(--gold)] no-underline transition-colors">{l}</a>
-            ))}
-          </div>
+      {/* FOOTER */}
+      <div style={{background:'#142D54',padding:'24px 48px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',color:'rgba(255,255,255,.4)'}}>
+          The Funded <span style={{color:'#60A5FA',fontStyle:'italic'}}>Diaries</span>
         </div>
-      </footer>
+        <div style={{fontSize:'11px',color:'rgba(255,255,255,.25)'}}>© 2026 The Funded Diaries. All rights reserved.</div>
+        <div style={{display:'flex',gap:'16px'}}>
+          {['Terms','Privacy','Support'].map(l=>(
+            <span key={l} style={{fontSize:'11px',color:'rgba(255,255,255,.3)',cursor:'pointer'}}>{l}</span>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

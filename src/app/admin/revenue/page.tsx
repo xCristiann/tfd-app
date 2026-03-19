@@ -133,7 +133,7 @@ export function AdminRevenuePage() {
     <DashboardLayout title="Revenue" nav={ADMIN_NAV} accentColor="red">
       {loading ? (
         <div className="flex justify-center py-20">
-          <div className="w-8 h-8 border-2 border-[var(--red)] border-t-transparent rounded-full animate-spin"/>
+          <div className="w-8 h-8 border-2 border-[#DC2626] border-t-transparent rounded-full animate-spin"/>
         </div>
       ) : (
         <>
@@ -143,25 +143,25 @@ export function AdminRevenuePage() {
               label="My Revenue"
               value={fmt(data.totalSalesRevenue)}
               sub={`${data.totalAccountsSold} challenges sold`}
-              subColor="text-[var(--green)]"
+              subColor="text-[#16A34A]"
             />
             <KPICard
               label="Total Paid Out"
               value={fmt(data.totalPaidOut)}
               sub={`${data.paidCount} payouts completed`}
-              subColor="text-[var(--red)]"
+              subColor="text-[#DC2626]"
             />
             <KPICard
               label="Net Profit"
               value={fmt(data.netProfit)}
               sub={`${profitMargin}% margin`}
-              subColor={data.netProfit >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}
+              subColor={data.netProfit >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}
             />
             <KPICard
               label="Pending Payouts"
               value={fmt(data.totalPending)}
               sub={`${data.pendingCount} awaiting approval`}
-              subColor="text-[var(--gold)]"
+              subColor="text-[#2255CC]"
             />
           </div>
 
@@ -173,15 +173,15 @@ export function AdminRevenuePage() {
               <CardHeader title="Revenue Breakdown"/>
               <div className="flex flex-col gap-0">
                 {[
-                  { l:'Total Sales Revenue',  v:fmt(data.totalSalesRevenue),  c:'text-[var(--green)]',  bar:100,                                            barC:'var(--green)' },
-                  { l:'Total Paid to Traders', v:fmt(data.totalPaidOut),      c:'text-[var(--red)]',    bar: data.totalSalesRevenue > 0 ? (data.totalPaidOut/data.totalSalesRevenue)*100 : 0, barC:'var(--red)' },
-                  { l:'Pending Payouts',       v:fmt(data.totalPending),      c:'text-[var(--gold)]',   bar: data.totalSalesRevenue > 0 ? (data.totalPending/data.totalSalesRevenue)*100 : 0, barC:'var(--gold)' },
-                  { l:'Net Profit',            v:fmt(data.netProfit),         c:data.netProfit>=0?'text-[var(--green)]':'text-[var(--red)]', bar: data.totalSalesRevenue > 0 ? Math.abs(data.netProfit/data.totalSalesRevenue)*100 : 0, barC: data.netProfit>=0?'var(--green)':'var(--red)' },
+                  { l:'Total Sales Revenue',  v:fmt(data.totalSalesRevenue),  c:'text-[#16A34A]',  bar:100,                                            barC:'#16A34A' },
+                  { l:'Total Paid to Traders', v:fmt(data.totalPaidOut),      c:'text-[#DC2626]',    bar: data.totalSalesRevenue > 0 ? (data.totalPaidOut/data.totalSalesRevenue)*100 : 0, barC:'#DC2626' },
+                  { l:'Pending Payouts',       v:fmt(data.totalPending),      c:'text-[#2255CC]',   bar: data.totalSalesRevenue > 0 ? (data.totalPending/data.totalSalesRevenue)*100 : 0, barC:'#2255CC' },
+                  { l:'Net Profit',            v:fmt(data.netProfit),         c:data.netProfit>=0?'text-[#16A34A]':'text-[#DC2626]', bar: data.totalSalesRevenue > 0 ? Math.abs(data.netProfit/data.totalSalesRevenue)*100 : 0, barC: data.netProfit>=0?'#16A34A':'#DC2626' },
                 ].map(({l,v,c,bar,barC}) => (
-                  <div key={l} className="py-[10px] border-b border-[var(--dim)]">
+                  <div key={l} className="py-[10px] border-b border-[#F0F4FB]">
                     <div className="flex justify-between items-center mb-[6px]">
-                      <span className="text-[11px] text-[var(--text2)]">{l}</span>
-                      <span className={`font-mono text-[14px] font-bold ${c}`}>{v}</span>
+                      <span className="text-[11px] text-[#5C7A9E]">{l}</span>
+                      <span className={`font-['JetBrains_Mono',monospace] text-[14px] font-bold ${c}`}>{v}</span>
                     </div>
                     <div className="h-[3px] bg-white/5 rounded overflow-hidden">
                       <div className="h-full rounded transition-all duration-500" style={{ width:`${Math.min(100,bar)}%`, background:barC }}/>
@@ -189,12 +189,12 @@ export function AdminRevenuePage() {
                   </div>
                 ))}
                 <div className="pt-[10px] flex justify-between">
-                  <span className="text-[10px] text-[var(--text3)]">Avg challenge price</span>
-                  <span className="font-mono text-[12px] text-[var(--gold)]">{fmt(data.avgChallengePrice)}</span>
+                  <span className="text-[10px] text-[#8FA3BF]">Avg challenge price</span>
+                  <span className="font-['JetBrains_Mono',monospace] text-[12px] text-[#2255CC]">{fmt(data.avgChallengePrice)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[10px] text-[var(--text3)]">Accounts sold</span>
-                  <span className="font-mono text-[12px] text-[var(--text)]">{data.totalAccountsSold}</span>
+                  <span className="text-[10px] text-[#8FA3BF]">Accounts sold</span>
+                  <span className="font-['JetBrains_Mono',monospace] text-[12px] text-[#1A3A6B]">{data.totalAccountsSold}</span>
                 </div>
               </div>
             </Card>
@@ -203,7 +203,7 @@ export function AdminRevenuePage() {
             <Card>
               <CardHeader title="Monthly Revenue vs Payouts"/>
               {monthlyRevenue.every(m => m.sales === 0 && m.payouts === 0) ? (
-                <div className="py-8 text-center text-[11px] text-[var(--text3)]">No monthly data yet</div>
+                <div className="py-8 text-center text-[11px] text-[#8FA3BF]">No monthly data yet</div>
               ) : (
                 <>
                   <div className="flex items-end gap-[6px] h-[130px] mt-2 mb-3">
@@ -221,7 +221,7 @@ export function AdminRevenuePage() {
                             title={`Payouts: ${fmt(m.payouts)}`}
                           />
                         </div>
-                        <span className="text-[8px] text-[var(--text3)] font-mono">{m.month}</span>
+                        <span className="text-[8px] text-[#8FA3BF] font-['JetBrains_Mono',monospace]">{m.month}</span>
                       </div>
                     ))}
                   </div>
@@ -229,18 +229,18 @@ export function AdminRevenuePage() {
                   <div className="flex gap-4 justify-center">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-sm" style={{ background:'rgba(0,217,126,0.6)' }}/>
-                      <span className="text-[9px] text-[var(--text3)]">Sales Revenue</span>
+                      <span className="text-[9px] text-[#8FA3BF]">Sales Revenue</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-sm" style={{ background:'rgba(255,51,82,0.6)' }}/>
-                      <span className="text-[9px] text-[var(--text3)]">Payouts</span>
+                      <span className="text-[9px] text-[#8FA3BF]">Payouts</span>
                     </div>
                   </div>
                   {/* Net per month */}
                   <div className="mt-3 flex gap-[6px]">
                     {monthlyRevenue.map(m => (
                       <div key={m.month} className="flex-1 text-center">
-                        <div className={`text-[8px] font-mono font-bold ${m.net>=0?'text-[var(--green)]':'text-[var(--red)]'}`}>
+                        <div className={`text-[8px] font-['JetBrains_Mono',monospace] font-bold ${m.net>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>
                           {m.net>=0?'+':''}{m.net>=1000?`${(m.net/1000).toFixed(1)}k`:m.net.toFixed(0)}
                         </div>
                       </div>
@@ -258,37 +258,37 @@ export function AdminRevenuePage() {
             <Card>
               <CardHeader title="Revenue by Product"/>
               {byProduct.length === 0 ? (
-                <div className="py-8 text-center text-[11px] text-[var(--text3)]">No data yet</div>
+                <div className="py-8 text-center text-[11px] text-[#8FA3BF]">No data yet</div>
               ) : byProduct.map((p, i) => (
                 <div key={i} className="mb-4">
                   <div className="flex justify-between items-start mb-[6px]">
                     <div>
                       <div className="text-[12px] font-semibold">{p.name}</div>
-                      <div className="text-[9px] text-[var(--text3)] mt-[2px]">
+                      <div className="text-[9px] text-[#8FA3BF] mt-[2px]">
                         {p.count} account{p.count!==1?'s':''} · avg {fmt(p.avgPrice)}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-mono text-[14px] font-bold text-[var(--green)]">{fmt(p.revenue)}</div>
-                      <div className="text-[9px] text-[var(--text3)]">{((p.revenue/maxProductRev)*100).toFixed(0)}% of sales</div>
+                      <div className="font-['JetBrains_Mono',monospace] text-[14px] font-bold text-[#16A34A]">{fmt(p.revenue)}</div>
+                      <div className="text-[9px] text-[#8FA3BF]">{((p.revenue/maxProductRev)*100).toFixed(0)}% of sales</div>
                     </div>
                   </div>
                   <div className="h-[4px] bg-white/5 rounded overflow-hidden">
-                    <div className="h-full rounded" style={{ width:`${(p.revenue/maxProductRev)*100}%`, background:'var(--gold)' }}/>
+                    <div className="h-full rounded" style={{ width:`${(p.revenue/maxProductRev)*100}%`, background:'#2255CC' }}/>
                   </div>
                 </div>
               ))}
 
               {/* Totals footer */}
-              <div className="mt-4 pt-4 border-t border-[var(--dim)] grid grid-cols-3 gap-3">
+              <div className="mt-4 pt-4 border-t border-[#F0F4FB] grid grid-cols-3 gap-3">
                 {[
-                  ['Total Revenue', fmt(data.totalSalesRevenue), 'var(--green)'],
-                  ['Total Payouts', fmt(data.totalPaidOut), 'var(--red)'],
-                  ['Net Profit', fmt(data.netProfit), data.netProfit>=0?'var(--green)':'var(--red)'],
+                  ['Total Revenue', fmt(data.totalSalesRevenue), '#16A34A'],
+                  ['Total Payouts', fmt(data.totalPaidOut), '#DC2626'],
+                  ['Net Profit', fmt(data.netProfit), data.netProfit>=0?'#16A34A':'#DC2626'],
                 ].map(([l,v,c])=>(
-                  <div key={l} className="text-center p-2 bg-[var(--bg3)] border border-[var(--dim)]">
-                    <div className="text-[7px] tracking-[1.5px] uppercase text-[var(--text3)] font-semibold mb-1">{l}</div>
-                    <div className="font-mono text-[12px] font-bold" style={{ color:c }}>{v}</div>
+                  <div key={l} className="text-center p-2 bg-[#F4F7FD] border border-[#F0F4FB]">
+                    <div className="text-[7px] tracking-[1.5px] uppercase text-[#8FA3BF] font-semibold mb-1">{l}</div>
+                    <div className="font-['JetBrains_Mono',monospace] text-[12px] font-bold" style={{ color:c }}>{v}</div>
                   </div>
                 ))}
               </div>
@@ -298,29 +298,29 @@ export function AdminRevenuePage() {
             <Card>
               <CardHeader title="Recent Sales"/>
               {recentSales.length === 0 ? (
-                <div className="py-8 text-center text-[11px] text-[var(--text3)]">No sales yet</div>
+                <div className="py-8 text-center text-[11px] text-[#8FA3BF]">No sales yet</div>
               ) : (
                 <table className="w-full border-collapse text-[10px]">
                   <thead>
-                    <tr className="border-b border-[var(--dim)]">
+                    <tr className="border-b border-[#F0F4FB]">
                       {['Product','Size','Price','Phase','Date'].map(h=>(
-                        <th key={h} className="px-[8px] py-[5px] text-[7px] tracking-[1.5px] uppercase text-[var(--text3)] font-semibold text-left">{h}</th>
+                        <th key={h} className="px-[8px] py-[5px] text-[7px] tracking-[1.5px] uppercase text-[#8FA3BF] font-semibold text-left">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {recentSales.map((s, i) => (
-                      <tr key={i} className="border-b border-[rgba(255,51,82,.04)]">
+                      <tr key={i} className="border-b border-[rgba(220,38,38,.04)]">
                         <td className="px-[8px] py-[6px] font-semibold text-[10px]" style={{ maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.product}</td>
-                        <td className="px-[8px] py-[6px] font-mono text-[var(--text2)]">${(s.size/1000).toFixed(0)}K</td>
-                        <td className="px-[8px] py-[6px] font-mono font-bold text-[var(--green)]">{fmt(s.price)}</td>
+                        <td className="px-[8px] py-[6px] font-['JetBrains_Mono',monospace] text-[#5C7A9E]">${(s.size/1000).toFixed(0)}K</td>
+                        <td className="px-[8px] py-[6px] font-['JetBrains_Mono',monospace] font-bold text-[#16A34A]">{fmt(s.price)}</td>
                         <td className="px-[8px] py-[6px]">
                           <span className="text-[8px] uppercase tracking-[1px] font-bold px-[5px] py-[2px]"
-                            style={{ background:s.phase==='funded'?'rgba(212,168,67,.15)':'rgba(100,100,200,.1)', color:s.phase==='funded'?'var(--gold)':'var(--text3)', border:`1px solid ${s.phase==='funded'?'var(--bdr2)':'transparent'}` }}>
+                            style={{ background:s.phase==='funded'?'rgba(34,85,204,.15)':'rgba(100,100,200,.1)', color:s.phase==='funded'?'#2255CC':'#8FA3BF', border:`1px solid ${s.phase==='funded'?'#C5D5EA':'transparent'}` }}>
                             {s.phase??'—'}
                           </span>
                         </td>
-                        <td className="px-[8px] py-[6px] text-[9px] text-[var(--text3)] font-mono">
+                        <td className="px-[8px] py-[6px] text-[9px] text-[#8FA3BF] font-['JetBrains_Mono',monospace]">
                           {s.date ? new Date(s.date).toLocaleDateString() : '—'}
                         </td>
                       </tr>

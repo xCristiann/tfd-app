@@ -9,10 +9,10 @@ import { fmt, formatDate } from '@/lib/utils'
 import { TRADER_NAV } from '@/lib/nav'
 
 const STATUS_COLORS: Record<string, string> = {
-  completed: 'bg-[rgba(0,217,126,.1)] text-[var(--green)]',
-  pending:   'bg-[rgba(212,168,67,.1)] text-[var(--gold)]',
-  refunded:  'bg-[rgba(255,51,82,.1)] text-[var(--red)]',
-  failed:    'bg-[rgba(255,51,82,.1)] text-[var(--red)]',
+  completed: 'bg-[rgba(22,163,74,.1)] text-[#16A34A]',
+  pending:   'bg-[rgba(34,85,204,.08)] text-[#2255CC]',
+  refunded:  'bg-[rgba(220,38,38,.1)] text-[#DC2626]',
+  failed:    'bg-[rgba(220,38,38,.1)] text-[#DC2626]',
 }
 
 export function BillingPage() {
@@ -78,51 +78,51 @@ export function BillingPage() {
       <DashboardLayout title="Billing & Invoices" nav={TRADER_NAV} accentColor="gold">
         <div className="grid grid-cols-3 gap-[11px]">
           <KPICard label="Total Orders"      value={String(orders.length)}                                               sub="All time"/>
-          <KPICard label="Total Spent"       value={fmt(totalSpent)}                                                     sub="Challenge fees" subColor="text-[var(--gold)]"/>
-          <KPICard label="Challenges Bought" value={String(orders.filter(o=>o.status==='completed').length)}             sub="Completed" subColor="text-[var(--green)]"/>
+          <KPICard label="Total Spent"       value={fmt(totalSpent)}                                                     sub="Challenge fees" subColor="text-[#2255CC]"/>
+          <KPICard label="Challenges Bought" value={String(orders.filter(o=>o.status==='completed').length)}             sub="Completed" subColor="text-[#16A34A]"/>
         </div>
 
         <Card>
           <CardHeader title="Purchase History"/>
           {loading ? (
-            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/></div>
+            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[#2255CC] border-t-transparent rounded-full animate-spin"/></div>
           ) : orders.length === 0 ? (
             <div className="py-12 text-center">
               <div className="text-[28px] mb-3">🧾</div>
               <div className="text-[13px] font-semibold mb-1">No purchases yet</div>
-              <p className="text-[11px] text-[var(--text3)]">Your purchase history will appear here after you buy a challenge.</p>
+              <p className="text-[11px] text-[#8FA3BF]">Your purchase history will appear here after you buy a challenge.</p>
             </div>
           ) : (
             <table className="w-full border-collapse text-[11px]">
               <thead>
-                <tr className="border-b border-[var(--dim)]">
+                <tr className="border-b border-[#F0F4FB]">
                   {['Order #','Date','Product','Account Size','Amount','Discount','Status','Invoice'].map(h => (
-                    <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left bg-[rgba(212,168,67,.02)]">{h}</th>
+                    <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(212,168,67,.02)]">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {orders.map(o => (
-                  <tr key={o.id} className="border-b border-[rgba(212,168,67,.04)] hover:bg-[rgba(212,168,67,.02)]">
-                    <td className="px-[11px] py-[10px] font-mono text-[var(--gold)] font-bold text-[10px]">{o.order_number}</td>
-                    <td className="px-[11px] py-[10px] text-[var(--text3)] text-[10px]">{formatDate(o.created_at)}</td>
+                  <tr key={o.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(212,168,67,.02)]">
+                    <td className="px-[11px] py-[10px] font-['JetBrains_Mono',monospace] text-[#2255CC] font-bold text-[10px]">{o.order_number}</td>
+                    <td className="px-[11px] py-[10px] text-[#8FA3BF] text-[10px]">{formatDate(o.created_at)}</td>
                     <td className="px-[11px] py-[10px]">
                       <div className="font-semibold">{o.challenge_products?.name ?? '—'}</div>
-                      <div className="text-[9px] text-[var(--text3)] mt-[1px]">{o.challenge_products?.challenge_type === '1step' ? '1-Step' : o.challenge_products?.challenge_type === 'instant' ? 'Instant' : '2-Step'} Challenge</div>
+                      <div className="text-[9px] text-[#8FA3BF] mt-[1px]">{o.challenge_products?.challenge_type === '1step' ? '1-Step' : o.challenge_products?.challenge_type === 'instant' ? 'Instant' : '2-Step'} Challenge</div>
                     </td>
-                    <td className="px-[11px] py-[10px] font-mono text-[10px]">${o.challenge_products?.account_size ? Number(o.challenge_products.account_size).toLocaleString() : '—'}</td>
-                    <td className="px-[11px] py-[10px] font-mono font-semibold">${o.final_amount_usd ?? o.amount_usd}</td>
+                    <td className="px-[11px] py-[10px] font-['JetBrains_Mono',monospace] text-[10px]">${o.challenge_products?.account_size ? Number(o.challenge_products.account_size).toLocaleString() : '—'}</td>
+                    <td className="px-[11px] py-[10px] font-['JetBrains_Mono',monospace] font-semibold">${o.final_amount_usd ?? o.amount_usd}</td>
                     <td className="px-[11px] py-[10px]">
                       {o.discount_usd > 0
-                        ? <span className="text-[var(--green)] font-mono text-[10px]">-${o.discount_usd} <span className="text-[9px] text-[var(--text3)]">({o.coupon_code})</span></span>
-                        : <span className="text-[var(--text3)]">—</span>}
+                        ? <span className="text-[#16A34A] font-['JetBrains_Mono',monospace] text-[10px]">-${o.discount_usd} <span className="text-[9px] text-[#8FA3BF]">({o.coupon_code})</span></span>
+                        : <span className="text-[#8FA3BF]">—</span>}
                     </td>
                     <td className="px-[11px] py-[10px]">
-                      <span className={`text-[8px] px-2 py-1 font-bold uppercase ${STATUS_COLORS[o.status] ?? 'text-[var(--text3)]'}`}>{o.status}</span>
+                      <span className={`text-[8px] px-2 py-1 font-bold uppercase ${STATUS_COLORS[o.status] ?? 'text-[#8FA3BF]'}`}>{o.status}</span>
                     </td>
                     <td className="px-[11px] py-[10px]">
                       <button onClick={() => downloadInvoice(o)} disabled={downloading === o.id}
-                        className="px-[8px] py-[4px] text-[8px] uppercase font-bold cursor-pointer border border-[var(--bdr2)] text-[var(--gold)] bg-[rgba(212,168,67,.06)] hover:bg-[rgba(212,168,67,.12)] transition-colors disabled:opacity-50">
+                        className="px-[8px] py-[4px] text-[8px] uppercase font-bold cursor-pointer border border-[#C5D5EA] text-[#2255CC] bg-[rgba(34,85,204,.05)] hover:bg-[rgba(34,85,204,.1)] transition-colors disabled:opacity-50">
                         {downloading === o.id ? '...' : '↓ Invoice'}
                       </button>
                     </td>

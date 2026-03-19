@@ -6,26 +6,28 @@ export function PnLBars({ data }: { data: number[] }) {
   useEffect(() => {
     const c = ref.current
     if (!c) return
+    const vals = data.length >= 2 ? data : [-200,400,-100,600,300,-150,800,200,500,700]
     const ctx = c.getContext('2d')!
-    const W = c.parentElement!.clientWidth - 36
-    const H = 140
+    const W = c.parentElement!.clientWidth || 400
+    const H = 100
     c.width = W; c.height = H
-
-    const vals = data.length ? data : [420,-180,800,320,-230,1116,240,-80,612,440]
-    const bw = Math.max(4, Math.floor((W - 4) / vals.length) - 2)
-    const maxA = Math.max(...vals.map(Math.abs))
-    const cy = H / 2
+    const barW = (W / vals.length) * 0.6
+    const gap = W / vals.length
+    const maxV = Math.max(...vals.map(Math.abs), 1)
+    const midY = H / 2
 
     vals.forEach((v, i) => {
-      const x = i * (bw + 2)
-      const bh = (Math.abs(v) / maxA) * (H / 2 - 4)
-      ctx.fillStyle = v >= 0 ? 'rgba(0,217,126,.7)' : 'rgba(255,51,82,.7)'
-      ctx.fillRect(x, v >= 0 ? cy - bh : cy, bw, bh)
+      const x = i * gap + (gap - barW) / 2
+      const h = (Math.abs(v) / maxV) * (H / 2 - 4)
+      ctx.fillStyle = v >= 0 ? 'rgba(22,163,74,.7)' : 'rgba(220,38,38,.7)'
+      if (v >= 0) ctx.fillRect(x, midY - h, barW, h)
+      else ctx.fillRect(x, midY, barW, h)
     })
 
-    ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = 1
-    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke()
+    ctx.strokeStyle = 'rgba(26,58,107,.1)'
+    ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(W, midY); ctx.stroke()
   }, [data])
 
-  return <canvas ref={ref} style={{ width: '100%', height: 140 }} />
+  return <canvas ref={ref} style={{ width: '100%', height: 100, display: 'block' }} />
 }

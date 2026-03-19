@@ -283,10 +283,10 @@ export function CheckoutPage() {
   const fmt = (n: number) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0 })}`
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-[var(--bg)]">
+    <div className="flex h-screen items-center justify-center bg-[#F0F4FB]">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/>
-        <div className="text-[11px] text-[var(--text3)]">
+        <div className="w-8 h-8 border-2 border-[#2255CC] border-t-transparent rounded-full animate-spin"/>
+        <div className="text-[11px] text-[#8FA3BF]">
           {paymentStatus === 'success' ? 'Activating your account…' : 'Loading…'}
         </div>
       </div>
@@ -295,25 +295,25 @@ export function CheckoutPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans">
+      <div className="min-h-screen bg-[#F0F4FB] text-[#1A3A6B] font-sans">
         {/* Top bar */}
-        <div className="border-b border-[var(--bdr)] px-6 py-4 flex items-center justify-between">
-          <div className="font-serif text-[16px] font-bold cursor-pointer" onClick={() => navigate('/')}>
-            The Funded <span className="text-[var(--gold)]">Diaries</span>
+        <div className="border-b border-[#E8EEF8] px-6 py-4 flex items-center justify-between">
+          <div className="font-sans text-[16px] font-bold cursor-pointer" onClick={() => navigate('/')}>
+            The Funded <span className="text-[#2255CC]">Diaries</span>
           </div>
           <div className="flex items-center gap-3">
             {[['1','Account Info'],['2','Payment'],['3','Credentials']].map(([n,l]) => (
               <div key={n} className={`flex items-center gap-2 ${Number(n) <= step ? 'opacity-100' : 'opacity-30'}`}>
                 <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border ${
-                  Number(n) < step ? 'bg-[var(--gold)] border-[var(--gold)] text-[var(--bg)]' :
-                  Number(n) === step ? 'border-[var(--gold)] text-[var(--gold)]' : 'border-[var(--dim)] text-[var(--text3)]'
+                  Number(n) < step ? 'bg-[#2255CC] border-[#2255CC] text-[#F0F4FB]' :
+                  Number(n) === step ? 'border-[#2255CC] text-[#2255CC]' : 'border-[#F0F4FB] text-[#8FA3BF]'
                 }`}>{Number(n) < step ? '✓' : n}</div>
                 <span className="text-[9px] uppercase tracking-[1px] hidden md:block">{l}</span>
-                {n !== '3' && <div className="w-8 h-[1px] bg-[var(--dim)] hidden md:block"/>}
+                {n !== '3' && <div className="w-8 h-[1px] bg-[rgba(26,58,107,.06)] hidden md:block"/>}
               </div>
             ))}
           </div>
-          <button onClick={() => navigate('/dashboard')} className="text-[10px] text-[var(--text3)] hover:text-[var(--text)] cursor-pointer bg-transparent border-none">✕ Cancel</button>
+          <button onClick={() => navigate('/dashboard')} className="text-[10px] text-[#8FA3BF] hover:text-[#1A3A6B] cursor-pointer bg-transparent border-none">✕ Cancel</button>
         </div>
 
         <div className="max-w-[1000px] mx-auto px-6 py-10 grid grid-cols-[1fr_320px] gap-8">
@@ -322,29 +322,29 @@ export function CheckoutPage() {
             {/* Step 1: Account Info */}
             {step === 1 && (
               <div>
-                <div className="text-[9px] tracking-[2px] uppercase text-[var(--gold)] font-semibold mb-2">Step 1 of 3</div>
-                <h2 className="font-serif text-[24px] font-bold mb-1">Your Information</h2>
-                <p className="text-[11px] text-[var(--text2)] mb-8">Confirm your details for the trading account.</p>
+                <div className="text-[9px] tracking-[2px] uppercase text-[#2255CC] font-semibold mb-2">Step 1 of 3</div>
+                <h2 className="font-sans text-[24px] font-bold mb-1">Your Information</h2>
+                <p className="text-[11px] text-[#5C7A9E] mb-8">Confirm your details for the trading account.</p>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   {[['First Name', firstName, setFirstName], ['Last Name', lastName, setLastName]].map(([l, v, s]) => (
                     <div key={String(l)}>
-                      <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">{String(l)}</label>
+                      <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">{String(l)}</label>
                       <input value={String(v)} onChange={e => (s as any)(e.target.value)}
-                        className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none focus:border-[var(--gold)] transition-colors"/>
+                        className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[12px] outline-none focus:border-[#2255CC] transition-colors"/>
                     </div>
                   ))}
                 </div>
 
                 <div className="mb-4">
-                  <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Email</label>
-                  <input value={email} disabled className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--dim)] text-[var(--text3)] text-[12px] outline-none cursor-not-allowed"/>
+                  <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Email</label>
+                  <input value={email} disabled className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#F0F4FB] text-[#8FA3BF] text-[12px] outline-none cursor-not-allowed"/>
                 </div>
 
                 <div className="mb-6">
-                  <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Country of Residence</label>
+                  <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Country of Residence</label>
                   <select value={country} onChange={e => setCountry(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none cursor-pointer focus:border-[var(--gold)] transition-colors">
+                    className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[12px] outline-none cursor-pointer focus:border-[#2255CC] transition-colors">
                     <option value="">Select country…</option>
                     {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -353,25 +353,25 @@ export function CheckoutPage() {
                 {/* Address */}
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="col-span-3">
-                    <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Street Address</label>
+                    <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Street Address</label>
                     <input value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main Street"
-                      className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none focus:border-[var(--gold)] transition-colors"/>
+                      className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[12px] outline-none focus:border-[#2255CC] transition-colors"/>
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">City</label>
+                    <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">City</label>
                     <input value={city} onChange={e => setCity(e.target.value)} placeholder="London"
-                      className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none focus:border-[var(--gold)] transition-colors"/>
+                      className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[12px] outline-none focus:border-[#2255CC] transition-colors"/>
                   </div>
                   <div>
-                    <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Postal Code</label>
+                    <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Postal Code</label>
                     <input value={postal} onChange={e => setPostal(e.target.value)} placeholder="SW1A 1AA"
-                      className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none focus:border-[var(--gold)] transition-colors"/>
+                      className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[12px] outline-none focus:border-[#2255CC] transition-colors"/>
                   </div>
                 </div>
 
                 {/* Platform */}
                 <div className="mb-6">
-                  <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Trading Platform</label>
+                  <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Trading Platform</label>
                   <div className="grid grid-cols-3 gap-3">
                     {[
                       { id:'cft', label:'CFT Trade', sub:'Available now', available: true },
@@ -380,11 +380,11 @@ export function CheckoutPage() {
                     ].map(p => (
                       <div key={p.id} className={`p-3 border text-center transition-all ${
                         p.id === 'cft'
-                          ? 'border-[var(--gold)] bg-[rgba(212,168,67,.06)]'
-                          : 'border-[var(--dim)] opacity-40'
+                          ? 'border-[#2255CC] bg-[rgba(34,85,204,.05)]'
+                          : 'border-[#F0F4FB] opacity-40'
                       }`}>
-                        <div className={`font-mono font-bold text-[13px] mb-1 ${p.id === 'cft' ? 'text-[var(--gold)]' : 'text-[var(--text3)]'}`}>{p.label}</div>
-                        <div className="text-[9px] text-[var(--text3)]">{p.sub}</div>
+                        <div className={`font-['JetBrains_Mono',monospace] font-bold text-[13px] mb-1 ${p.id === 'cft' ? 'text-[#2255CC]' : 'text-[#8FA3BF]'}`}>{p.label}</div>
+                        <div className="text-[9px] text-[#8FA3BF]">{p.sub}</div>
                       </div>
                     ))}
                   </div>
@@ -392,14 +392,14 @@ export function CheckoutPage() {
 
                 <div className="flex items-start gap-3 mb-8">
                   <input type="checkbox" id="agree" checked={agree} onChange={e => setAgree(e.target.checked)}
-                    className="mt-[2px] cursor-pointer accent-[var(--gold)]"/>
-                  <label htmlFor="agree" className="text-[11px] text-[var(--text2)] cursor-pointer leading-[1.6]">
-                    I agree to the <span className="text-[var(--gold)]">Terms & Conditions</span>, <span className="text-[var(--gold)]">Risk Disclosure</span>, and confirm I am 18+.
+                    className="mt-[2px] cursor-pointer accent-[#2255CC]"/>
+                  <label htmlFor="agree" className="text-[11px] text-[#5C7A9E] cursor-pointer leading-[1.6]">
+                    I agree to the <span className="text-[#2255CC]">Terms & Conditions</span>, <span className="text-[#2255CC]">Risk Disclosure</span>, and confirm I am 18+.
                   </label>
                 </div>
 
                 <button onClick={() => setStep(2)} disabled={!agree || !firstName || !lastName}
-                  className="w-full py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                  className="w-full py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[#2255CC] text-[#F0F4FB] border-none cursor-pointer hover:bg-[#1A44B0] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                   Continue to Payment →
                 </button>
               </div>
@@ -408,16 +408,16 @@ export function CheckoutPage() {
             {/* Step 2: Payment */}
             {step === 2 && (
               <div>
-                <div className="text-[9px] tracking-[2px] uppercase text-[var(--gold)] font-semibold mb-2">Step 2 of 3</div>
-                <h2 className="font-serif text-[24px] font-bold mb-1">Payment</h2>
-                <p className="text-[11px] text-[var(--text2)] mb-8">You'll be redirected to Stripe's secure payment page.</p>
+                <div className="text-[9px] tracking-[2px] uppercase text-[#2255CC] font-semibold mb-2">Step 2 of 3</div>
+                <h2 className="font-sans text-[24px] font-bold mb-1">Payment</h2>
+                <p className="text-[11px] text-[#5C7A9E] mb-8">You'll be redirected to Stripe's secure payment page.</p>
 
-                <div className="p-6 border border-[var(--bdr)] bg-[var(--bg2)] mb-6">
-                  <div className="flex items-center gap-4 mb-4 pb-4 border-b border-[var(--dim)]">
-                    <div className="w-10 h-10 bg-[rgba(212,168,67,.1)] border border-[var(--bdr2)] flex items-center justify-center text-[18px]">💳</div>
+                <div className="p-6 border border-[#E8EEF8] bg-white mb-6">
+                  <div className="flex items-center gap-4 mb-4 pb-4 border-b border-[#F0F4FB]">
+                    <div className="w-10 h-10 bg-[rgba(34,85,204,.08)] border border-[#C5D5EA] flex items-center justify-center text-[18px]">💳</div>
                     <div>
                       <div className="font-semibold text-[13px]">Secure Payment via Stripe</div>
-                      <div className="text-[10px] text-[var(--text3)]">Credit card, debit card, Apple Pay, Google Pay</div>
+                      <div className="text-[10px] text-[#8FA3BF]">Credit card, debit card, Apple Pay, Google Pay</div>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -426,26 +426,26 @@ export function CheckoutPage() {
                       ['Processing Fee', '$0'],
                       ['Total', `$${product?.price_usd}`],
                     ].map(([l,v],i) => (
-                      <div key={l} className={`flex justify-between text-[12px] ${i === 2 ? 'font-bold pt-2 border-t border-[var(--dim)] text-[var(--gold)]' : 'text-[var(--text2)]'}`}>
-                        <span>{l}</span><span className="font-mono">{v}</span>
+                      <div key={l} className={`flex justify-between text-[12px] ${i === 2 ? 'font-bold pt-2 border-t border-[#F0F4FB] text-[#2255CC]' : 'text-[#5C7A9E]'}`}>
+                        <span>{l}</span><span className="font-['JetBrains_Mono',monospace]">{v}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 mb-6 text-[10px] text-[var(--text3)]">
+                <div className="flex flex-col gap-3 mb-6 text-[10px] text-[#8FA3BF]">
                   {['256-bit SSL encryption — your card data never touches our servers','Powered by Stripe — trusted by millions of businesses worldwide','One-time payment · No recurring charges · No subscriptions'].map(t => (
-                    <div key={t} className="flex items-center gap-2"><span className="text-[var(--green)]">🔒</span>{t}</div>
+                    <div key={t} className="flex items-center gap-2"><span className="text-[#16A34A]">🔒</span>{t}</div>
                   ))}
                 </div>
 
                 <div className="flex gap-3">
                   <button onClick={() => setStep(1)}
-                    className="px-6 py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[var(--bg3)] border border-[var(--dim)] text-[var(--text2)] cursor-pointer hover:text-[var(--text)] transition-all">
+                    className="px-6 py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[#F4F7FD] border border-[#F0F4FB] text-[#5C7A9E] cursor-pointer hover:text-[#1A3A6B] transition-all">
                     ← Back
                   </button>
                   <button onClick={proceedToPayment} disabled={placing}
-                    className="flex-1 py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                    className="flex-1 py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[#2255CC] text-[#F0F4FB] border-none cursor-pointer hover:bg-[#1A44B0] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
                     {placing ? 'Redirecting to Stripe…' : `Pay $${finalPrice.toFixed(2)} Securely →`}
                   </button>
                 </div>
@@ -455,12 +455,12 @@ export function CheckoutPage() {
             {/* Step 3: Credentials */}
             {step === 3 && createdAccount && (
               <div>
-                <div className="text-[9px] tracking-[2px] uppercase text-[var(--green)] font-semibold mb-2">Payment Confirmed ✓</div>
-                <h2 className="font-serif text-[24px] font-bold mb-1">Your Trading Account</h2>
-                <p className="text-[11px] text-[var(--text2)] mb-6">Save these credentials — your password cannot be recovered.</p>
+                <div className="text-[9px] tracking-[2px] uppercase text-[#16A34A] font-semibold mb-2">Payment Confirmed ✓</div>
+                <h2 className="font-sans text-[24px] font-bold mb-1">Your Trading Account</h2>
+                <p className="text-[11px] text-[#5C7A9E] mb-6">Save these credentials — your password cannot be recovered.</p>
 
-                <div className="p-5 border border-[var(--gold)] bg-[rgba(212,168,67,.04)] mb-6">
-                  <div className="text-[8px] uppercase tracking-[2px] text-[var(--gold)] font-semibold mb-4">CFT Trade Login Details</div>
+                <div className="p-5 border border-[#2255CC] bg-[rgba(34,85,204,.03)] mb-6">
+                  <div className="text-[8px] uppercase tracking-[2px] text-[#2255CC] font-semibold mb-4">CFT Trade Login Details</div>
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       ['Login ID', createdAccount.login],
@@ -470,35 +470,35 @@ export function CheckoutPage() {
                       ['Account Size', fmt(createdAccount.balance)],
                       ['Phase', 'Phase 1'],
                     ].map(([l,v]) => (
-                      <div key={l} className="bg-[var(--bg3)] border border-[var(--dim)] p-3">
-                        <div className="text-[7px] uppercase tracking-[1.5px] text-[var(--text3)] mb-1">{l}</div>
-                        <div className="font-mono text-[12px] font-bold text-[var(--gold)] break-all">{v}</div>
+                      <div key={l} className="bg-[#F4F7FD] border border-[#F0F4FB] p-3">
+                        <div className="text-[7px] uppercase tracking-[1.5px] text-[#8FA3BF] mb-1">{l}</div>
+                        <div className="font-['JetBrains_Mono',monospace] text-[12px] font-bold text-[#2255CC] break-all">{v}</div>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div className="p-4 border border-[rgba(255,180,0,.2)] bg-[rgba(255,180,0,.04)] mb-6">
-                  <div className="text-[10px] text-[var(--gold)] font-semibold mb-1">⚠️ Save your credentials now</div>
-                  <div className="text-[10px] text-[var(--text2)]">Your password is shown only once. Screenshot or copy it now before continuing.</div>
+                  <div className="text-[10px] text-[#2255CC] font-semibold mb-1">⚠️ Save your credentials now</div>
+                  <div className="text-[10px] text-[#5C7A9E]">Your password is shown only once. Screenshot or copy it now before continuing.</div>
                 </div>
 
-                <div className="p-4 border border-[var(--bdr)] bg-[var(--bg2)] mb-6">
-                  <div className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold mb-3">Next Steps</div>
+                <div className="p-4 border border-[#E8EEF8] bg-white mb-6">
+                  <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-3">Next Steps</div>
                   {[
                     ['1', 'Save credentials', 'Copy and store the login details above securely.'],
                     ['2', 'Open Trading Platform', 'Go to Dashboard → Trading Platform and select your new account.'],
                     ['3', 'Start Trading', 'Begin Phase 1 — hit your profit target to get funded.'],
                   ].map(([n, t, d]) => (
                     <div key={n} className="flex gap-3 mb-3 last:mb-0">
-                      <div className="w-5 h-5 bg-[rgba(212,168,67,.1)] border border-[var(--bdr2)] flex items-center justify-center text-[9px] font-bold text-[var(--gold)] flex-shrink-0">{n}</div>
-                      <div><div className="text-[11px] font-semibold mb-[2px]">{t}</div><div className="text-[10px] text-[var(--text3)]">{d}</div></div>
+                      <div className="w-5 h-5 bg-[rgba(34,85,204,.08)] border border-[#C5D5EA] flex items-center justify-center text-[9px] font-bold text-[#2255CC] flex-shrink-0">{n}</div>
+                      <div><div className="text-[11px] font-semibold mb-[2px]">{t}</div><div className="text-[10px] text-[#8FA3BF]">{d}</div></div>
                     </div>
                   ))}
                 </div>
 
                 <button onClick={() => navigate('/dashboard')}
-                  className="w-full py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all">
+                  className="w-full py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[#2255CC] text-[#F0F4FB] border-none cursor-pointer hover:bg-[#1A44B0] transition-all">
                   Go to Dashboard →
                 </button>
               </div>
@@ -507,15 +507,15 @@ export function CheckoutPage() {
 
           {/* Right: Order Summary */}
           <div>
-            <div className="border border-[var(--bdr)] bg-[var(--bg2)] p-5 sticky top-6">
-              <div className="text-[8px] uppercase tracking-[2px] text-[var(--text3)] font-semibold mb-4">Order Summary</div>
-              <div className="font-serif text-[28px] font-bold text-[var(--gold)] mb-1">
+            <div className="border border-[#E8EEF8] bg-white p-5 sticky top-6">
+              <div className="text-[8px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold mb-4">Order Summary</div>
+              <div className="font-sans text-[28px] font-bold text-[#2255CC] mb-1">
                 ${product ? Number(product.account_size)/1000 : 0}K
               </div>
-              <div className="text-[11px] text-[var(--text2)] mb-1">{product?.name} Challenge</div>
-              <div className="text-[9px] text-[var(--text3)] mb-5">{product?.challenge_type === '1step' ? '1-Step' : product?.challenge_type === 'instant' ? 'Instant' : '2-Step'} Challenge</div>
+              <div className="text-[11px] text-[#5C7A9E] mb-1">{product?.name} Challenge</div>
+              <div className="text-[9px] text-[#8FA3BF] mb-5">{product?.challenge_type === '1step' ? '1-Step' : product?.challenge_type === 'instant' ? 'Instant' : '2-Step'} Challenge</div>
 
-              <div className="flex flex-col gap-2 pb-4 mb-4 border-b border-[var(--dim)]">
+              <div className="flex flex-col gap-2 pb-4 mb-4 border-b border-[#F0F4FB]">
                 {product && [
                   ['Phase 1 Target', `${product.ph1_profit_target}%`],
                   ['Daily Drawdown', `${product.ph1_daily_dd}%`],
@@ -524,53 +524,53 @@ export function CheckoutPage() {
                   ['Platform', 'CFT Trade'],
                 ].map(([l,v]) => (
                   <div key={l} className="flex justify-between text-[10px]">
-                    <span className="text-[var(--text3)]">{l}</span>
-                    <span className="font-mono text-[var(--gold)]">{v}</span>
+                    <span className="text-[#8FA3BF]">{l}</span>
+                    <span className="font-['JetBrains_Mono',monospace] text-[#2255CC]">{v}</span>
                   </div>
                 ))}
               </div>
 
               {/* Coupon */}
               <div className="mb-4">
-                <div className="text-[7px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold mb-2">Coupon Code</div>
+                <div className="text-[7px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-2">Coupon Code</div>
                 {couponData ? (
-                  <div className="flex items-center justify-between p-2 bg-[rgba(0,217,126,.06)] border border-[rgba(0,217,126,.2)]">
+                  <div className="flex items-center justify-between p-2 bg-[rgba(22,163,74,.06)] border border-[rgba(0,217,126,.2)]">
                     <div>
-                      <div className="font-mono font-bold text-[var(--green)] text-[11px]">{couponData.code}</div>
-                      <div className="text-[9px] text-[var(--green)]">-{couponData.discount_type==='percent'?`${couponData.discount_value}%`:`$${couponData.discount_value}`} applied</div>
+                      <div className="font-['JetBrains_Mono',monospace] font-bold text-[#16A34A] text-[11px]">{couponData.code}</div>
+                      <div className="text-[9px] text-[#16A34A]">-{couponData.discount_type==='percent'?`${couponData.discount_value}%`:`$${couponData.discount_value}`} applied</div>
                     </div>
-                    <button onClick={removeCoupon} className="text-[var(--text3)] hover:text-[var(--red)] cursor-pointer bg-transparent border-none text-[14px]">✕</button>
+                    <button onClick={removeCoupon} className="text-[#8FA3BF] hover:text-[#DC2626] cursor-pointer bg-transparent border-none text-[14px]">✕</button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     <input value={couponInput} onChange={e => setCouponInput(e.target.value.toUpperCase())}
                       placeholder="Enter code"
-                      className="flex-1 px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] font-mono text-[11px] uppercase outline-none focus:border-[var(--gold)] transition-colors"/>
+                      className="flex-1 px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] font-['JetBrains_Mono',monospace] text-[11px] uppercase outline-none focus:border-[#2255CC] transition-colors"/>
                     <button onClick={applyCoupon} disabled={couponLoading || !couponInput}
-                      className="px-3 py-2 bg-[rgba(212,168,67,.1)] border border-[var(--bdr2)] text-[var(--gold)] text-[9px] font-bold uppercase cursor-pointer hover:bg-[rgba(212,168,67,.2)] transition-colors disabled:opacity-40">
+                      className="px-3 py-2 bg-[rgba(34,85,204,.08)] border border-[#C5D5EA] text-[#2255CC] text-[9px] font-bold uppercase cursor-pointer hover:bg-[rgba(34,85,204,.2)] transition-colors disabled:opacity-40">
                       {couponLoading ? '...' : 'Apply'}
                     </button>
                   </div>
                 )}
-                {couponError && <div className="text-[9px] text-[var(--red)] mt-1">{couponError}</div>}
+                {couponError && <div className="text-[9px] text-[#DC2626] mt-1">{couponError}</div>}
               </div>
 
               {discountAmount > 0 && (
-                <div className="flex justify-between text-[11px] text-[var(--green)] mb-2">
+                <div className="flex justify-between text-[11px] text-[#16A34A] mb-2">
                   <span>Discount</span>
-                  <span className="font-mono">-${discountAmount.toFixed(2)}</span>
+                  <span className="font-['JetBrains_Mono',monospace]">-${discountAmount.toFixed(2)}</span>
                 </div>
               )}
 
               <div className="flex justify-between items-center mb-4">
                 <span className="text-[11px] font-semibold">Total Due</span>
                 <div className="text-right">
-                  {discountAmount > 0 && <div className="text-[10px] text-[var(--text3)] line-through font-mono">${product?.price_usd}</div>}
-                  <span className="font-mono text-[18px] font-bold text-[var(--gold)]">${finalPrice.toFixed(2)}</span>
+                  {discountAmount > 0 && <div className="text-[10px] text-[#8FA3BF] line-through font-['JetBrains_Mono',monospace]">${product?.price_usd}</div>}
+                  <span className="font-['JetBrains_Mono',monospace] text-[18px] font-bold text-[#2255CC]">${finalPrice.toFixed(2)}</span>
                 </div>
               </div>
 
-              <div className="text-[9px] text-[var(--text3)] leading-[1.6]">
+              <div className="text-[9px] text-[#8FA3BF] leading-[1.6]">
                 One-time fee. No subscriptions. No hidden charges. 30-day challenge validity.
               </div>
             </div>

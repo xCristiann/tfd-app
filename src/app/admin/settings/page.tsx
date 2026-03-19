@@ -16,9 +16,9 @@ export function AdminSettingsPage() {
             <div className="flex flex-col gap-3">
               {[['Platform Name','The Funded Diaries'],['Support Email','support@funkeddiaries.com'],['Max Payout (per request)','$50,000'],['Min Payout','$100'],['Payout Processing Days','24']].map(([l,v])=>(
                 <div key={l} className="flex flex-col gap-1">
-                  <label className="text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold">{l}</label>
-                  <div className="flex bg-[var(--bg3)] border border-[var(--dim)] focus-within:border-[var(--bdr2)] transition-colors">
-                    <input defaultValue={v} className="flex-1 px-3 py-[10px] bg-transparent outline-none text-[var(--text)] text-[12px] font-sans"/>
+                  <label className="text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold">{l}</label>
+                  <div className="flex bg-[#F4F7FD] border border-[#F0F4FB] focus-within:border-[#C5D5EA] transition-colors">
+                    <input defaultValue={v} className="flex-1 px-3 py-[10px] bg-transparent outline-none text-[#1A3A6B] text-[12px] font-sans"/>
                   </div>
                 </div>
               ))}
@@ -30,9 +30,9 @@ export function AdminSettingsPage() {
             <div className="flex flex-col gap-3">
               {[['Auto-breach on DD limit','Enabled'],['Breach notification email','risk@funkeddiaries.com'],['Max open positions (funded)','10'],['Weekend position holding','Enabled'],['News trading window (mins)','30']].map(([l,v])=>(
                 <div key={l} className="flex flex-col gap-1">
-                  <label className="text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold">{l}</label>
-                  <div className="flex bg-[var(--bg3)] border border-[var(--dim)] focus-within:border-[var(--bdr2)] transition-colors">
-                    <input defaultValue={v} className="flex-1 px-3 py-[10px] bg-transparent outline-none text-[var(--text)] text-[12px] font-sans"/>
+                  <label className="text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold">{l}</label>
+                  <div className="flex bg-[#F4F7FD] border border-[#F0F4FB] focus-within:border-[#C5D5EA] transition-colors">
+                    <input defaultValue={v} className="flex-1 px-3 py-[10px] bg-transparent outline-none text-[#1A3A6B] text-[12px] font-sans"/>
                   </div>
                 </div>
               ))}

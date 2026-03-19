@@ -16,8 +16,8 @@ function ProgressBar({ label, value, max, color, done }: { label:string; value:n
   return (
     <div className="mb-3">
       <div className="flex justify-between mb-1">
-        <span className="text-[11px] text-[var(--text2)]">{label}</span>
-        <span className="font-mono text-[11px]" style={{color}}>{value.toFixed(2)}%{done?' ✓':` / ${max}%`}</span>
+        <span className="text-[11px] text-[#5C7A9E]">{label}</span>
+        <span className="font-['JetBrains_Mono',monospace] text-[11px]" style={{color}}>{value.toFixed(2)}%{done?' ✓':` / ${max}%`}</span>
       </div>
       <div className="h-[5px] bg-white/5 rounded-[3px] overflow-hidden">
         <div className="h-full rounded-[3px] transition-all duration-500" style={{width:`${pct}%`,background:color}}/>
@@ -45,20 +45,20 @@ export function ChallengesPage() {
           {[['my','My Challenges'],['buy','Available Challenges']].map(([k,l])=>(
             <button key={k} onClick={()=>setTab(k as any)}
               className={`px-[14px] py-[7px] text-[9px] tracking-[1.5px] uppercase font-semibold cursor-pointer border transition-all ${
-                tab===k ? 'bg-[rgba(212,168,67,.1)] border-[var(--bdr2)] text-[var(--gold)]' : 'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)]'
+                tab===k ? 'bg-[rgba(34,85,204,.08)] border-[#C5D5EA] text-[#2255CC]' : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'
               }`}>{l}</button>
           ))}
         </div>
 
         {tab === 'my' && (
           accLoading ? (
-            <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/></div>
+            <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-[#2255CC] border-t-transparent rounded-full animate-spin"/></div>
           ) : accounts.length === 0 ? (
             <Card>
               <div className="py-16 text-center">
                 <div className="text-[32px] mb-3">🎯</div>
-                <div className="font-serif text-[18px] font-bold mb-2">No challenges yet</div>
-                <p className="text-[12px] text-[var(--text2)] mb-6">Purchase a challenge to start trading our capital.</p>
+                <div className="font-sans text-[18px] font-bold mb-2">No challenges yet</div>
+                <p className="text-[12px] text-[#5C7A9E] mb-6">Purchase a challenge to start trading our capital.</p>
                 <Button onClick={()=>setTab('buy')}>Browse Challenges →</Button>
               </div>
             </Card>
@@ -74,18 +74,18 @@ export function ChallengesPage() {
                 return (
                   <Card key={account.id}>
                     <div className="flex items-center justify-between mb-1">
-                      <div className="font-serif text-[15px] font-semibold">{account.account_number}</div>
+                      <div className="font-sans text-[15px] font-semibold">{account.account_number}</div>
                       <Badge variant={phaseVariant(account.phase)}>{phaseLabel(account.phase)}</Badge>
                     </div>
-                    <p className="text-[11px] text-[var(--text2)] mb-4">
+                    <p className="text-[11px] text-[#5C7A9E] mb-4">
                       ${account.starting_balance.toLocaleString()} · {prod?.name ?? 'TFD Challenge'}
                     </p>
                     <ProgressBar label={`Profit Target (${targetPct}%)`} value={profitPct} max={targetPct}
-                      color={profitPct >= targetPct ? 'var(--green)' : 'var(--gold)'} done={profitPct >= targetPct}/>
+                      color={profitPct >= targetPct ? '#16A34A' : '#2255CC'} done={profitPct >= targetPct}/>
                     <ProgressBar label={`Daily DD (${dailyMax}% max)`} value={account.daily_dd_used ?? 0} max={dailyMax}
-                      color={(account.daily_dd_used ?? 0) > dailyMax*0.8 ? 'var(--red)' : 'var(--green)'} done={false}/>
+                      color={(account.daily_dd_used ?? 0) > dailyMax*0.8 ? '#DC2626' : '#16A34A'} done={false}/>
                     <ProgressBar label={`Max DD (${maxMax}% max)`} value={account.max_dd_used ?? 0} max={maxMax}
-                      color={(account.max_dd_used ?? 0) > maxMax*0.7 ? 'var(--red)' : 'var(--gold)'} done={false}/>
+                      color={(account.max_dd_used ?? 0) > maxMax*0.7 ? '#DC2626' : '#2255CC'} done={false}/>
                     <div className="flex gap-2 mt-2">
                       <Button onClick={()=>navigate('/platform')} className="flex-1 text-[9px]">Trade Now →</Button>
                       <Button variant="ghost" onClick={()=>navigate('/dashboard/analytics')} className="flex-1 text-[9px]">Analytics</Button>
@@ -99,17 +99,17 @@ export function ChallengesPage() {
 
         {tab === 'buy' && (
           availableProducts.length === 0 ? (
-            <Card><div className="py-12 text-center text-[11px] text-[var(--text3)]">No challenges available at the moment</div></Card>
+            <Card><div className="py-12 text-center text-[11px] text-[#8FA3BF]">No challenges available at the moment</div></Card>
           ) : (
             <div className="grid grid-cols-3 gap-[14px]">
               {availableProducts.map(p=>(
                 <Card key={p.id}>
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <div className="font-serif text-[20px] font-bold text-[var(--gold)]">${Number(p.account_size).toLocaleString()}</div>
-                      <div className="text-[11px] text-[var(--text2)]">{p.name}</div>
+                      <div className="font-sans text-[20px] font-bold text-[#2255CC]">${Number(p.account_size).toLocaleString()}</div>
+                      <div className="text-[11px] text-[#5C7A9E]">{p.name}</div>
                     </div>
-                    <div className="font-serif text-[22px] font-bold">${p.price_usd}</div>
+                    <div className="font-sans text-[22px] font-bold">${p.price_usd}</div>
                   </div>
                   {[
                     ['Type', p.challenge_type === '2step' ? '2-Step Challenge' : '1-Step Challenge'],
@@ -117,9 +117,9 @@ export function ChallengesPage() {
                     ['Ph1 Max DD', `${p.ph1_max_dd}%`],
                     ['Profit Split', `${p.funded_profit_split}%`],
                   ].map(([l,v])=>(
-                    <div key={l} className="flex justify-between py-[5px] border-b border-[var(--dim)] last:border-0">
-                      <span className="text-[9px] text-[var(--text3)]">{l}</span>
-                      <span className="font-mono text-[10px] text-[var(--gold)]">{v}</span>
+                    <div key={l} className="flex justify-between py-[5px] border-b border-[#F0F4FB] last:border-0">
+                      <span className="text-[9px] text-[#8FA3BF]">{l}</span>
+                      <span className="font-['JetBrains_Mono',monospace] text-[10px] text-[#2255CC]">{v}</span>
                     </div>
                   ))}
                   <Button className="w-full mt-3"

@@ -180,33 +180,33 @@ export function AdminPayoutsPage() {
                   style={{
                     padding:'5px 12px', fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const,
                     fontWeight:600, cursor:'pointer',
-                    background: filter===s ? 'rgba(212,168,67,.1)' : 'var(--bg3)',
-                    border: filter===s ? '1px solid var(--bdr2)' : '1px solid var(--dim)',
-                    color: filter===s ? 'var(--gold)' : 'var(--text3)',
+                    background: filter===s ? 'rgba(34,85,204,.08)' : '#F4F7FD',
+                    border: filter===s ? '1px solid #C5D5EA' : '1px solid rgba(26,58,107,.06)',
+                    color: filter===s ? '#2255CC' : '#8FA3BF',
                   }}>
                   {s} {s !== 'all' && counts[s] > 0 ? `(${counts[s]})` : ''}
                 </button>
               ))}
-              <button onClick={() => load(filter)} style={{ marginLeft:'auto', padding:'5px 10px', fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, fontWeight:600, cursor:'pointer', background:'var(--bg3)', border:'1px solid var(--dim)', color:'var(--text3)' }}>
+              <button onClick={() => load(filter)} style={{ marginLeft:'auto', padding:'5px 10px', fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, fontWeight:600, cursor:'pointer', background:'#F4F7FD', border:'1px solid rgba(26,58,107,.06)', color:'#8FA3BF' }}>
                 ↻ Refresh
               </button>
             </div>
 
             {loading ? (
               <div style={{ display:'flex', justifyContent:'center', padding:40 }}>
-                <div style={{ width:24, height:24, border:'2px solid var(--red)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
+                <div style={{ width:24, height:24, border:'2px solid #DC2626', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
               </div>
             ) : payouts.length === 0 ? (
-              <div style={{ padding:40, textAlign:'center' as const, color:'var(--text3)', fontSize:11 }}>
+              <div style={{ padding:40, textAlign:'center' as const, color:'#8FA3BF', fontSize:11 }}>
                 No {filter === 'all' ? '' : filter} payouts found
               </div>
             ) : (
               <div style={{ overflowX:'auto' as const }}>
                 <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
                   <thead>
-                    <tr style={{ borderBottom:'1px solid var(--dim)' }}>
+                    <tr style={{ borderBottom:'1px solid rgba(26,58,107,.06)' }}>
                       {['Trader','Account','Amount','Method','Status','Date','Actions'].map(h => (
-                        <th key={h} style={{ padding:'6px 11px', fontSize:7, letterSpacing:2, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, textAlign:'left' as const, background:'rgba(255,51,82,.02)' }}>{h}</th>
+                        <th key={h} style={{ padding:'6px 11px', fontSize:7, letterSpacing:2, textTransform:'uppercase' as const, color:'#8FA3BF', fontWeight:600, textAlign:'left' as const, background:'rgba(220,38,38,.02)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -217,43 +217,43 @@ export function AdminPayoutsPage() {
                       return (
                         <tr key={p.id}
                           onClick={() => setSelected(isSelected ? null : p)}
-                          style={{ borderBottom:'1px solid rgba(255,51,82,.04)', cursor:'pointer', background: isSelected ? 'rgba(212,168,67,.05)' : 'transparent' }}>
+                          style={{ borderBottom:'1px solid rgba(220,38,38,.04)', cursor:'pointer', background: isSelected ? 'rgba(34,85,204,.04)' : 'transparent' }}>
                           <td style={{ padding:'8px 11px', fontWeight:600 }}>{name}</td>
-                          <td style={{ padding:'8px 11px', fontFamily:'monospace', color:'var(--gold)', fontSize:10 }}>
+                          <td style={{ padding:'8px 11px', fontFamily:'monospace', color:'#2255CC', fontSize:10 }}>
                             {p.account?.account_number ?? '—'}
                           </td>
-                          <td style={{ padding:'8px 11px', fontFamily:'monospace', color:'var(--green)', fontWeight:700 }}>
+                          <td style={{ padding:'8px 11px', fontFamily:'monospace', color:'#16A34A', fontWeight:700 }}>
                             {fmt(p.requested_usd)}
                           </td>
-                          <td style={{ padding:'8px 11px', color:'var(--text2)', fontSize:10 }}>
+                          <td style={{ padding:'8px 11px', color:'#5C7A9E', fontSize:10 }}>
                             {METHOD_LABELS[p.method] ?? p.method}
                           </td>
                           <td style={{ padding:'8px 11px' }}>
                             <Badge variant={STATUS_VARIANT[p.status]}>{p.status}</Badge>
                           </td>
-                          <td style={{ padding:'8px 11px', fontSize:10, color:'var(--text3)' }}>
+                          <td style={{ padding:'8px 11px', fontSize:10, color:'#8FA3BF' }}>
                             {new Date(p.created_at).toLocaleDateString()} {new Date(p.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
                           </td>
                           <td style={{ padding:'8px 11px' }} onClick={e => e.stopPropagation()}>
                             <div style={{ display:'flex', gap:4 }}>
                               {p.status === 'pending' && (<>
                                 <button onClick={() => updateStatus(p.id,'approved',name)}
-                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(0,217,126,.1)', color:'var(--green)', border:'1px solid rgba(0,217,126,.2)' }}>
+                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(22,163,74,.1)', color:'#16A34A', border:'1px solid rgba(0,217,126,.2)' }}>
                                   ✓ Approve
                                 </button>
                                 <button onClick={() => updateStatus(p.id,'rejected',name)}
-                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.1)', color:'var(--red)', border:'1px solid rgba(255,51,82,.2)' }}>
+                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(220,38,38,.1)', color:'#DC2626', border:'1px solid rgba(255,51,82,.2)' }}>
                                   ✕ Reject
                                 </button>
                               </>)}
                               {p.status === 'approved' && (
                                 <button onClick={() => navigate(`/admin/payouts/${p.id}`)}
-                                  style={{ padding:'3px 10px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(212,168,67,.15)', color:'var(--gold)', border:'1px solid var(--bdr2)' }}>
+                                  style={{ padding:'3px 10px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(34,85,204,.15)', color:'#2255CC', border:'1px solid #C5D5EA' }}>
                                   💸 Pay
                                 </button>
                               )}
                               {p.status === 'paid' && (
-                                <span style={{ fontSize:9, color:'var(--green)', fontFamily:'monospace' }}>✓ Paid</span>
+                                <span style={{ fontSize:9, color:'#16A34A', fontFamily:'monospace' }}>✓ Paid</span>
                               )}
                             </div>
                           </td>
@@ -273,7 +273,7 @@ export function AdminPayoutsPage() {
             <Card>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
                 <span style={{ fontFamily:'serif', fontSize:16, fontWeight:'bold' }}>Payout Detail</span>
-                <button onClick={() => setSelected(null)} style={{ background:'none', border:'none', color:'var(--text3)', cursor:'pointer', fontSize:16 }}>✕</button>
+                <button onClick={() => setSelected(null)} style={{ background:'none', border:'none', color:'#8FA3BF', cursor:'pointer', fontSize:16 }}>✕</button>
               </div>
 
               {/* Status badge */}
@@ -282,9 +282,9 @@ export function AdminPayoutsPage() {
               </div>
 
               {/* Amount */}
-              <div style={{ textAlign:'center' as const, padding:'16px', background:'var(--bg3)', border:'1px solid var(--bdr)', marginBottom:16 }}>
-                <div style={{ fontSize:8, letterSpacing:2, textTransform:'uppercase' as const, color:'var(--text3)', marginBottom:4 }}>Requested Amount</div>
-                <div style={{ fontFamily:'monospace', fontSize:28, fontWeight:700, color:'var(--green)' }}>{fmt(selected.requested_usd)}</div>
+              <div style={{ textAlign:'center' as const, padding:'16px', background:'#F4F7FD', border:'1px solid #E8EEF8', marginBottom:16 }}>
+                <div style={{ fontSize:8, letterSpacing:2, textTransform:'uppercase' as const, color:'#8FA3BF', marginBottom:4 }}>Requested Amount</div>
+                <div style={{ fontFamily:'monospace', fontSize:28, fontWeight:700, color:'#16A34A' }}>{fmt(selected.requested_usd)}</div>
               </div>
 
               {/* Details */}
@@ -300,9 +300,9 @@ export function AdminPayoutsPage() {
                   ...(selected.approved_at ? [['Approved', new Date(selected.approved_at).toLocaleString()]] : []),
                   ...(selected.paid_at     ? [['Paid At',  new Date(selected.paid_at).toLocaleString()]]     : []),
                 ].map(([l, v]) => (
-                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', background:'var(--bg3)', border:'1px solid var(--dim)' }}>
-                    <span style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600 }}>{l}</span>
-                    <span style={{ fontFamily:'monospace', fontSize:10, color:'var(--text)', maxWidth:160, textAlign:'right' as const, wordBreak:'break-all' as const }}>{v}</span>
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', background:'#F4F7FD', border:'1px solid rgba(26,58,107,.06)' }}>
+                    <span style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'#8FA3BF', fontWeight:600 }}>{l}</span>
+                    <span style={{ fontFamily:'monospace', fontSize:10, color:'#1A3A6B', maxWidth:160, textAlign:'right' as const, wordBreak:'break-all' as const }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -310,13 +310,13 @@ export function AdminPayoutsPage() {
               {/* Wallet address */}
               {selected.wallet_address && (
                 <div style={{ marginBottom:16 }}>
-                  <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, marginBottom:6 }}>
+                  <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'#8FA3BF', fontWeight:600, marginBottom:6 }}>
                     {selected.method?.includes('bank') ? 'Bank Details' : 'Wallet Address'}
                   </div>
-                  <div style={{ padding:'10px', background:'var(--bg3)', border:'1px solid var(--bdr2)', fontFamily:'monospace', fontSize:10, wordBreak:'break-all' as const, color:'var(--gold)', cursor:'pointer' }}
+                  <div style={{ padding:'10px', background:'#F4F7FD', border:'1px solid #C5D5EA', fontFamily:'monospace', fontSize:10, wordBreak:'break-all' as const, color:'#2255CC', cursor:'pointer' }}
                     onClick={() => { navigator.clipboard.writeText(selected.wallet_address); toast('success','📋','Copied','Address copied to clipboard') }}>
                     {selected.wallet_address}
-                    <span style={{ float:'right', fontSize:9, color:'var(--text3)' }}>📋</span>
+                    <span style={{ float:'right', fontSize:9, color:'#8FA3BF' }}>📋</span>
                   </div>
                 </div>
               )}
@@ -324,8 +324,8 @@ export function AdminPayoutsPage() {
               {/* Notes */}
               {selected.trader_notes && (
                 <div style={{ marginBottom:16 }}>
-                  <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'var(--text3)', fontWeight:600, marginBottom:6 }}>Trader Notes</div>
-                  <div style={{ padding:10, background:'var(--bg3)', border:'1px solid var(--dim)', fontSize:11, color:'var(--text2)', fontStyle:'italic' as const }}>
+                  <div style={{ fontSize:8, letterSpacing:1.5, textTransform:'uppercase' as const, color:'#8FA3BF', fontWeight:600, marginBottom:6 }}>Trader Notes</div>
+                  <div style={{ padding:10, background:'#F4F7FD', border:'1px solid rgba(26,58,107,.06)', fontSize:11, color:'#5C7A9E', fontStyle:'italic' as const }}>
                     "{selected.trader_notes}"
                   </div>
                 </div>
@@ -335,22 +335,22 @@ export function AdminPayoutsPage() {
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {selected.status === 'pending' && (<>
                   <button onClick={() => updateStatus(selected.id,'approved', selected.user?.first_name ?? '')}
-                    style={{ width:'100%', padding:'10px', fontSize:10, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'var(--green)', color:'#000', border:'none' }}>
+                    style={{ width:'100%', padding:'10px', fontSize:10, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'#16A34A', color:'#000', border:'none' }}>
                     ✓ Approve Payout
                   </button>
                   <button onClick={() => updateStatus(selected.id,'rejected', selected.user?.first_name ?? '')}
-                    style={{ width:'100%', padding:'10px', fontSize:10, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.12)', color:'var(--red)', border:'1px solid rgba(255,51,82,.3)' }}>
+                    style={{ width:'100%', padding:'10px', fontSize:10, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.12)', color:'#DC2626', border:'1px solid rgba(255,51,82,.3)' }}>
                     ✕ Reject Payout
                   </button>
                 </>)}
                 {selected.status === 'approved' && (
                   <button onClick={() => navigate(`/admin/payouts/${selected.id}`)}
-                    style={{ width:'100%', padding:'12px', fontSize:11, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'var(--gold)', color:'#000', border:'none' }}>
+                    style={{ width:'100%', padding:'12px', fontSize:11, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'#2255CC', color:'#000', border:'none' }}>
                     💸 Process Payment
                   </button>
                 )}
                 {selected.status === 'paid' && (
-                  <div style={{ textAlign:'center' as const, padding:10, fontSize:11, color:'var(--green)', fontFamily:'monospace', border:'1px solid rgba(0,217,126,.2)', background:'rgba(0,217,126,.05)' }}>
+                  <div style={{ textAlign:'center' as const, padding:10, fontSize:11, color:'#16A34A', fontFamily:'monospace', border:'1px solid rgba(0,217,126,.2)', background:'rgba(22,163,74,.05)' }}>
                     ✓ Payment completed
                   </div>
                 )}

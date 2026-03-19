@@ -54,8 +54,8 @@ export function JournalPage() {
     toast('info','🗑','Deleted','Entry removed.')
   }
 
-  const inputCls = "flex-1 px-3 py-[10px] bg-transparent outline-none text-[var(--text)] placeholder-[rgba(230,226,248,.25)] text-[12px] font-sans"
-  const wrap = "flex bg-[var(--bg3)] border border-[var(--dim)] focus-within:border-[var(--bdr2)] transition-colors"
+  const inputCls = "flex-1 px-3 py-[10px] bg-transparent outline-none text-[#1A3A6B] placeholder-[rgba(230,226,248,.25)] text-[12px] font-sans"
+  const wrap = "flex bg-[#F4F7FD] border border-[#F0F4FB] focus-within:border-[#C5D5EA] transition-colors"
 
   return (
     <>
@@ -65,40 +65,40 @@ export function JournalPage() {
             <Button size="sm" onClick={()=>setModal(true)}>+ New Entry</Button>
           }/>
           {loading ? (
-            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/></div>
+            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[#2255CC] border-t-transparent rounded-full animate-spin"/></div>
           ) : entries.length === 0 ? (
             <div className="py-16 text-center">
               <div className="text-[32px] mb-3">📓</div>
-              <div className="font-serif text-[18px] font-bold mb-2">No entries yet</div>
-              <p className="text-[12px] text-[var(--text2)] mb-6">Start journaling your trades to track your psychology and growth.</p>
+              <div className="font-sans text-[18px] font-bold mb-2">No entries yet</div>
+              <p className="text-[12px] text-[#5C7A9E] mb-6">Start journaling your trades to track your psychology and growth.</p>
               <Button onClick={()=>setModal(true)}>Write First Entry</Button>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-[11px]">
               {entries.map(e=>(
-                <div key={e.id} className="bg-[var(--bg3)] border border-[var(--bdr)] p-[13px] hover:border-[var(--bdr2)] transition-colors">
+                <div key={e.id} className="bg-[#F4F7FD] border border-[#E8EEF8] p-[13px] hover:border-[#C5D5EA] transition-colors">
                   <div className="flex justify-between mb-[5px]">
-                    <span className="font-mono text-[9px] text-[var(--text3)]">
+                    <span className="font-['JetBrains_Mono',monospace] text-[9px] text-[#8FA3BF]">
                       {new Date(e.created_at).toLocaleDateString()} {e.title ? `· ${e.title}` : ''}
                     </span>
                     {e.pnl != null && (
-                      <span className={e.pnl >= 0 ? 'text-[var(--green)] text-[11px]' : 'text-[var(--red)] text-[11px]'}>
+                      <span className={e.pnl >= 0 ? 'text-[#16A34A] text-[11px]' : 'text-[#DC2626] text-[11px]'}>
                         {e.pnl >= 0 ? '+' : ''}${e.pnl}
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-[var(--text2)] italic leading-[1.6] mb-[7px] line-clamp-3">{e.body}</div>
+                  <div className="text-[11px] text-[#5C7A9E] italic leading-[1.6] mb-[7px] line-clamp-3">{e.body}</div>
                   <div className="flex items-center justify-between">
                     <div className="flex gap-[3px] flex-wrap">
                       {(e.tags ?? []).map(t=>(
                         <span key={t} className={`text-[8px] px-[6px] py-[1px] border ${
-                          t.toLowerCase()==='win'  ? 'bg-[rgba(0,217,126,.08)] border-[rgba(0,217,126,.2)] text-[var(--green)]' :
-                          t.toLowerCase()==='loss' ? 'bg-[rgba(255,51,82,.08)] border-[rgba(255,51,82,.2)] text-[var(--red)]' :
-                          'border-[var(--dim)] text-[var(--text3)]'
+                          t.toLowerCase()==='win'  ? 'bg-[rgba(0,217,126,.08)] border-[rgba(0,217,126,.2)] text-[#16A34A]' :
+                          t.toLowerCase()==='loss' ? 'bg-[rgba(255,51,82,.08)] border-[rgba(255,51,82,.2)] text-[#DC2626]' :
+                          'border-[#F0F4FB] text-[#8FA3BF]'
                         }`}>{t}</span>
                       ))}
                     </div>
-                    <button onClick={()=>deleteEntry(e.id)} className="text-[9px] text-[var(--text3)] hover:text-[var(--red)] cursor-pointer bg-transparent border-none">✕</button>
+                    <button onClick={()=>deleteEntry(e.id)} className="text-[9px] text-[#8FA3BF] hover:text-[#DC2626] cursor-pointer bg-transparent border-none">✕</button>
                   </div>
                 </div>
               ))}
@@ -111,18 +111,18 @@ export function JournalPage() {
         <div className="flex flex-col gap-[9px]">
           {[['Trade / Symbol','text',sym,setSym,'EUR/USD BUY'],['P&L (number)','number',pnl,setPnl,'+250 or -100'],['Tags (comma separated)','text',tags,setTags,'Macro, Breakout, Win…']].map(([l,t,v,set,ph]:any)=>(
             <div key={l} className="flex flex-col gap-1">
-              <label className="text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold">{l}</label>
+              <label className="text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold">{l}</label>
               <div className={wrap}><input type={t} value={v} onChange={e=>set(e.target.value)} placeholder={ph} className={inputCls}/></div>
             </div>
           ))}
           <div className="flex flex-col gap-1">
-            <label className="text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold">Notes *</label>
+            <label className="text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold">Notes *</label>
             <div className={wrap}><textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="What went well? What to improve?" className={inputCls + " resize-y min-h-[70px]"}/></div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={()=>setModal(false)} className="px-[18px] py-[8px] bg-transparent border border-[var(--bdr2)] text-[var(--text2)] text-[9px] tracking-[2px] uppercase font-bold cursor-pointer">Cancel</button>
-          <button onClick={save} disabled={saving} className="px-[22px] py-[8px] bg-[var(--gold)] text-[var(--bg)] text-[9px] tracking-[2px] uppercase font-bold cursor-pointer border-none disabled:opacity-50">
+          <button onClick={()=>setModal(false)} className="px-[18px] py-[8px] bg-transparent border border-[#C5D5EA] text-[#5C7A9E] text-[9px] tracking-[2px] uppercase font-bold cursor-pointer">Cancel</button>
+          <button onClick={save} disabled={saving} className="px-[22px] py-[8px] bg-[#2255CC] text-[#F0F4FB] text-[9px] tracking-[2px] uppercase font-bold cursor-pointer border-none disabled:opacity-50">
             {saving ? 'Saving…' : 'Save Entry'}
           </button>
         </div>

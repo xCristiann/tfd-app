@@ -102,9 +102,9 @@ export function PayoutsPage() {
           <Card>
             <div className="py-16 text-center">
               <div className="text-[32px] mb-3">💰</div>
-              <div className="font-serif text-[18px] font-bold mb-2">No Funded Accounts</div>
-              <p className="text-[12px] text-[var(--text2)] mb-2">You can only request payouts from funded accounts.</p>
-              <p className="text-[11px] text-[var(--text3)]">Pass Phase 1 and Phase 2 to get funded and start withdrawing profits.</p>
+              <div className="font-sans text-[18px] font-bold mb-2">No Funded Accounts</div>
+              <p className="text-[12px] text-[#5C7A9E] mb-2">You can only request payouts from funded accounts.</p>
+              <p className="text-[11px] text-[#8FA3BF]">Pass Phase 1 and Phase 2 to get funded and start withdrawing profits.</p>
             </div>
           </Card>
         ) : (
@@ -124,12 +124,12 @@ export function PayoutsPage() {
                         <button key={a.id} onClick={()=>setSelectedAccountId(a.id)}
                           className={`flex flex-col px-4 py-3 border text-left transition-all cursor-pointer ${
                             a.id === selectedAccount?.id
-                              ? 'border-[var(--gold)] bg-[rgba(212,168,67,.06)]'
-                              : 'border-[var(--bdr)] bg-[var(--bg3)] hover:border-[var(--bdr2)]'
+                              ? 'border-[#2255CC] bg-[rgba(34,85,204,.05)]'
+                              : 'border-[#E8EEF8] bg-[#F4F7FD] hover:border-[#C5D5EA]'
                           }`}>
-                          <span className="font-mono text-[11px] text-[var(--gold)]">{a.account_number}</span>
-                          <span className="text-[9px] text-[var(--text3)]">{p?.name} · {p?.funded_profit_split ?? 85}% split</span>
-                          <span className="text-[10px] text-[var(--green)] mt-1">Withdrawable: {fmt(w)}</span>
+                          <span className="font-['JetBrains_Mono',monospace] text-[11px] text-[#2255CC]">{a.account_number}</span>
+                          <span className="text-[9px] text-[#8FA3BF]">{p?.name} · {p?.funded_profit_split ?? 85}% split</span>
+                          <span className="text-[10px] text-[#16A34A] mt-1">Withdrawable: {fmt(w)}</span>
                         </button>
                       )
                     })}
@@ -140,26 +140,26 @@ export function PayoutsPage() {
               {/* Request form */}
               <Card>
                 <CardHeader title="Request Payout" action={
-                  <span className="text-[10px] text-[var(--text3)]">
-                    Account: <span className="text-[var(--gold)] font-mono">{selectedAccount?.account_number}</span>
+                  <span className="text-[10px] text-[#8FA3BF]">
+                    Account: <span className="text-[#2255CC] font-['JetBrains_Mono',monospace]">{selectedAccount?.account_number}</span>
                   </span>
                 }/>
 
                 {/* Withdrawable info */}
                 <div className="flex gap-3 mb-5">
-                  <div className="flex-1 p-3 bg-[rgba(212,168,67,.05)] border border-[rgba(212,168,67,.15)]">
-                    <div className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold mb-1">Profit</div>
-                    <div className={`font-mono text-[15px] font-bold ${profit >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                  <div className="flex-1 p-3 bg-[rgba(34,85,204,.04)] border border-[rgba(34,85,204,.15)]">
+                    <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-1">Profit</div>
+                    <div className={`font-['JetBrains_Mono',monospace] text-[15px] font-bold ${profit >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
                       {profit >= 0 ? '+' : ''}{fmt(profit)}
                     </div>
                   </div>
-                  <div className="flex-1 p-3 bg-[rgba(212,168,67,.05)] border border-[rgba(212,168,67,.15)]">
-                    <div className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold mb-1">Your {splitPct}% Split</div>
-                    <div className="font-mono text-[15px] font-bold text-[var(--gold)]">{fmt(withdrawable)}</div>
+                  <div className="flex-1 p-3 bg-[rgba(34,85,204,.04)] border border-[rgba(34,85,204,.15)]">
+                    <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-1">Your {splitPct}% Split</div>
+                    <div className="font-['JetBrains_Mono',monospace] text-[15px] font-bold text-[#2255CC]">{fmt(withdrawable)}</div>
                   </div>
-                  <div className="flex-1 p-3 bg-[rgba(212,168,67,.05)] border border-[rgba(212,168,67,.15)]">
-                    <div className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold mb-1">Profit Split</div>
-                    <div className="font-mono text-[15px] font-bold text-[var(--gold)]">{splitPct}%</div>
+                  <div className="flex-1 p-3 bg-[rgba(34,85,204,.04)] border border-[rgba(34,85,204,.15)]">
+                    <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-1">Profit Split</div>
+                    <div className="font-['JetBrains_Mono',monospace] text-[15px] font-bold text-[#2255CC]">{splitPct}%</div>
                   </div>
                 </div>
 
@@ -179,22 +179,22 @@ export function PayoutsPage() {
               <Card>
                 <CardHeader title={`Payout History (${payouts.length})`} />
                 {payouts.length === 0 ? (
-                  <div className="py-8 text-center text-[11px] text-[var(--text3)]">No payouts yet</div>
+                  <div className="py-8 text-center text-[11px] text-[#8FA3BF]">No payouts yet</div>
                 ) : (
                   <table className="w-full border-collapse text-[11px]">
                     <thead>
-                      <tr className="border-b border-[var(--dim)]">
+                      <tr className="border-b border-[#F0F4FB]">
                         {['Date','Amount','Method','Status'].map(h=>(
-                          <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left">{h}</th>
+                          <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {payouts.map(p=>(
-                        <tr key={p.id} className="border-b border-[rgba(212,168,67,.04)]">
-                          <td className="px-[11px] py-[8px] text-[var(--text2)]">{new Date(p.created_at).toLocaleDateString()}</td>
-                          <td className="px-[11px] py-[8px] font-mono text-[var(--green)]">{fmt(p.requested_usd)}</td>
-                          <td className="px-[11px] py-[8px] text-[var(--text2)]">{METHOD_LABELS[p.method] ?? p.method}</td>
+                        <tr key={p.id} className="border-b border-[rgba(34,85,204,.03)]">
+                          <td className="px-[11px] py-[8px] text-[#5C7A9E]">{new Date(p.created_at).toLocaleDateString()}</td>
+                          <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#16A34A]">{fmt(p.requested_usd)}</td>
+                          <td className="px-[11px] py-[8px] text-[#5C7A9E]">{METHOD_LABELS[p.method] ?? p.method}</td>
                           <td className="px-[11px] py-[8px]"><Badge variant={(STATUS_COLORS[p.status] ?? 'pending') as any}>{p.status}</Badge></td>
                         </tr>
                       ))}
@@ -205,15 +205,15 @@ export function PayoutsPage() {
             </div>
 
             <div className="flex flex-col gap-[14px]">
-              <KPICard label="Total Withdrawn" value={fmt(totalPaid)} sub="All time" subColor="text-[var(--green)]" />
+              <KPICard label="Total Withdrawn" value={fmt(totalPaid)} sub="All time" subColor="text-[#16A34A]" />
               <KPICard label="Payouts Count" value={String(payouts.filter(p=>p.status==='paid').length)} sub="Completed" />
-              <KPICard label="Withdrawable Now" value={fmt(withdrawable)} sub={`${splitPct}% of profit`} subColor="text-[var(--gold)]" />
+              <KPICard label="Withdrawable Now" value={fmt(withdrawable)} sub={`${splitPct}% of profit`} subColor="text-[#2255CC]" />
               <Card>
                 <CardHeader title="Payout Info" />
-                <div className="flex flex-col gap-2 text-[11px] text-[var(--text2)]">
+                <div className="flex flex-col gap-2 text-[11px] text-[#5C7A9E]">
                   {[['Processing Time','24 hours'],['Minimum','$100'],['Crypto','Same day'],['Wire','2-3 days'],['Split',`${splitPct}% yours`]].map(([l,v])=>(
-                    <div key={l} className="flex justify-between border-b border-[var(--dim)] pb-2">
-                      <span className="text-[var(--text3)]">{l}</span><span>{v}</span>
+                    <div key={l} className="flex justify-between border-b border-[#F0F4FB] pb-2">
+                      <span className="text-[#8FA3BF]">{l}</span><span>{v}</span>
                     </div>
                   ))}
                 </div>

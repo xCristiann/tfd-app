@@ -134,8 +134,8 @@ export function DashboardSupportPage() {
     setView('list')
   }
 
-  const wrap = "flex bg-[var(--bg3)] border border-[var(--dim)] focus-within:border-[var(--bdr2)] transition-colors"
-  const inp = "flex-1 px-3 py-[10px] bg-transparent outline-none text-[var(--text)] placeholder-[rgba(230,226,248,.25)] text-[12px]"
+  const wrap = "flex bg-[#F4F7FD] border border-[#F0F4FB] focus-within:border-[#C5D5EA] transition-colors"
+  const inp = "flex-1 px-3 py-[10px] bg-transparent outline-none text-[#1A3A6B] placeholder-[rgba(230,226,248,.25)] text-[12px]"
 
   return (
     <>
@@ -146,7 +146,7 @@ export function DashboardSupportPage() {
           <div className="flex gap-[3px]">
             {view !== 'list' && (
               <button onClick={() => { setView('list'); setSelectedTicket(null) }}
-                className="px-3 py-[5px] text-[9px] tracking-[1px] uppercase font-bold border border-[var(--dim)] text-[var(--text3)] bg-transparent cursor-pointer">
+                className="px-3 py-[5px] text-[9px] tracking-[1px] uppercase font-bold border border-[#F0F4FB] text-[#8FA3BF] bg-transparent cursor-pointer">
                 ← Back
               </button>
             )}
@@ -163,27 +163,27 @@ export function DashboardSupportPage() {
             {tickets.length === 0 ? (
               <div className="py-12 text-center">
                 <div className="text-[32px] mb-3">🎫</div>
-                <p className="text-[12px] text-[var(--text2)] mb-4">No support tickets yet.</p>
+                <p className="text-[12px] text-[#5C7A9E] mb-4">No support tickets yet.</p>
                 <Button onClick={() => setView('new')}>Open a Ticket</Button>
               </div>
             ) : (
               <table className="w-full border-collapse text-[11px]">
                 <thead>
-                  <tr className="border-b border-[var(--dim)]">
+                  <tr className="border-b border-[#F0F4FB]">
                     {['Ticket #','Subject','Department','Status','Date',''].map(h => (
-                      <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left">{h}</th>
+                      <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {tickets.map(t => (
-                    <tr key={t.id} className="border-b border-[rgba(212,168,67,.04)] hover:bg-[rgba(212,168,67,.03)] cursor-pointer" onClick={() => openTicket(t)}>
-                      <td className="px-[11px] py-[9px] font-mono text-[var(--gold)]">{t.ticket_number ?? `#${t.id.slice(0,6)}`}</td>
+                    <tr key={t.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(34,85,204,.02)] cursor-pointer" onClick={() => openTicket(t)}>
+                      <td className="px-[11px] py-[9px] font-['JetBrains_Mono',monospace] text-[#2255CC]">{t.ticket_number ?? `#${t.id.slice(0,6)}`}</td>
                       <td className="px-[11px] py-[9px] font-medium max-w-[200px] truncate">{t.subject}</td>
-                      <td className="px-[11px] py-[9px] text-[var(--text3)] capitalize">{t.department}</td>
+                      <td className="px-[11px] py-[9px] text-[#8FA3BF] capitalize">{t.department}</td>
                       <td className="px-[11px] py-[9px]"><Badge variant={STATUS_VARIANT[t.status]??'open'}>{t.status}</Badge></td>
-                      <td className="px-[11px] py-[9px] text-[10px] text-[var(--text3)]">{new Date(t.created_at).toLocaleDateString()}</td>
-                      <td className="px-[11px] py-[9px] text-[var(--gold)] text-[10px]">View →</td>
+                      <td className="px-[11px] py-[9px] text-[10px] text-[#8FA3BF]">{new Date(t.created_at).toLocaleDateString()}</td>
+                      <td className="px-[11px] py-[9px] text-[#2255CC] text-[10px]">View →</td>
                     </tr>
                   ))}
                 </tbody>
@@ -198,11 +198,11 @@ export function DashboardSupportPage() {
             <CardHeader title="Open New Ticket"/>
             <div className="flex flex-col gap-4 max-w-[600px]">
               <div>
-                <label className="block text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold mb-1">Subject</label>
+                <label className="block text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold mb-1">Subject</label>
                 <div className={wrap}><input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Payout not received" className={inp}/></div>
               </div>
               <div>
-                <label className="block text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold mb-1">Department</label>
+                <label className="block text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold mb-1">Department</label>
                 <div className={wrap}>
                   <select value={dept} onChange={e => setDept(e.target.value)} style={{background:'transparent'}} className={inp + " cursor-pointer"}>
                     <option value="technical">Technical Support</option>
@@ -214,7 +214,7 @@ export function DashboardSupportPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold mb-1">Message</label>
+                <label className="block text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold mb-1">Message</label>
                 <div className={wrap}><textarea value={msg} onChange={e => setMsg(e.target.value)} placeholder="Describe your issue in detail…" className={inp + " resize-y min-h-[120px]"}/></div>
               </div>
               <Button loading={submitting} onClick={submitNewTicket} className="w-full">Submit Ticket</Button>
@@ -229,8 +229,8 @@ export function DashboardSupportPage() {
             <Card>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-serif text-[16px] font-semibold">{selectedTicket.subject}</div>
-                  <div className="text-[10px] text-[var(--text3)] mt-1">
+                  <div className="font-sans text-[16px] font-semibold">{selectedTicket.subject}</div>
+                  <div className="text-[10px] text-[#8FA3BF] mt-1">
                     {selectedTicket.ticket_number ?? `#${selectedTicket.id.slice(0,8)}`} · {selectedTicket.department} · Opened {new Date(selectedTicket.created_at).toLocaleDateString()}
                   </div>
                 </div>
@@ -242,19 +242,19 @@ export function DashboardSupportPage() {
             <Card>
               <div className="flex flex-col gap-3 min-h-[300px] max-h-[500px] overflow-y-auto mb-4 pr-1">
                 {messages.length === 0 && (
-                  <div className="text-center text-[11px] text-[var(--text3)] py-8">No messages yet</div>
+                  <div className="text-center text-[11px] text-[#8FA3BF] py-8">No messages yet</div>
                 )}
                 {messages.map((m, i) => {
                   const isMe = m.sender_id === profile?.id
                   return (
                     <div key={i} className={`max-w-[75%] ${isMe ? 'self-end ml-auto' : 'self-start'}`}>
-                      <div className="text-[9px] text-[var(--text3)] mb-1">
+                      <div className="text-[9px] text-[#8FA3BF] mb-1">
                         {isMe ? 'You' : 'TFD Support'} · {new Date(m.created_at).toLocaleString()}
                       </div>
                       <div className={`px-4 py-3 text-[12px] leading-[1.7] ${
                         isMe
-                          ? 'bg-[rgba(212,168,67,.08)] border border-[rgba(212,168,67,.2)] text-[var(--text)]'
-                          : 'bg-[rgba(59,158,255,.08)] border border-[rgba(59,158,255,.2)] text-[var(--text)]'
+                          ? 'bg-[rgba(212,168,67,.08)] border border-[rgba(34,85,204,.2)] text-[#1A3A6B]'
+                          : 'bg-[rgba(59,158,255,.08)] border border-[rgba(59,158,255,.2)] text-[#1A3A6B]'
                       }`}>
                         {m.body}
                       </div>
@@ -266,22 +266,22 @@ export function DashboardSupportPage() {
 
               {/* Reply box */}
               {selectedTicket.status !== 'closed' && (
-                <div className="border-t border-[var(--bdr)] pt-4 flex gap-3">
-                  <div className="flex-1 flex bg-[var(--bg3)] border border-[var(--dim)] focus-within:border-[var(--bdr2)] transition-colors">
+                <div className="border-t border-[#E8EEF8] pt-4 flex gap-3">
+                  <div className="flex-1 flex bg-[#F4F7FD] border border-[#F0F4FB] focus-within:border-[#C5D5EA] transition-colors">
                     <textarea
                       value={reply}
                       onChange={e => setReply(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) sendReply() }}
                       placeholder="Reply to this ticket… (Ctrl+Enter to send)"
-                      className="flex-1 px-3 py-[10px] bg-transparent outline-none text-[var(--text)] text-[12px] resize-none min-h-[70px] placeholder-[rgba(230,226,248,.25)]"
+                      className="flex-1 px-3 py-[10px] bg-transparent outline-none text-[#1A3A6B] text-[12px] resize-none min-h-[70px] placeholder-[rgba(230,226,248,.25)]"
                     />
                   </div>
                   <Button variant="gold" onClick={sendReply} loading={sendingReply} className="self-end">Send</Button>
                 </div>
               )}
               {selectedTicket.status === 'closed' && (
-                <div className="border-t border-[var(--bdr)] pt-4 text-center text-[11px] text-[var(--text3)]">
-                  This ticket is closed. <button onClick={() => setView('new')} className="text-[var(--gold)] cursor-pointer bg-transparent border-none underline">Open a new ticket</button>
+                <div className="border-t border-[#E8EEF8] pt-4 text-center text-[11px] text-[#8FA3BF]">
+                  This ticket is closed. <button onClick={() => setView('new')} className="text-[#2255CC] cursor-pointer bg-transparent border-none underline">Open a new ticket</button>
                 </div>
               )}
             </Card>

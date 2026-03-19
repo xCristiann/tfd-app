@@ -616,20 +616,20 @@ export function PlatformPage(){
 
   return(
   <>
-  <div style={{display:'flex',height:'100vh',overflow:'hidden',background:'#0A0A0F',color:'var(--text)',fontSize:12}}>
+  <div style={{display:'flex',height:'100vh',overflow:'hidden',background:'#0A0A0F',color:'#1A3A6B',fontSize:12}}>
 
     {/* ── Watchlist ── */}
-    <div style={{width:192,flexShrink:0,background:'var(--bg2)',borderRight:'1px solid var(--bdr)',display:'flex',flexDirection:'column'}}>
-      <div style={{padding:'10px 12px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:8}}>
-        <div style={{width:20,height:20,border:'1px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'var(--gold)'}}>✦</div>
+    <div style={{width:192,flexShrink:0,background:'#fff',borderRight:'1px solid #E8EEF8',display:'flex',flexDirection:'column'}}>
+      <div style={{padding:'10px 12px',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',gap:8}}>
+        <div style={{width:20,height:20,border:'1px solid #2255CC',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'#2255CC'}}>✦</div>
         <span style={{fontFamily:'serif',fontSize:11,fontWeight:'bold',lineHeight:1.3}}>TFD<br/>Terminal</span>
       </div>
       {/* Search */}
-      <div style={{padding:'6px 10px',borderBottom:'1px solid var(--bdr)'}}>
+      <div style={{padding:'6px 10px',borderBottom:'1px solid #E8EEF8'}}>
         <input
           value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="Search..."
-          style={{width:'100%',padding:'5px 8px',background:'var(--bg3)',border:'1px solid var(--dim)',color:'var(--text)',fontSize:10,outline:'none',boxSizing:'border-box' as const}}
+          style={{width:'100%',padding:'5px 8px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',color:'#1A3A6B',fontSize:10,outline:'none',boxSizing:'border-box' as const}}
         />
       </div>
       {/* Instrument list */}
@@ -643,25 +643,25 @@ export function PlatformPage(){
             const iMs=getMarketStatus(i.market)
             return(
               <div key={i.sym} onClick={()=>setSym(i.sym)} style={{
-                padding:'6px 10px 5px',cursor:'pointer',borderBottom:'1px solid rgba(212,168,67,.03)',
-                background:sym===i.sym?'rgba(212,168,67,.07)':'transparent',
-                borderLeft:sym===i.sym?'2px solid var(--gold)':'2px solid transparent',
+                padding:'6px 10px 5px',cursor:'pointer',borderBottom:'1px solid rgba(34,85,204,.02)',
+                background:sym===i.sym?'rgba(34,85,204,.07)':'transparent',
+                borderLeft:sym===i.sym?'2px solid #2255CC':'2px solid transparent',
               }}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <span style={{fontWeight:600,fontSize:10}}>{i.sym}</span>
                   <div style={{display:'flex',gap:5,alignItems:'center'}}>
                     <span
                       onClick={e=>{e.stopPropagation();toggleFav(i.sym)}}
-                      style={{fontSize:15,cursor:'pointer',color:isFav?'var(--gold)':'rgba(255,255,255,.2)',lineHeight:1,userSelect:'none' as const}}
+                      style={{fontSize:15,cursor:'pointer',color:isFav?'#2255CC':'rgba(255,255,255,.2)',lineHeight:1,userSelect:'none' as const}}
                       title={isFav?'Remove from favorites':'Add to favorites'}
                     >{isFav?'★':'☆'}</span>
-                    <span style={{width:5,height:5,borderRadius:'50%',background:!iMs.open?'var(--red)':prices[i.sym]>0?'var(--green)':'#444'}}/>
+                    <span style={{width:5,height:5,borderRadius:'50%',background:!iMs.open?'#DC2626':prices[i.sym]>0?'#16A34A':'#444'}}/>
                   </div>
                 </div>
-                <div style={{fontFamily:'monospace',fontSize:12,marginTop:1,fontWeight:700,color:isUp?'var(--green)':'var(--red)',opacity:iMs.open?1:0.55}}>
+                <div style={{fontFamily:'monospace',fontSize:12,marginTop:1,fontWeight:700,color:isUp?'#16A34A':'#DC2626',opacity:iMs.open?1:0.55}}>
                   {cur.toFixed(i.dec)}
                 </div>
-                <div style={{fontSize:8,color:iMs.open?(isUp?'var(--green)':'var(--red)'):'var(--text3)'}}>
+                <div style={{fontSize:8,color:iMs.open?(isUp?'#16A34A':'#DC2626'):'#8FA3BF'}}>
                   {iMs.open?`${isUp?'▲':'▼'} ${Math.abs(cur-prv).toFixed(i.dec)}`:'CLOSED'}
                 </div>
               </div>
@@ -672,7 +672,7 @@ export function PlatformPage(){
               {/* Favorites section — always first, any category */}
               {watchlist.favs.length>0&&(
                 <div>
-                  <div style={{padding:'4px 10px',fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--gold)',fontWeight:700,background:'rgba(212,168,67,.06)',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:5}}>
+                  <div style={{padding:'4px 10px',fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#2255CC',fontWeight:700,background:'rgba(34,85,204,.05)',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',gap:5}}>
                     <span>★</span> Favorites
                   </div>
                   {watchlist.favs.map(renderItem)}
@@ -684,7 +684,7 @@ export function PlatformPage(){
                 if(!items.length)return null
                 return(
                   <div key={cat}>
-                    <div style={{padding:'4px 10px',fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:700,background:'rgba(0,0,0,.3)',borderBottom:'1px solid var(--bdr)'}}>
+                    <div style={{padding:'4px 10px',fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:700,background:'rgba(0,0,0,.3)',borderBottom:'1px solid #E8EEF8'}}>
                       {CAT_LABELS[cat]}
                     </div>
                     {items.map(renderItem)}
@@ -695,54 +695,54 @@ export function PlatformPage(){
           )
         })()}
       </div>
-      <div style={{padding:'8px 10px',borderTop:'1px solid var(--bdr)'}}>
+      <div style={{padding:'8px 10px',borderTop:'1px solid #E8EEF8'}}>
         {accounts.length>1
-          ?<select value={selAccId??primary?.id??''} onChange={e=>setSelAccId(e.target.value)} style={{width:'100%',padding:'5px 6px',background:'var(--bg3)',border:'1px solid var(--dim)',color:'var(--text)',fontSize:9,fontFamily:'monospace',outline:'none',marginBottom:6}}>
+          ?<select value={selAccId??primary?.id??''} onChange={e=>setSelAccId(e.target.value)} style={{width:'100%',padding:'5px 6px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',color:'#1A3A6B',fontSize:9,fontFamily:'monospace',outline:'none',marginBottom:6}}>
               {accounts.map(a=><option key={a.id} value={a.id}>{a.account_number}</option>)}
             </select>
-          :<div style={{marginBottom:6,padding:'4px 6px',background:'var(--bg3)',border:'1px solid var(--dim)',fontSize:9,fontFamily:'monospace',color:'var(--gold)',textAlign:'center' as const}}>{primary?.account_number??'—'}</div>
+          :<div style={{marginBottom:6,padding:'4px 6px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',fontSize:9,fontFamily:'monospace',color:'#2255CC',textAlign:'center' as const}}>{primary?.account_number??'—'}</div>
         }
-        <button onClick={()=>navigate('/dashboard')} style={{width:'100%',fontSize:9,letterSpacing:1,textTransform:'uppercase' as const,color:'var(--text3)',background:'none',border:'none',cursor:'pointer'}}>← Dashboard</button>
+        <button onClick={()=>navigate('/dashboard')} style={{width:'100%',fontSize:9,letterSpacing:1,textTransform:'uppercase' as const,color:'#8FA3BF',background:'none',border:'none',cursor:'pointer'}}>← Dashboard</button>
       </div>
     </div>
 
     {/* ── Main ── */}
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
       {!ms.open&&(
-        <div style={{background:'rgba(255,51,82,.1)',borderBottom:'1px solid rgba(255,51,82,.25)',padding:'6px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
-          <span style={{fontSize:11,color:'var(--red)',fontWeight:600}}>🔴 {ms.label}</span>
-          {ms.nextOpen&&<span style={{fontSize:10,color:'var(--text3)'}}>Next open: {ms.nextOpen}</span>}
+        <div style={{background:'rgba(220,38,38,.1)',borderBottom:'1px solid rgba(255,51,82,.25)',padding:'6px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+          <span style={{fontSize:11,color:'#DC2626',fontWeight:600}}>🔴 {ms.label}</span>
+          {ms.nextOpen&&<span style={{fontSize:10,color:'#8FA3BF'}}>Next open: {ms.nextOpen}</span>}
         </div>
       )}
 
       {/* Topbar */}
-      <div style={{height:50,flexShrink:0,background:'var(--bg2)',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',padding:'0 14px',gap:10}}>
+      <div style={{height:50,flexShrink:0,background:'#fff',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',padding:'0 14px',gap:10}}>
         <span style={{fontFamily:'serif',fontSize:16,fontWeight:'bold',flexShrink:0}}>{sym}</span>
-        <span style={{fontFamily:'monospace',fontSize:22,fontWeight:700,flexShrink:0,minWidth:100,letterSpacing:-0.5,color:up?'var(--green)':'var(--red)'}}>{livePrice.toFixed(inst.dec)}</span>
-        <span style={{fontSize:10,flexShrink:0,color:up?'var(--green)':'var(--red)'}}>{up?'▲':'▼'} {Math.abs(livePrice-prevPrice).toFixed(inst.dec)}</span>
-        <div style={{display:'flex',gap:14,padding:'4px 14px',background:'rgba(0,0,0,.4)',border:'1px solid rgba(212,168,67,.1)',marginLeft:6,flexShrink:0}}>
+        <span style={{fontFamily:'monospace',fontSize:22,fontWeight:700,flexShrink:0,minWidth:100,letterSpacing:-0.5,color:up?'#16A34A':'#DC2626'}}>{livePrice.toFixed(inst.dec)}</span>
+        <span style={{fontSize:10,flexShrink:0,color:up?'#16A34A':'#DC2626'}}>{up?'▲':'▼'} {Math.abs(livePrice-prevPrice).toFixed(inst.dec)}</span>
+        <div style={{display:'flex',gap:14,padding:'4px 14px',background:'rgba(0,0,0,.4)',border:'1px solid rgba(34,85,204,.08)',marginLeft:6,flexShrink:0}}>
           {[
-            {l:'BALANCE',v:fmt(balance),c:'var(--gold)'},
-            {l:'EQUITY', v:fmt(equity), c:equity>=balance?'var(--green)':'var(--red)'},
-            {l:'P&L',    v:`${openPnl>=0?'+':''}${fmt(openPnl)}`,c:openPnl>=0?'var(--green)':'var(--red)'},
-            {l:'FREE MARGIN',v:fmt(freeMargin),c:freeMargin<0?'var(--red)':'var(--text2)'},
-            ...(usedMargin>0?[{l:'MARGIN LVL',v:`${marginLvl.toFixed(0)}%`,c:marginLvl<150?'var(--red)':'var(--text2)'}]:[]),
+            {l:'BALANCE',v:fmt(balance),c:'#2255CC'},
+            {l:'EQUITY', v:fmt(equity), c:equity>=balance?'#16A34A':'#DC2626'},
+            {l:'P&L',    v:`${openPnl>=0?'+':''}${fmt(openPnl)}`,c:openPnl>=0?'#16A34A':'#DC2626'},
+            {l:'FREE MARGIN',v:fmt(freeMargin),c:freeMargin<0?'#DC2626':'#5C7A9E'},
+            ...(usedMargin>0?[{l:'MARGIN LVL',v:`${marginLvl.toFixed(0)}%`,c:marginLvl<150?'#DC2626':'#5C7A9E'}]:[]),
           ].map(({l,v,c})=>(
             <div key={l} style={{flexShrink:0}}>
-              <div style={{fontSize:7,letterSpacing:1.5,color:'var(--text3)',fontWeight:600,textTransform:'uppercase' as const}}>{l}</div>
+              <div style={{fontSize:7,letterSpacing:1.5,color:'#8FA3BF',fontWeight:600,textTransform:'uppercase' as const}}>{l}</div>
               <div style={{fontFamily:'monospace',fontSize:11,fontWeight:700,color:c,marginTop:1}}>{v}</div>
             </div>
           ))}
         </div>
-        {(primary as any)?.payout_locked&&<div style={{padding:'4px 10px',background:'rgba(212,168,67,.1)',border:'1px solid var(--bdr2)',fontSize:9,color:'var(--gold)',letterSpacing:1,fontWeight:600,textTransform:'uppercase' as const,flexShrink:0}}>⏳ Payout Pending</div>}
+        {(primary as any)?.payout_locked&&<div style={{padding:'4px 10px',background:'rgba(34,85,204,.08)',border:'1px solid #C5D5EA',fontSize:9,color:'#2255CC',letterSpacing:1,fontWeight:600,textTransform:'uppercase' as const,flexShrink:0}}>⏳ Payout Pending</div>}
         <div style={{marginLeft:'auto',display:'flex',gap:2}}>
           {Object.keys(TF_CONFIG).map(t=>(
-            <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 7px',fontSize:9,fontFamily:'monospace',fontWeight:'bold',cursor:'pointer',background:tf===t?'rgba(212,168,67,.15)':'transparent',border:tf===t?'1px solid var(--bdr2)':'1px solid transparent',color:tf===t?'var(--gold)':'var(--text3)'}}>{t}</button>
+            <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 7px',fontSize:9,fontFamily:'monospace',fontWeight:'bold',cursor:'pointer',background:tf===t?'rgba(34,85,204,.15)':'transparent',border:tf===t?'1px solid #C5D5EA':'1px solid transparent',color:tf===t?'#2255CC':'#8FA3BF'}}>{t}</button>
           ))}
         </div>
         <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
-          <div style={{width:5,height:5,borderRadius:'50%',background:ms.open?'var(--green)':'var(--red)',boxShadow:ms.open?'0 0 6px var(--green)':'none'}}/>
-          <span style={{fontSize:9,color:ms.open?'var(--green)':'var(--red)',letterSpacing:1.5,textTransform:'uppercase' as const,fontWeight:600}}>{ms.open?'Live':'Closed'}</span>
+          <div style={{width:5,height:5,borderRadius:'50%',background:ms.open?'#16A34A':'#DC2626',boxShadow:ms.open?'0 0 6px #16A34A':'none'}}/>
+          <span style={{fontSize:9,color:ms.open?'#16A34A':'#DC2626',letterSpacing:1.5,textTransform:'uppercase' as const,fontWeight:600}}>{ms.open?'Live':'Closed'}</span>
         </div>
       </div>
 
@@ -759,20 +759,20 @@ export function PlatformPage(){
       </div>
 
       {/* Bottom tabs */}
-      <div style={{height:220,flexShrink:0,background:'var(--bg2)',borderTop:'1px solid var(--bdr)',display:'flex',flexDirection:'column'}}>
-        <div style={{display:'flex',borderBottom:'1px solid var(--bdr)'}}>
+      <div style={{height:220,flexShrink:0,background:'#fff',borderTop:'1px solid #E8EEF8',display:'flex',flexDirection:'column'}}>
+        <div style={{display:'flex',borderBottom:'1px solid #E8EEF8'}}>
           {[['positions',`Positions (${openTrades.length})`],['history',`History (${closedTrades.length})`],['account','Account']].map(([k,l])=>(
-            <button key={k} onClick={()=>setTab(k)} style={{padding:'7px 14px',fontSize:9,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:600,cursor:'pointer',border:'none',marginBottom:-1,borderBottom:tab===k?'2px solid var(--gold)':'2px solid transparent',background:tab===k?'rgba(212,168,67,.04)':'transparent',color:tab===k?'var(--gold)':'var(--text3)'}}>{l}</button>
+            <button key={k} onClick={()=>setTab(k)} style={{padding:'7px 14px',fontSize:9,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:600,cursor:'pointer',border:'none',marginBottom:-1,borderBottom:tab===k?'2px solid #2255CC':'2px solid transparent',background:tab===k?'rgba(34,85,204,.03)':'transparent',color:tab===k?'#2255CC':'#8FA3BF'}}>{l}</button>
           ))}
         </div>
         <div style={{flex:1,overflow:'auto'}}>
 
           {tab==='positions'&&(openTrades.length===0
-            ?<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'var(--text3)',fontSize:11}}>No open positions</div>
+            ?<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'#8FA3BF',fontSize:11}}>No open positions</div>
             :<table style={{width:'100%',borderCollapse:'collapse',fontSize:10}}>
-               <thead><tr style={{borderBottom:'1px solid var(--dim)'}}>
+               <thead><tr style={{borderBottom:'1px solid rgba(26,58,107,.06)'}}>
                  {['Symbol','Dir','Lots','Open','Current','P&L','DD%','SL','TP','Time',''].map(h=>(
-                   <th key={h} style={{padding:'5px 8px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',textAlign:'left' as const,fontWeight:600}}>{h}</th>
+                   <th key={h} style={{padding:'5px 8px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',textAlign:'left' as const,fontWeight:600}}>{h}</th>
                  ))}
                </tr></thead>
                <tbody>{openTrades.map(t=>{
@@ -783,21 +783,21 @@ export function PlatformPage(){
                  const warn=ddPct<=-4
                  const isEditing=editSLTP?.id===t.id
                  return(
-                   <tr key={t.id} style={{borderBottom:'1px solid rgba(212,168,67,.04)',background:warn?'rgba(255,51,82,.05)':'transparent'}}>
+                   <tr key={t.id} style={{borderBottom:'1px solid rgba(34,85,204,.03)',background:warn?'rgba(220,38,38,.05)':'transparent'}}>
                      <td style={{padding:'5px 8px',fontWeight:700}}>{t.symbol}</td>
-                     <td style={{padding:'5px 8px'}}><span style={{fontSize:8,fontWeight:'bold',color:t.direction==='buy'?'var(--green)':'var(--red)'}}>{t.direction.toUpperCase()}</span></td>
+                     <td style={{padding:'5px 8px'}}><span style={{fontSize:8,fontWeight:'bold',color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction.toUpperCase()}</span></td>
                      <td style={{padding:'5px 8px',fontFamily:'monospace'}}>{t.lots}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',color:'var(--text2)'}}>{t.open_price}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:600,color:cur>=t.open_price?'var(--green)':'var(--red)'}}>{cur.toFixed(ti?.dec??5)}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:700,fontSize:11,color:pnl>=0?'var(--green)':'var(--red)'}}>{pnl>=0?'+':''}{fmt(pnl)}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:10,fontWeight:600,color:warn?'var(--red)':ddPct<0?'rgba(255,51,82,.7)':'var(--green)'}}>{ddPct>=0?'+':''}{ddPct.toFixed(2)}%</td>
+                     <td style={{padding:'5px 8px',fontFamily:'monospace',color:'#5C7A9E'}}>{t.open_price}</td>
+                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:600,color:cur>=t.open_price?'#16A34A':'#DC2626'}}>{cur.toFixed(ti?.dec??5)}</td>
+                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:700,fontSize:11,color:pnl>=0?'#16A34A':'#DC2626'}}>{pnl>=0?'+':''}{fmt(pnl)}</td>
+                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:10,fontWeight:600,color:warn?'#DC2626':ddPct<0?'rgba(255,51,82,.7)':'#16A34A'}}>{ddPct>=0?'+':''}{ddPct.toFixed(2)}%</td>
                      {/* SL editable */}
                      <td style={{padding:'5px 8px'}}>
                        {isEditing
                          ?<input value={editSLTP!.sl} onChange={e=>setEditSLTP(x=>x?{...x,sl:e.target.value}:null)}
-                             style={{width:70,padding:'2px 4px',background:'rgba(255,51,82,.1)',border:'1px solid rgba(255,51,82,.4)',color:'var(--red)',fontFamily:'monospace',fontSize:9,outline:'none'}}
+                             style={{width:70,padding:'2px 4px',background:'rgba(220,38,38,.1)',border:'1px solid rgba(255,51,82,.4)',color:'#DC2626',fontFamily:'monospace',fontSize:9,outline:'none'}}
                              type="number" placeholder="SL"/>
-                         :<span style={{fontFamily:'monospace',color:'var(--red)',fontSize:9,cursor:'pointer',textDecoration:'underline',textDecorationStyle:'dotted' as const}}
+                         :<span style={{fontFamily:'monospace',color:'#DC2626',fontSize:9,cursor:'pointer',textDecoration:'underline',textDecorationStyle:'dotted' as const}}
                              onClick={()=>setEditSLTP({id:t.id,sl:t.sl?.toString()||'',tp:t.tp?.toString()||''})}>
                              {t.sl??'—'}
                            </span>
@@ -807,22 +807,22 @@ export function PlatformPage(){
                      <td style={{padding:'5px 8px'}}>
                        {isEditing
                          ?<input value={editSLTP!.tp} onChange={e=>setEditSLTP(x=>x?{...x,tp:e.target.value}:null)}
-                             style={{width:70,padding:'2px 4px',background:'rgba(0,217,126,.1)',border:'1px solid rgba(0,217,126,.4)',color:'var(--green)',fontFamily:'monospace',fontSize:9,outline:'none'}}
+                             style={{width:70,padding:'2px 4px',background:'rgba(22,163,74,.1)',border:'1px solid rgba(0,217,126,.4)',color:'#16A34A',fontFamily:'monospace',fontSize:9,outline:'none'}}
                              type="number" placeholder="TP"/>
-                         :<span style={{fontFamily:'monospace',color:'var(--green)',fontSize:9,cursor:'pointer',textDecoration:'underline',textDecorationStyle:'dotted' as const}}
+                         :<span style={{fontFamily:'monospace',color:'#16A34A',fontSize:9,cursor:'pointer',textDecoration:'underline',textDecorationStyle:'dotted' as const}}
                              onClick={()=>setEditSLTP({id:t.id,sl:t.sl?.toString()||'',tp:t.tp?.toString()||''})}>
                              {t.tp??'—'}
                            </span>
                        }
                      </td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:9,color:'var(--text3)'}}>{new Date(t.opened_at).toLocaleTimeString()}</td>
+                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:9,color:'#8FA3BF'}}>{new Date(t.opened_at).toLocaleTimeString()}</td>
                      <td style={{padding:'5px 8px',display:'flex',gap:4}}>
                        {isEditing
                          ?<>
-                            <button onClick={saveEditSLTP} style={{padding:'2px 6px',fontSize:8,cursor:'pointer',background:'rgba(0,217,126,.15)',color:'var(--green)',border:'1px solid rgba(0,217,126,.3)',fontWeight:'bold'}}>✓</button>
-                            <button onClick={()=>setEditSLTP(null)} style={{padding:'2px 6px',fontSize:8,cursor:'pointer',background:'transparent',color:'var(--text3)',border:'1px solid var(--dim)'}}>✕</button>
+                            <button onClick={saveEditSLTP} style={{padding:'2px 6px',fontSize:8,cursor:'pointer',background:'rgba(0,217,126,.15)',color:'#16A34A',border:'1px solid rgba(0,217,126,.3)',fontWeight:'bold'}}>✓</button>
+                            <button onClick={()=>setEditSLTP(null)} style={{padding:'2px 6px',fontSize:8,cursor:'pointer',background:'transparent',color:'#8FA3BF',border:'1px solid rgba(26,58,107,.06)'}}>✕</button>
                           </>
-                         :<button onClick={()=>closeTrade(t)} style={{padding:'3px 8px',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:'rgba(255,51,82,.1)',color:'var(--red)',border:'1px solid rgba(255,51,82,.25)'}}>Close</button>
+                         :<button onClick={()=>closeTrade(t)} style={{padding:'3px 8px',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:'rgba(220,38,38,.1)',color:'#DC2626',border:'1px solid rgba(255,51,82,.25)'}}>Close</button>
                        }
                      </td>
                    </tr>
@@ -832,24 +832,24 @@ export function PlatformPage(){
           )}
 
           {tab==='history'&&(closedTrades.length===0
-            ?<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'var(--text3)',fontSize:11}}>No history</div>
+            ?<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'#8FA3BF',fontSize:11}}>No history</div>
             :<table style={{width:'100%',borderCollapse:'collapse',fontSize:10}}>
-               <thead><tr style={{borderBottom:'1px solid var(--dim)'}}>
+               <thead><tr style={{borderBottom:'1px solid rgba(26,58,107,.06)'}}>
                  {['Symbol','Dir','Lots','Open','Close','Pips','P&L','Reason','Date'].map(h=>(
-                   <th key={h} style={{padding:'5px 8px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',textAlign:'left' as const,fontWeight:600}}>{h}</th>
+                   <th key={h} style={{padding:'5px 8px',fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',textAlign:'left' as const,fontWeight:600}}>{h}</th>
                  ))}
                </tr></thead>
                <tbody>{closedTrades.map(t=>(
-                 <tr key={t.id} style={{borderBottom:'1px solid rgba(212,168,67,.04)'}}>
+                 <tr key={t.id} style={{borderBottom:'1px solid rgba(34,85,204,.03)'}}>
                    <td style={{padding:'5px 8px',fontWeight:700}}>{t.symbol}</td>
-                   <td style={{padding:'5px 8px'}}><span style={{fontSize:8,fontWeight:'bold',color:t.direction==='buy'?'var(--green)':'var(--red)'}}>{t.direction.toUpperCase()}</span></td>
+                   <td style={{padding:'5px 8px'}}><span style={{fontSize:8,fontWeight:'bold',color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction.toUpperCase()}</span></td>
                    <td style={{padding:'5px 8px',fontFamily:'monospace'}}>{t.lots}</td>
                    <td style={{padding:'5px 8px',fontFamily:'monospace'}}>{t.open_price}</td>
                    <td style={{padding:'5px 8px',fontFamily:'monospace'}}>{t.close_price??'—'}</td>
-                   <td style={{padding:'5px 8px',fontFamily:'monospace',color:(t.pips??0)>=0?'var(--green)':'var(--red)'}}>{t.pips!=null?`${t.pips>0?'+':''}${t.pips}`:'—'}</td>
-                   <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:700,color:(t.net_pnl??0)>=0?'var(--green)':'var(--red)'}}>{t.net_pnl!=null?`${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}`:'—'}</td>
-                   <td style={{padding:'5px 8px',fontSize:9,color:t.close_reason==='breach'?'var(--red)':'var(--text3)'}}>{t.close_reason==='breach'?'🚨 Breach':'Manual'}</td>
-                   <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:9,color:'var(--text3)'}}>{t.closed_at?new Date(t.closed_at).toLocaleString():'—'}</td>
+                   <td style={{padding:'5px 8px',fontFamily:'monospace',color:(t.pips??0)>=0?'#16A34A':'#DC2626'}}>{t.pips!=null?`${t.pips>0?'+':''}${t.pips}`:'—'}</td>
+                   <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:700,color:(t.net_pnl??0)>=0?'#16A34A':'#DC2626'}}>{t.net_pnl!=null?`${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}`:'—'}</td>
+                   <td style={{padding:'5px 8px',fontSize:9,color:t.close_reason==='breach'?'#DC2626':'#8FA3BF'}}>{t.close_reason==='breach'?'🚨 Breach':'Manual'}</td>
+                   <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:9,color:'#8FA3BF'}}>{t.closed_at?new Date(t.closed_at).toLocaleString():'—'}</td>
                  </tr>
                ))}</tbody>
              </table>
@@ -858,19 +858,19 @@ export function PlatformPage(){
           {tab==='account'&&(
             <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,padding:16}}>
               {([
-                ['Balance',    fmt(balance),                           'var(--gold)'],
-                ['Equity',     fmt(equity),                            equity>=balance?'var(--green)':'var(--red)'],
-                ['Open P&L',   `${openPnl>=0?'+':''}${fmt(openPnl)}`, openPnl>=0?'var(--green)':'var(--red)'],
-                ['Free Margin',fmt(freeMargin),                         freeMargin<0?'var(--red)':'var(--text)'],
-                ['Used Margin',fmt(usedMargin),                         'var(--text)'],
-                ['Margin Lvl', usedMargin>0?`${marginLvl.toFixed(0)}%`:'∞', marginLvl<150&&usedMargin>0?'var(--red)':'var(--green)'],
-                ['Leverage',   `1:${LEVERAGE}`,                         'var(--text2)'],
-                ['Open Pos.',  String(openTrades.length),               'var(--text)'],
-                ['Account',    primary?.account_number??'—',            'var(--gold)'],
-                ['Phase',      primary?.phase??'—',                     'var(--text2)'],
+                ['Balance',    fmt(balance),                           '#2255CC'],
+                ['Equity',     fmt(equity),                            equity>=balance?'#16A34A':'#DC2626'],
+                ['Open P&L',   `${openPnl>=0?'+':''}${fmt(openPnl)}`, openPnl>=0?'#16A34A':'#DC2626'],
+                ['Free Margin',fmt(freeMargin),                         freeMargin<0?'#DC2626':'#1A3A6B'],
+                ['Used Margin',fmt(usedMargin),                         '#1A3A6B'],
+                ['Margin Lvl', usedMargin>0?`${marginLvl.toFixed(0)}%`:'∞', marginLvl<150&&usedMargin>0?'#DC2626':'#16A34A'],
+                ['Leverage',   `1:${LEVERAGE}`,                         '#5C7A9E'],
+                ['Open Pos.',  String(openTrades.length),               '#1A3A6B'],
+                ['Account',    primary?.account_number??'—',            '#2255CC'],
+                ['Phase',      primary?.phase??'—',                     '#5C7A9E'],
               ] as [string,string,string][]).map(([l,v,c])=>(
                 <div key={l}>
-                  <div style={{fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:4}}>{l}</div>
+                  <div style={{fontSize:7,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:4}}>{l}</div>
                   <div style={{fontFamily:'monospace',fontSize:12,color:c}}>{v}</div>
                 </div>
               ))}
@@ -881,39 +881,39 @@ export function PlatformPage(){
     </div>
 
     {/* ── Order Panel ── */}
-    <div style={{width:215,flexShrink:0,background:'var(--bg2)',borderLeft:'1px solid var(--bdr)',display:'flex',flexDirection:'column'}}>
-      <div style={{padding:'10px 12px',borderBottom:'1px solid var(--bdr)'}}>
-        <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:8}}>Order Panel</div>
-        <div style={{marginBottom:8,padding:'5px 8px',background:ms.open?'rgba(0,217,126,.07)':'rgba(255,51,82,.07)',border:`1px solid ${ms.open?'rgba(0,217,126,.2)':'rgba(255,51,82,.2)'}`,display:'flex',alignItems:'center',gap:6}}>
-          <div style={{width:5,height:5,borderRadius:'50%',background:ms.open?'var(--green)':'var(--red)',flexShrink:0}}/>
-          <span style={{fontSize:8,color:ms.open?'var(--green)':'var(--red)',fontWeight:600}}>{ms.label}</span>
+    <div style={{width:215,flexShrink:0,background:'#fff',borderLeft:'1px solid #E8EEF8',display:'flex',flexDirection:'column'}}>
+      <div style={{padding:'10px 12px',borderBottom:'1px solid #E8EEF8'}}>
+        <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:8}}>Order Panel</div>
+        <div style={{marginBottom:8,padding:'5px 8px',background:ms.open?'rgba(0,217,126,.07)':'rgba(220,38,38,.07)',border:`1px solid ${ms.open?'rgba(0,217,126,.2)':'rgba(255,51,82,.2)'}`,display:'flex',alignItems:'center',gap:6}}>
+          <div style={{width:5,height:5,borderRadius:'50%',background:ms.open?'#16A34A':'#DC2626',flexShrink:0}}/>
+          <span style={{fontSize:8,color:ms.open?'#16A34A':'#DC2626',fontWeight:600}}>{ms.label}</span>
         </div>
         <div style={{display:'flex'}}>
-          <button onClick={()=>setDir('buy')}  disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='buy'?'var(--green)':'rgba(0,217,126,.08)',color:dir==='buy'?'#000':'var(--green)'}}>Buy</button>
-          <button onClick={()=>setDir('sell')} disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='sell'?'var(--red)':'rgba(255,51,82,.08)',color:dir==='sell'?'#fff':'var(--red)'}}>Sell</button>
+          <button onClick={()=>setDir('buy')}  disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='buy'?'#16A34A':'rgba(0,217,126,.08)',color:dir==='buy'?'#000':'#16A34A'}}>Buy</button>
+          <button onClick={()=>setDir('sell')} disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='sell'?'#DC2626':'rgba(255,51,82,.08)',color:dir==='sell'?'#fff':'#DC2626'}}>Sell</button>
         </div>
       </div>
       <div style={{flex:1,overflowY:'auto',padding:12,display:'flex',flexDirection:'column',gap:8}}>
         {/* Price */}
-        <div style={{textAlign:'center' as const,padding:'10px 8px',border:`1px solid ${up?'rgba(0,217,126,.25)':'rgba(255,51,82,.25)'}`,background:'var(--bg3)'}}>
-          <div style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:3}}>{dir==='buy'?'Ask':'Bid'}</div>
-          <div style={{fontFamily:'monospace',fontSize:22,fontWeight:700,letterSpacing:-1,color:up?'var(--green)':'var(--red)'}}>{execPrice.toFixed(inst.dec)}</div>
-          <div style={{fontSize:8,color:'var(--text3)',marginTop:3}}>spread {inst.spread.toFixed(inst.dec)}</div>
+        <div style={{textAlign:'center' as const,padding:'10px 8px',border:`1px solid ${up?'rgba(0,217,126,.25)':'rgba(255,51,82,.25)'}`,background:'#F4F7FD'}}>
+          <div style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:3}}>{dir==='buy'?'Ask':'Bid'}</div>
+          <div style={{fontFamily:'monospace',fontSize:22,fontWeight:700,letterSpacing:-1,color:up?'#16A34A':'#DC2626'}}>{execPrice.toFixed(inst.dec)}</div>
+          <div style={{fontSize:8,color:'#8FA3BF',marginTop:3}}>spread {inst.spread.toFixed(inst.dec)}</div>
         </div>
         {/* Order type */}
         <div>
-          <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:4}}>Order Type</div>
-          <div style={{display:'flex',background:'var(--bg3)',border:'1px solid var(--dim)'}}>
-            {['Market','Limit','Stop'].map(t=><button key={t} onClick={()=>setOrdType(t)} style={{flex:1,padding:'6px 0',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',border:'none',background:ordType===t?'rgba(212,168,67,.12)':'transparent',color:ordType===t?'var(--gold)':'var(--text3)'}}>{t}</button>)}
+          <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:4}}>Order Type</div>
+          <div style={{display:'flex',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)'}}>
+            {['Market','Limit','Stop'].map(t=><button key={t} onClick={()=>setOrdType(t)} style={{flex:1,padding:'6px 0',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',border:'none',background:ordType===t?'rgba(34,85,204,.1)':'transparent',color:ordType===t?'#2255CC':'#8FA3BF'}}>{t}</button>)}
           </div>
         </div>
         {/* Lot size */}
         <div>
-          <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:4}}>Lot Size <span style={{fontWeight:400}}>max {maxLots}</span></div>
-          <div style={{display:'flex',background:'var(--bg3)',border:'1px solid var(--dim)'}}>
-            <button onClick={()=>setLots(l=>String(Math.max(0.01,+l-0.01).toFixed(2)))} style={{padding:'0 10px',background:'transparent',border:'none',borderRight:'1px solid var(--dim)',cursor:'pointer',color:'var(--text3)',fontSize:16}}>−</button>
-            <input value={lots} onChange={e=>setLots(e.target.value)} type="number" step="0.01" min="0.01" style={{flex:1,textAlign:'center' as const,padding:'8px 0',background:'transparent',border:'none',outline:'none',color:'var(--text)',fontFamily:'monospace',fontSize:13}}/>
-            <button onClick={()=>setLots(l=>String((+l+0.01).toFixed(2)))} style={{padding:'0 10px',background:'transparent',border:'none',borderLeft:'1px solid var(--dim)',cursor:'pointer',color:'var(--text3)',fontSize:16}}>+</button>
+          <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:4}}>Lot Size <span style={{fontWeight:400}}>max {maxLots}</span></div>
+          <div style={{display:'flex',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)'}}>
+            <button onClick={()=>setLots(l=>String(Math.max(0.01,+l-0.01).toFixed(2)))} style={{padding:'0 10px',background:'transparent',border:'none',borderRight:'1px solid rgba(26,58,107,.06)',cursor:'pointer',color:'#8FA3BF',fontSize:16}}>−</button>
+            <input value={lots} onChange={e=>setLots(e.target.value)} type="number" step="0.01" min="0.01" style={{flex:1,textAlign:'center' as const,padding:'8px 0',background:'transparent',border:'none',outline:'none',color:'#1A3A6B',fontFamily:'monospace',fontSize:13}}/>
+            <button onClick={()=>setLots(l=>String((+l+0.01).toFixed(2)))} style={{padding:'0 10px',background:'transparent',border:'none',borderLeft:'1px solid rgba(26,58,107,.06)',cursor:'pointer',color:'#8FA3BF',fontSize:16}}>+</button>
           </div>
         </div>
         {/* SL / TP */}
@@ -921,26 +921,26 @@ export function PlatformPage(){
           const v=i===0?sl:tp;const sv=i===0?setSl:setTp
           return(
             <div key={l}>
-              <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600,marginBottom:4}}>{l}</div>
-              <input value={v} onChange={e=>sv(e.target.value)} placeholder="Optional" type="number" style={{width:'100%',padding:'8px',background:'var(--bg3)',border:'1px solid var(--dim)',outline:'none',color:'var(--text)',fontFamily:'monospace',fontSize:12,boxSizing:'border-box' as const}}/>
+              <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:4}}>{l}</div>
+              <input value={v} onChange={e=>sv(e.target.value)} placeholder="Optional" type="number" style={{width:'100%',padding:'8px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',outline:'none',color:'#1A3A6B',fontFamily:'monospace',fontSize:12,boxSizing:'border-box' as const}}/>
             </div>
           )
         })}
         {/* Margin info */}
-        <div style={{background:'var(--bg3)',border:'1px solid var(--dim)',padding:'8px 10px'}}>
+        <div style={{background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)',padding:'8px 10px'}}>
           {([
-            ['Notional',    `$${(notionalPerLot*lotsNum).toLocaleString('en',{maximumFractionDigits:0})}`, 'var(--text2)'],
-            ['Req. Margin', `$${reqMargin.toLocaleString('en',{maximumFractionDigits:2})}`,               reqMargin>freeMargin?'var(--red)':'var(--text)'],
-            ['Free Margin', `$${freeMargin.toLocaleString('en',{maximumFractionDigits:2})}`,              freeMargin<reqMargin?'var(--red)':'var(--green)'],
-            ['Leverage',    `1:${LEVERAGE}`,                                                               'var(--text3)'],
+            ['Notional',    `$${(notionalPerLot*lotsNum).toLocaleString('en',{maximumFractionDigits:0})}`, '#5C7A9E'],
+            ['Req. Margin', `$${reqMargin.toLocaleString('en',{maximumFractionDigits:2})}`,               reqMargin>freeMargin?'#DC2626':'#1A3A6B'],
+            ['Free Margin', `$${freeMargin.toLocaleString('en',{maximumFractionDigits:2})}`,              freeMargin<reqMargin?'#DC2626':'#16A34A'],
+            ['Leverage',    `1:${LEVERAGE}`,                                                               '#8FA3BF'],
           ] as [string,string,string][]).map(([l,v,c])=>(
             <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-              <span style={{fontSize:8,color:'var(--text3)'}}>{l}</span>
+              <span style={{fontSize:8,color:'#8FA3BF'}}>{l}</span>
               <span style={{fontSize:9,fontFamily:'monospace',fontWeight:600,color:c}}>{v}</span>
             </div>
           ))}
         </div>
-        <button onClick={()=>setConfirm(true)} disabled={!canTrade||placing||reqMargin>freeMargin} style={{width:'100%',padding:'12px 0',fontSize:11,letterSpacing:2,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade&&!placing&&reqMargin<=freeMargin?'pointer':'not-allowed',border:'none',opacity:canTrade&&!placing&&reqMargin<=freeMargin?1:0.35,background:dir==='buy'?'var(--green)':'var(--red)',color:dir==='buy'?'#000':'#fff'}}>
+        <button onClick={()=>setConfirm(true)} disabled={!canTrade||placing||reqMargin>freeMargin} style={{width:'100%',padding:'12px 0',fontSize:11,letterSpacing:2,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade&&!placing&&reqMargin<=freeMargin?'pointer':'not-allowed',border:'none',opacity:canTrade&&!placing&&reqMargin<=freeMargin?1:0.35,background:dir==='buy'?'#16A34A':'#DC2626',color:dir==='buy'?'#000':'#fff'}}>
           {!ms.open?'Market Closed':placing?'Placing…':`${dir.toUpperCase()} ${lotsNum} ${sym}`}
         </button>
       </div>
@@ -950,9 +950,9 @@ export function PlatformPage(){
   {/* Confirm modal */}
   {confirm&&(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.8)',backdropFilter:'blur(4px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{background:'var(--bg2)',border:'1px solid var(--bdr2)',padding:24,minWidth:300}}>
+      <div style={{background:'#fff',border:'1px solid #C5D5EA',padding:24,minWidth:300}}>
         <div style={{fontFamily:'serif',fontSize:19,fontWeight:'bold',marginBottom:4}}>Confirm Order</div>
-        <div style={{fontSize:11,color:'var(--text2)',marginBottom:16}}>Review before executing</div>
+        <div style={{fontSize:11,color:'#5C7A9E',marginBottom:16}}>Review before executing</div>
         <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16}}>
           {([
             ['Symbol',sym],['Direction',dir.toUpperCase()],['Type',ordType],
@@ -961,15 +961,15 @@ export function PlatformPage(){
             ['Req. Margin',`$${reqMargin.toLocaleString('en',{maximumFractionDigits:2})}`],
             ['Account',primary?.account_number??'—'],
           ] as [string,string][]).map(([l,v])=>(
-            <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'6px 10px',background:'var(--bg3)',border:'1px solid var(--dim)'}}>
-              <span style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase' as const,color:'var(--text3)',fontWeight:600}}>{l}</span>
-              <span style={{fontFamily:'monospace',fontSize:12,color:v==='BUY'?'var(--green)':v==='SELL'?'var(--red)':'var(--text)'}}>{v}</span>
+            <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'6px 10px',background:'#F4F7FD',border:'1px solid rgba(26,58,107,.06)'}}>
+              <span style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600}}>{l}</span>
+              <span style={{fontFamily:'monospace',fontSize:12,color:v==='BUY'?'#16A34A':v==='SELL'?'#DC2626':'#1A3A6B'}}>{v}</span>
             </div>
           ))}
         </div>
         <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
-          <button onClick={()=>setConfirm(false)} style={{padding:'8px 18px',background:'transparent',border:'1px solid var(--bdr2)',color:'var(--text2)',fontSize:9,letterSpacing:2,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer'}}>Cancel</button>
-          <button onClick={placeOrder} style={{padding:'8px 22px',border:'none',fontSize:9,letterSpacing:2,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:dir==='buy'?'var(--green)':'var(--red)',color:dir==='buy'?'#000':'#fff'}}>Confirm {dir.toUpperCase()}</button>
+          <button onClick={()=>setConfirm(false)} style={{padding:'8px 18px',background:'transparent',border:'1px solid #C5D5EA',color:'#5C7A9E',fontSize:9,letterSpacing:2,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer'}}>Cancel</button>
+          <button onClick={placeOrder} style={{padding:'8px 22px',border:'none',fontSize:9,letterSpacing:2,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:dir==='buy'?'#16A34A':'#DC2626',color:dir==='buy'?'#000':'#fff'}}>Confirm {dir.toUpperCase()}</button>
         </div>
       </div>
     </div>

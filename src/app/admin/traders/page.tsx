@@ -246,29 +246,29 @@ export function AdminTradersPage() {
     openTrader(selectedTrader)
   }
 
-  const inp = "flex-1 px-3 py-[9px] bg-transparent outline-none text-[var(--text)] text-[12px] font-sans placeholder-[rgba(230,226,248,.3)]"
+  const inp = "flex-1 px-3 py-[9px] bg-transparent outline-none text-[#1A3A6B] text-[12px] font-sans placeholder-[rgba(230,226,248,.3)]"
 
   return (
     <>
       <DashboardLayout title="Trader Management" nav={ADMIN_NAV} accentColor="red">
         <Card>
           <CardHeader title={`All Traders (${filtered.length})`} action={
-            <span className="text-[10px] text-[var(--text3)]">{traders.length} total registered</span>
+            <span className="text-[10px] text-[#8FA3BF]">{traders.length} total registered</span>
           }/>
-          <div className="flex bg-[var(--bg3)] border border-[var(--dim)] focus-within:border-[var(--bdr2)] mb-3 transition-colors">
-            <span className="px-3 flex items-center text-[var(--text3)]">🔍</span>
+          <div className="flex bg-[#F4F7FD] border border-[#F0F4FB] focus-within:border-[#C5D5EA] mb-3 transition-colors">
+            <span className="px-3 flex items-center text-[#8FA3BF]">🔍</span>
             <input className={inp} placeholder="Search name, email or IP…" value={search} onChange={e => setSearch(e.target.value)}/>
           </div>
           {loading ? (
-            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[var(--red)] border-t-transparent rounded-full animate-spin"/></div>
+            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[#DC2626] border-t-transparent rounded-full animate-spin"/></div>
           ) : filtered.length === 0 ? (
-            <div className="py-10 text-center text-[11px] text-[var(--text3)]">No traders found</div>
+            <div className="py-10 text-center text-[11px] text-[#8FA3BF]">No traders found</div>
           ) : (
             <table className="w-full border-collapse text-[11px]">
               <thead>
-                <tr className="border-b border-[var(--dim)]">
+                <tr className="border-b border-[#F0F4FB]">
                   {['Name','Email','Country','Last IP','Last Login','Accounts','Best Phase','Status','Role','Joined','Actions'].map(h=>(
-                    <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left bg-[rgba(255,51,82,.02)]">{h}</th>
+                    <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(220,38,38,.02)]">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -279,54 +279,54 @@ export function AdminTradersPage() {
                     ?? accounts.find((a:any)=>a.phase==='phase2')?.phase
                     ?? accounts[0]?.phase ?? '—'
                   return (
-                    <tr key={t.id} className={`border-b border-[rgba(255,51,82,.04)] hover:bg-[rgba(255,51,82,.03)] cursor-pointer ${t.is_banned ? 'opacity-50' : ''}`}>
+                    <tr key={t.id} className={`border-b border-[rgba(220,38,38,.04)] hover:bg-[rgba(255,51,82,.03)] cursor-pointer ${t.is_banned ? 'opacity-50' : ''}`}>
                       <td className="px-[11px] py-[8px] font-semibold" onClick={()=>openTrader(t)}>
-                        <span className="hover:text-[var(--gold)] transition-colors">{t.first_name} {t.last_name}</span>
+                        <span className="hover:text-[#2255CC] transition-colors">{t.first_name} {t.last_name}</span>
                       </td>
-                      <td className="px-[11px] py-[8px] text-[var(--text2)]">{t.email}</td>
-                      <td className="px-[11px] py-[8px] text-[var(--text3)]">{t.country ?? '—'}</td>
+                      <td className="px-[11px] py-[8px] text-[#5C7A9E]">{t.email}</td>
+                      <td className="px-[11px] py-[8px] text-[#8FA3BF]">{t.country ?? '—'}</td>
                       <td className="px-[11px] py-[8px]">
                         {t.last_login_ip ? (
                           <button onClick={e=>{e.stopPropagation();setIpTrader(t)}}
-                            className="font-mono text-[10px] text-[var(--gold)] bg-[rgba(212,168,67,.08)] border border-[var(--bdr2)] px-[6px] py-[2px] cursor-pointer hover:bg-[rgba(212,168,67,.15)] transition-all">
+                            className="font-['JetBrains_Mono',monospace] text-[10px] text-[#2255CC] bg-[rgba(212,168,67,.08)] border border-[#C5D5EA] px-[6px] py-[2px] cursor-pointer hover:bg-[rgba(34,85,204,.15)] transition-all">
                             {t.last_login_ip}
                           </button>
-                        ) : <span className="text-[var(--text3)]">—</span>}
+                        ) : <span className="text-[#8FA3BF]">—</span>}
                       </td>
-                      <td className="px-[11px] py-[8px] text-[var(--text3)] text-[10px]">
+                      <td className="px-[11px] py-[8px] text-[#8FA3BF] text-[10px]">
                         {t.last_login_at ? new Date(t.last_login_at).toLocaleString() : '—'}
                       </td>
-                      <td className="px-[11px] py-[8px] font-mono">{accounts.length}</td>
+                      <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{accounts.length}</td>
                       <td className="px-[11px] py-[8px]">
-                        {bestPhase !== '—' ? <Badge variant={bestPhase as any}>{bestPhase}</Badge> : <span className="text-[var(--text3)]">—</span>}
+                        {bestPhase !== '—' ? <Badge variant={bestPhase as any}>{bestPhase}</Badge> : <span className="text-[#8FA3BF]">—</span>}
                       </td>
                       <td className="px-[11px] py-[8px]">
                         {t.is_banned
-                          ? <span className="text-[8px] uppercase font-bold text-[var(--red)] bg-[rgba(255,51,82,.1)] border border-[rgba(255,51,82,.2)] px-[6px] py-[2px]">Banned</span>
-                          : <span className="text-[8px] uppercase font-bold text-[var(--green)]">Active</span>
+                          ? <span className="text-[8px] uppercase font-bold text-[#DC2626] bg-[rgba(220,38,38,.1)] border border-[rgba(255,51,82,.2)] px-[6px] py-[2px]">Banned</span>
+                          : <span className="text-[8px] uppercase font-bold text-[#16A34A]">Active</span>
                         }
                       </td>
                       <td className="px-[11px] py-[8px]"><Badge variant={t.role==='admin'?'warning':'open'}>{t.role}</Badge></td>
-                      <td className="px-[11px] py-[8px] text-[var(--text3)] text-[10px]">{new Date(t.created_at).toLocaleDateString()}</td>
+                      <td className="px-[11px] py-[8px] text-[#8FA3BF] text-[10px]">{new Date(t.created_at).toLocaleDateString()}</td>
                       <td className="px-[11px] py-[8px]" onClick={e=>e.stopPropagation()}>
                         <div className="flex gap-1 flex-wrap">
                           <button onClick={()=>openTrader(t)}
-                            className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(212,168,67,.1)] text-[var(--gold)] border border-[var(--bdr2)]">
+                            className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(34,85,204,.08)] text-[#2255CC] border border-[#C5D5EA]">
                             View
                           </button>
                           <button onClick={()=>banTrader(t.id, t.is_banned)}
-                            className={`px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer border ${t.is_banned ? 'bg-[rgba(0,200,100,.1)] text-[var(--green)] border-[rgba(0,200,100,.2)]' : 'bg-[rgba(255,51,82,.1)] text-[var(--red)] border-[rgba(255,51,82,.2)]'}`}>
+                            className={`px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer border ${t.is_banned ? 'bg-[rgba(0,200,100,.1)] text-[#16A34A] border-[rgba(0,200,100,.2)]' : 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(255,51,82,.2)]'}`}>
                             {t.is_banned ? 'Unban' : 'Ban'}
                           </button>
                           {t.role !== 'admin' && (
                             <button onClick={()=>setRole(t.id,'admin')}
-                              className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,51,82,.1)] text-[var(--red)] border border-[rgba(255,51,82,.2)]">
+                              className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(255,51,82,.2)]">
                               Admin
                             </button>
                           )}
                           {t.role !== 'trader' && (
                             <button onClick={()=>setRole(t.id,'trader')}
-                              className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(212,168,67,.1)] text-[var(--gold)] border border-[var(--bdr2)]">
+                              className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(34,85,204,.08)] text-[#2255CC] border border-[#C5D5EA]">
                               Trader
                             </button>
                           )}
@@ -343,54 +343,54 @@ export function AdminTradersPage() {
         {/* ── Trader Detail Modal ── */}
         {selectedTrader && (
           <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-6 overflow-y-auto" onClick={()=>setSelectedTrader(null)}>
-            <div className="bg-[var(--bg2)] border border-[var(--bdr)] w-full max-w-[760px] my-6" onClick={e=>e.stopPropagation()}>
+            <div className="bg-white border border-[#E8EEF8] w-full max-w-[760px] my-6" onClick={e=>e.stopPropagation()}>
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--bdr)]">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8EEF8]">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-[rgba(255,51,82,.1)] border border-[rgba(255,51,82,.2)] flex items-center justify-center font-bold text-[var(--red)] text-[13px]">
+                  <div className="w-10 h-10 rounded-full bg-[rgba(220,38,38,.1)] border border-[rgba(255,51,82,.2)] flex items-center justify-center font-bold text-[#DC2626] text-[13px]">
                     {selectedTrader.first_name?.[0]}{selectedTrader.last_name?.[0]}
                   </div>
                   <div>
-                    <div className="font-serif text-[16px] font-bold">{selectedTrader.first_name} {selectedTrader.last_name}</div>
-                    <div className="text-[10px] text-[var(--text3)]">{selectedTrader.email} · {selectedTrader.country ?? '—'}</div>
+                    <div className="font-sans text-[16px] font-bold">{selectedTrader.first_name} {selectedTrader.last_name}</div>
+                    <div className="text-[10px] text-[#8FA3BF]">{selectedTrader.email} · {selectedTrader.country ?? '—'}</div>
                   </div>
-                  {selectedTrader.is_banned && <span className="text-[8px] uppercase font-bold text-[var(--red)] bg-[rgba(255,51,82,.1)] border border-[rgba(255,51,82,.2)] px-[8px] py-[3px]">Banned</span>}
+                  {selectedTrader.is_banned && <span className="text-[8px] uppercase font-bold text-[#DC2626] bg-[rgba(220,38,38,.1)] border border-[rgba(255,51,82,.2)] px-[8px] py-[3px]">Banned</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={()=>setAddAccModal(true)}
-                    className="px-[12px] py-[6px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(212,168,67,.1)] text-[var(--gold)] border border-[var(--bdr2)]">
+                    className="px-[12px] py-[6px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(34,85,204,.08)] text-[#2255CC] border border-[#C5D5EA]">
                     + Add Account
                   </button>
                   <button onClick={()=>banTrader(selectedTrader.id, selectedTrader.is_banned)}
-                    className={`px-[12px] py-[6px] text-[8px] uppercase font-bold cursor-pointer border ${selectedTrader.is_banned ? 'bg-[rgba(0,200,100,.1)] text-[var(--green)] border-[rgba(0,200,100,.2)]' : 'bg-[rgba(255,51,82,.1)] text-[var(--red)] border-[rgba(255,51,82,.2)]'}`}>
+                    className={`px-[12px] py-[6px] text-[8px] uppercase font-bold cursor-pointer border ${selectedTrader.is_banned ? 'bg-[rgba(0,200,100,.1)] text-[#16A34A] border-[rgba(0,200,100,.2)]' : 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(255,51,82,.2)]'}`}>
                     {selectedTrader.is_banned ? '✓ Unban' : '🚫 Ban Trader'}
                   </button>
-                  <button onClick={()=>setSelectedTrader(null)} className="text-[var(--text3)] hover:text-[var(--text)] text-[18px] cursor-pointer bg-none border-none ml-2">✕</button>
+                  <button onClick={()=>setSelectedTrader(null)} className="text-[#8FA3BF] hover:text-[#1A3A6B] text-[18px] cursor-pointer bg-none border-none ml-2">✕</button>
                 </div>
               </div>
 
               {/* Info row */}
-              <div className="grid grid-cols-4 gap-0 border-b border-[var(--bdr)]">
+              <div className="grid grid-cols-4 gap-0 border-b border-[#E8EEF8]">
                 {[
                   ['Last IP', selectedTrader.last_login_ip ?? '—'],
                   ['Last Login', selectedTrader.last_login_at ? new Date(selectedTrader.last_login_at).toLocaleString() : '—'],
                   ['Joined', new Date(selectedTrader.created_at).toLocaleDateString()],
                   ['Role', selectedTrader.role],
                 ].map(([l,v])=>(
-                  <div key={l} className="px-5 py-3 border-r border-[var(--bdr)] last:border-0">
-                    <div className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold mb-1">{l}</div>
-                    <div className="font-mono text-[11px] text-[var(--gold)]">{v}</div>
+                  <div key={l} className="px-5 py-3 border-r border-[#E8EEF8] last:border-0">
+                    <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-1">{l}</div>
+                    <div className="font-['JetBrains_Mono',monospace] text-[11px] text-[#2255CC]">{v}</div>
                   </div>
                 ))}
               </div>
 
               {/* Accounts */}
               <div className="px-6 py-5">
-                <div className="text-[9px] uppercase tracking-[2px] text-[var(--text3)] font-semibold mb-4">Accounts ({traderAccounts.length})</div>
+                <div className="text-[9px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold mb-4">Accounts ({traderAccounts.length})</div>
                 {loadingAccounts ? (
-                  <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-[var(--red)] border-t-transparent rounded-full animate-spin"/></div>
+                  <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-[#DC2626] border-t-transparent rounded-full animate-spin"/></div>
                 ) : traderAccounts.length === 0 ? (
-                  <div className="py-8 text-center text-[11px] text-[var(--text3)]">No accounts yet</div>
+                  <div className="py-8 text-center text-[11px] text-[#8FA3BF]">No accounts yet</div>
                 ) : (
                   <div className="flex flex-col gap-3">
                     {traderAccounts.map(acc => {
@@ -400,15 +400,15 @@ export function AdminTradersPage() {
                       const canAdvance = acc.phase === 'phase1' || acc.phase === 'phase2'
                       const nextPhase = acc.phase === 'phase1' ? 'Phase 2' : acc.phase === 'phase2' ? 'Funded' : null
                       return (
-                        <div key={acc.id} className={`border p-4 ${acc.status === 'inactive' ? 'opacity-50 border-[var(--dim)]' : 'border-[var(--bdr2)]'}`}>
+                        <div key={acc.id} className={`border p-4 ${acc.status === 'inactive' ? 'opacity-50 border-[#F0F4FB]' : 'border-[#C5D5EA]'}`}>
                           <div className="flex items-center justify-between mb-3">
                             <div>
-                              <div className="font-mono text-[var(--gold)] text-[11px]">{acc.account_number}</div>
-                              <div className="text-[10px] text-[var(--text3)]">{prod?.name ?? '—'} · Server: {acc.server}</div>
+                              <div className="font-['JetBrains_Mono',monospace] text-[#2255CC] text-[11px]">{acc.account_number}</div>
+                              <div className="text-[10px] text-[#8FA3BF]">{prod?.name ?? '—'} · Server: {acc.server}</div>
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge variant={phaseVariant(acc.phase)}>{phaseLabel(acc.phase)}</Badge>
-                              {acc.status === 'inactive' && <span className="text-[8px] text-[var(--text3)] uppercase">Inactive</span>}
+                              {acc.status === 'inactive' && <span className="text-[8px] text-[#8FA3BF] uppercase">Inactive</span>}
                             </div>
                           </div>
                           <div className="grid grid-cols-4 gap-3 mb-3 text-[10px]">
@@ -418,20 +418,20 @@ export function AdminTradersPage() {
                               ['Daily DD', `${acc.daily_dd_used ?? 0}%`],
                               ['Max DD', `${acc.max_dd_used ?? 0}%`],
                             ].map(([l,v])=>(
-                              <div key={l} className="bg-[var(--bg3)] border border-[var(--dim)] px-3 py-2">
-                                <div className="text-[8px] uppercase tracking-[1px] text-[var(--text3)] mb-1">{l}</div>
-                                <div className="font-mono font-bold">{v}</div>
+                              <div key={l} className="bg-[#F4F7FD] border border-[#F0F4FB] px-3 py-2">
+                                <div className="text-[8px] uppercase tracking-[1px] text-[#8FA3BF] mb-1">{l}</div>
+                                <div className="font-['JetBrains_Mono',monospace] font-bold">{v}</div>
                               </div>
                             ))}
                           </div>
-                          <div className="text-[10px] text-[var(--text3)] mb-3">
-                            Login: <span className="font-mono text-[var(--text)]">{acc.platform_login}</span>
-                            &nbsp;·&nbsp;P&L: <span className={profitPct >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}>{profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%</span>
+                          <div className="text-[10px] text-[#8FA3BF] mb-3">
+                            Login: <span className="font-['JetBrains_Mono',monospace] text-[#1A3A6B]">{acc.platform_login}</span>
+                            &nbsp;·&nbsp;P&L: <span className={profitPct >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}>{profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%</span>
                           </div>
                           <div className="flex gap-2 flex-wrap">
                             {canAdvance && acc.status !== 'inactive' && acc.phase !== 'breached' && (
                               <button onClick={()=>advancePhase(acc)}
-                                className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(212,168,67,.1)] text-[var(--gold)] border border-[var(--bdr2)]">
+                                className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(34,85,204,.08)] text-[#2255CC] border border-[#C5D5EA]">
                                 → Move to {nextPhase}
                               </button>
                             )}
@@ -459,7 +459,7 @@ export function AdminTradersPage() {
                                 } catch(e) {}
                                 openTrader(selectedTrader)
                               }}
-                                className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,140,0,.1)] text-[var(--gold)] border border-[rgba(255,140,0,.2)]">
+                                className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-amber-50 text-[#2255CC] border border-amber-200">
                                 Mark Breached
                               </button>
                             )}
@@ -469,7 +469,7 @@ export function AdminTradersPage() {
                               toast('error','🗑','Deleted',`${acc.account_number} deleted.`)
                               openTrader(selectedTrader)
                             }}
-                              className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,51,82,.1)] text-[var(--red)] border border-[rgba(255,51,82,.2)]">
+                              className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(255,51,82,.2)]">
                               Delete
                             </button>
                           </div>
@@ -486,33 +486,33 @@ export function AdminTradersPage() {
         {/* ── IP History Modal ── */}
         {ipTrader && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6" onClick={()=>setIpTrader(null)}>
-            <div className="bg-[var(--bg2)] border border-[var(--bdr)] w-full max-w-[440px] p-6" onClick={e=>e.stopPropagation()}>
+            <div className="bg-white border border-[#E8EEF8] w-full max-w-[440px] p-6" onClick={e=>e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <div className="font-serif text-[15px] font-bold">{ipTrader.first_name} {ipTrader.last_name} — IP History</div>
-                  <div className="text-[10px] text-[var(--text3)]">{ipTrader.email}</div>
+                  <div className="font-sans text-[15px] font-bold">{ipTrader.first_name} {ipTrader.last_name} — IP History</div>
+                  <div className="text-[10px] text-[#8FA3BF]">{ipTrader.email}</div>
                 </div>
-                <button onClick={()=>setIpTrader(null)} className="text-[var(--text3)] hover:text-[var(--text)] text-[18px] cursor-pointer bg-none border-none">✕</button>
+                <button onClick={()=>setIpTrader(null)} className="text-[#8FA3BF] hover:text-[#1A3A6B] text-[18px] cursor-pointer bg-none border-none">✕</button>
               </div>
-              <div className="p-3 bg-[var(--bg3)] border border-[var(--dim)] mb-4">
-                <div className="text-[8px] uppercase tracking-[2px] text-[var(--text3)] font-semibold mb-1">Last Login</div>
+              <div className="p-3 bg-[#F4F7FD] border border-[#F0F4FB] mb-4">
+                <div className="text-[8px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold mb-1">Last Login</div>
                 <div className="flex justify-between">
-                  <span className="font-mono text-[var(--gold)]">{ipTrader.last_login_ip ?? '—'}</span>
-                  <span className="text-[10px] text-[var(--text3)]">{ipTrader.last_login_at ? new Date(ipTrader.last_login_at).toLocaleString() : '—'}</span>
+                  <span className="font-['JetBrains_Mono',monospace] text-[#2255CC]">{ipTrader.last_login_ip ?? '—'}</span>
+                  <span className="text-[10px] text-[#8FA3BF]">{ipTrader.last_login_at ? new Date(ipTrader.last_login_at).toLocaleString() : '—'}</span>
                 </div>
               </div>
-              <div className="text-[8px] uppercase tracking-[2px] text-[var(--text3)] font-semibold mb-2">History</div>
+              <div className="text-[8px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold mb-2">History</div>
               {ipTrader.login_history?.length > 0 ? (
                 <div className="flex flex-col gap-[3px] max-h-[240px] overflow-y-auto">
                   {[...ipTrader.login_history].reverse().map((e: any, i: number) => (
-                    <div key={i} className="flex justify-between items-center px-3 py-[5px] bg-[var(--bg3)] border border-[var(--dim)] text-[11px]">
-                      <span className="font-mono text-[var(--gold)]">{e.ip}</span>
-                      <span className="text-[var(--text3)] text-[10px]">{new Date(e.at).toLocaleString()}</span>
+                    <div key={i} className="flex justify-between items-center px-3 py-[5px] bg-[#F4F7FD] border border-[#F0F4FB] text-[11px]">
+                      <span className="font-['JetBrains_Mono',monospace] text-[#2255CC]">{e.ip}</span>
+                      <span className="text-[#8FA3BF] text-[10px]">{new Date(e.at).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-[11px] text-[var(--text3)] py-4 text-center">No history yet</div>
+                <div className="text-[11px] text-[#8FA3BF] py-4 text-center">No history yet</div>
               )}
             </div>
           </div>
@@ -521,28 +521,28 @@ export function AdminTradersPage() {
         {/* ── Add Account Modal ── */}
         {addAccModal && selectedTrader && (
           <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-6" onClick={()=>setAddAccModal(false)}>
-            <div className="bg-[var(--bg2)] border border-[var(--bdr)] w-full max-w-[400px] p-6" onClick={e=>e.stopPropagation()}>
+            <div className="bg-white border border-[#E8EEF8] w-full max-w-[400px] p-6" onClick={e=>e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
-                <div className="font-serif text-[15px] font-bold">Add Account Manually</div>
-                <button onClick={()=>setAddAccModal(false)} className="text-[var(--text3)] hover:text-[var(--text)] text-[18px] cursor-pointer bg-none border-none">✕</button>
+                <div className="font-sans text-[15px] font-bold">Add Account Manually</div>
+                <button onClick={()=>setAddAccModal(false)} className="text-[#8FA3BF] hover:text-[#1A3A6B] text-[18px] cursor-pointer bg-none border-none">✕</button>
               </div>
               <div className="mb-4">
-                <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Challenge Product</label>
+                <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Challenge Product</label>
                 <select value={addAccProduct} onChange={e=>setAddAccProduct(e.target.value)}
-                  className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none">
+                  className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[12px] outline-none">
                   <option value="">Select product…</option>
                   {products.map(p => <option key={p.id} value={p.id}>{p.name} (${p.price_usd})</option>)}
                 </select>
               </div>
               <div className="mb-6">
-                <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">Starting Phase</label>
+                <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Starting Phase</label>
                 <select value={addAccPhase} onChange={e=>setAddAccPhase(e.target.value)}
-                  className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[12px] outline-none">
+                  className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[12px] outline-none">
                   {['phase1','phase2','funded'].map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <button onClick={addAccountManually} disabled={addAccLoading}
-                className="w-full py-[12px] text-[9px] tracking-[2px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer hover:bg-[var(--gold2)] transition-all disabled:opacity-50">
+                className="w-full py-[12px] text-[9px] tracking-[2px] uppercase font-bold bg-[#2255CC] text-[#F0F4FB] border-none cursor-pointer hover:bg-[#1A44B0] transition-all disabled:opacity-50">
                 {addAccLoading ? 'Creating…' : 'Create Account →'}
               </button>
             </div>
@@ -552,19 +552,19 @@ export function AdminTradersPage() {
         {/* ── Edit Balance Modal ── */}
         {editBalAcc && (
           <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-6" onClick={()=>setEditBalAcc(null)}>
-            <div className="bg-[var(--bg2)] border border-[var(--bdr)] w-full max-w-[360px] p-6" onClick={e=>e.stopPropagation()}>
-              <div className="font-serif text-[15px] font-bold mb-1">Edit Balance</div>
-              <div className="text-[10px] text-[var(--text3)] mb-5">{editBalAcc.account_number}</div>
-              <label className="text-[8px] uppercase tracking-[1.5px] text-[var(--text3)] font-semibold block mb-2">New Balance (USD)</label>
+            <div className="bg-white border border-[#E8EEF8] w-full max-w-[360px] p-6" onClick={e=>e.stopPropagation()}>
+              <div className="font-sans text-[15px] font-bold mb-1">Edit Balance</div>
+              <div className="text-[10px] text-[#8FA3BF] mb-5">{editBalAcc.account_number}</div>
+              <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">New Balance (USD)</label>
               <input type="number" value={editBalValue} onChange={e=>setEditBalValue(e.target.value)}
-                className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--bdr2)] text-[var(--text)] text-[13px] font-mono outline-none focus:border-[var(--gold)] mb-5"/>
+                className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[13px] font-['JetBrains_Mono',monospace] outline-none focus:border-[#2255CC] mb-5"/>
               <div className="flex gap-3">
                 <button onClick={()=>setEditBalAcc(null)}
-                  className="flex-1 py-[10px] text-[9px] uppercase font-bold bg-[var(--bg3)] border border-[var(--dim)] text-[var(--text2)] cursor-pointer">
+                  className="flex-1 py-[10px] text-[9px] uppercase font-bold bg-[#F4F7FD] border border-[#F0F4FB] text-[#5C7A9E] cursor-pointer">
                   Cancel
                 </button>
                 <button onClick={()=>editBalance(editBalAcc, Number(editBalValue))}
-                  className="flex-1 py-[10px] text-[9px] uppercase font-bold bg-[var(--gold)] text-[var(--bg)] border-none cursor-pointer">
+                  className="flex-1 py-[10px] text-[9px] uppercase font-bold bg-[#2255CC] text-[#F0F4FB] border-none cursor-pointer">
                   Save →
                 </button>
               </div>

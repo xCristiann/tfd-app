@@ -5,64 +5,56 @@ interface Point { balance: number }
 export function EquityCurve({ data }: { data: Point[] }) {
   const ref = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => {
+  function draw(vals: number[]) {
     const c = ref.current
-    if (!c || data.length < 2) return
+    if (!c || vals.length < 2) return
     const ctx = c.getContext('2d')!
-    const W = c.parentElement!.clientWidth
-    const H = 160
+    const W = c.parentElement!.clientWidth || 400
+    const H = 140
     c.width = W; c.height = H
 
-    const vals = data.map((d) => d.balance)
     const mn = Math.min(...vals) * 0.999
     const mx = Math.max(...vals) * 1.001
     const toY = (v: number) => H - ((v - mn) / (mx - mn)) * H
     const step = W / (vals.length - 1)
 
     // Grid lines
-    ctx.strokeStyle = 'rgba(212,168,67,.05)'
+    ctx.strokeStyle = 'rgba(34,85,204,.06)'
     ctx.lineWidth = 1
-    for (let i = 1; i <= 4; i++) {
-      const y = (H / 4) * i
+    for (let i = 1; i <= 3; i++) {
+      const y = (H / 3) * i
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke()
     }
 
-    // Fill
+    // Fill under curve
     ctx.beginPath()
-    vals.forEach((v, i) => { i === 0 ? ctx.moveTo(0, toY(v)) : ctx.lineTo(i * step, toY(v)) })
+    vals.forEach((v, i) => i === 0 ? ctx.moveTo(0, toY(v)) : ctx.lineTo(i * step, toY(v)))
     ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath()
     const g = ctx.createLinearGradient(0, 0, 0, H)
-    g.addColorStop(0, 'rgba(0,217,126,.2)'); g.addColorStop(1, 'rgba(0,217,126,0)')
+    g.addColorStop(0, 'rgba(34,85,204,.12)')
+    g.addColorStop(1, 'rgba(34,85,204,.01)')
     ctx.fillStyle = g; ctx.fill()
 
     // Line
     ctx.beginPath()
-    vals.forEach((v, i) => { i === 0 ? ctx.moveTo(0, toY(v)) : ctx.lineTo(i * step, toY(v)) })
-    ctx.strokeStyle = 'rgba(0,217,126,.8)'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke()
-  }, [data])
+    vals.forEach((v, i) => i === 0 ? ctx.moveTo(0, toY(v)) : ctx.lineTo(i * step, toY(v)))
+    ctx.strokeStyle = '#2255CC'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke()
 
-  // Fallback mock data for preview
+    // End dot
+    const lastX = (vals.length - 1) * step
+    const lastY = toY(vals[vals.length - 1])
+    ctx.beginPath()
+    ctx.arc(lastX, lastY, 4, 0, Math.PI * 2)
+    ctx.fillStyle = '#2255CC'; ctx.fill()
+    ctx.beginPath()
+    ctx.arc(lastX, lastY, 7, 0, Math.PI * 2)
+    ctx.strokeStyle = 'rgba(34,85,204,.2)'; ctx.lineWidth = 2; ctx.stroke()
+  }
+
   useEffect(() => {
-    if (data.length > 0) return
-    const mock = [100000,100420,101200,100900,102100,103400,104800,106100,107400,108420]
-    const c = ref.current
-    if (!c) return
-    const ctx = c.getContext('2d')!
-    const W = c.parentElement!.clientWidth || 400; const H = 160
-    c.width = W; c.height = H
-    const mn = Math.min(...mock)*0.999, mx = Math.max(...mock)*1.001
-    const toY = (v: number) => H - ((v-mn)/(mx-mn))*H
-    const step = W/(mock.length-1)
-    ctx.beginPath()
-    mock.forEach((v,i)=>{i===0?ctx.moveTo(0,toY(v)):ctx.lineTo(i*step,toY(v))})
-    ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath()
-    const g=ctx.createLinearGradient(0,0,0,H)
-    g.addColorStop(0,'rgba(0,217,126,.2)');g.addColorStop(1,'rgba(0,217,126,0)')
-    ctx.fillStyle=g;ctx.fill()
-    ctx.beginPath()
-    mock.forEach((v,i)=>{i===0?ctx.moveTo(0,toY(v)):ctx.lineTo(i*step,toY(v))})
-    ctx.strokeStyle='rgba(0,217,126,.8)';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke()
+    if (data.length >= 2) draw(data.map(d => d.balance))
+    else draw([100000,100420,101200,100900,102100,103400,104800,106100,107400,108420])
   }, [data])
 
-  return <canvas ref={ref} style={{ width: '100%', height: 160 }} />
+  return <canvas ref={ref} style={{ width: '100%', height: 140, display: 'block' }} />
 }

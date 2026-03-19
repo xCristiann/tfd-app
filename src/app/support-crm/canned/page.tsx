@@ -28,7 +28,7 @@ export function CannedResponsesPage() {
       <DashboardLayout title="Canned Responses" nav={SUPPORT_NAV} accentColor="blue">
         <Card>
           <div className="flex justify-between items-center mb-3">
-            <div className="font-serif text-[15px] font-semibold">Canned Responses</div>
+            <div className="font-sans text-[15px] font-semibold">Canned Responses</div>
             <Button size="sm" onClick={()=>toast('info','➕','New','Create new canned response.')}>+ New Response</Button>
           </div>
           <div className="flex gap-[3px] mb-4">
@@ -36,25 +36,25 @@ export function CannedResponsesPage() {
               <button key={c} onClick={()=>setFilter(c)}
                 className={`px-[13px] py-[5px] text-[9px] tracking-[1.5px] uppercase font-semibold cursor-pointer border transition-all ${
                   filter===c
-                    ? 'bg-[rgba(59,158,255,.1)] border-[rgba(59,158,255,.25)] text-[var(--blue)]'
-                    : 'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)] hover:text-[var(--text2)]'
+                    ? 'bg-[rgba(59,158,255,.1)] border-[rgba(59,158,255,.25)] text-[#2255CC]'
+                    : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF] hover:text-[#5C7A9E]'
                 }`}>{c}</button>
             ))}
           </div>
           <div className="flex flex-col gap-3">
             {filtered.map((c,i)=>(
-              <div key={i} className="bg-[var(--bg3)] border border-[var(--bdr)] p-[13px]">
+              <div key={i} className="bg-[#F4F7FD] border border-[#E8EEF8] p-[13px]">
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <div className="font-semibold text-[12px]">{c.title}</div>
-                    <div className="text-[9px] text-[var(--blue)] mt-[1px]">{c.cat}</div>
+                    <div className="text-[9px] text-[#2255CC] mt-[1px]">{c.cat}</div>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="ghost" size="sm" onClick={()=>{navigator.clipboard.writeText(c.body);toast('success','📋','Copied','Response copied.')}}>Copy</Button>
                     <Button variant="ghost" size="sm" onClick={()=>toast('info','✏️','Edit','Editing response.')}>Edit</Button>
                   </div>
                 </div>
-                <p className="text-[11px] text-[var(--text2)] leading-[1.6] italic">"{c.body}"</p>
+                <p className="text-[11px] text-[#5C7A9E] leading-[1.6] italic">"{c.body}"</p>
               </div>
             ))}
           </div>

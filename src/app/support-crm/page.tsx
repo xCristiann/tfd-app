@@ -10,8 +10,8 @@ import { sendEmail } from '@/lib/email'
 import { SUPPORT_NAV } from '@/lib/nav'
 
 const PRI_COLOR: Record<string,string> = {
-  urgent:'text-[var(--red)]', high:'text-[var(--orange,#ff8c42)]',
-  medium:'text-[var(--gold)]', low:'text-[var(--text2)]',
+  urgent:'text-[#DC2626]', high:'text-[var(--orange,#ff8c42)]',
+  medium:'text-[#2255CC]', low:'text-[#5C7A9E]',
 }
 const STATUS_VARIANT: Record<string,any> = {
   open:'open', pending:'warning', resolved:'funded', closed:'breached'
@@ -148,13 +148,13 @@ export function SupportCRMPage() {
         <div className="flex gap-[14px] h-[calc(100vh-88px)]">
 
           {/* Ticket list */}
-          <div className="w-[280px] flex-shrink-0 bg-[var(--bg2)] border border-[var(--bdr)] flex flex-col overflow-hidden">
-            <div className="p-3 border-b border-[var(--bdr)]">
-              <div className="flex bg-[var(--bg3)] border border-[var(--dim)] focus-within:border-[var(--bdr2)] mb-2">
-                <span className="px-2 flex items-center text-[var(--text3)] text-[11px]">🔍</span>
+          <div className="w-[280px] flex-shrink-0 bg-white border border-[#E8EEF8] flex flex-col overflow-hidden">
+            <div className="p-3 border-b border-[#E8EEF8]">
+              <div className="flex bg-[#F4F7FD] border border-[#F0F4FB] focus-within:border-[#C5D5EA] mb-2">
+                <span className="px-2 flex items-center text-[#8FA3BF] text-[11px]">🔍</span>
                 <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search tickets…"
-                  className="flex-1 py-[7px] bg-transparent outline-none text-[var(--text)] text-[11px] placeholder-[rgba(230,226,248,.25)]"/>
+                  className="flex-1 py-[7px] bg-transparent outline-none text-[#1A3A6B] text-[11px] placeholder-[rgba(230,226,248,.25)]"/>
               </div>
               <div className="flex gap-[2px]">
                 {['open','pending','resolved','all'].map(f => (
@@ -162,7 +162,7 @@ export function SupportCRMPage() {
                     className={`flex-1 py-[4px] text-[7px] tracking-[1px] uppercase font-bold cursor-pointer border transition-all ${
                       filter === f
                         ? 'bg-[rgba(59,158,255,.15)] border-[rgba(59,158,255,.3)] text-[#3b9eff]'
-                        : 'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)]'
+                        : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'
                     }`}>{f}</button>
                 ))}
               </div>
@@ -174,18 +174,18 @@ export function SupportCRMPage() {
                   <div className="w-5 h-5 border-2 border-[#3b9eff] border-t-transparent rounded-full animate-spin"/>
                 </div>
               ) : tickets.length === 0 ? (
-                <div className="p-4 text-center text-[11px] text-[var(--text3)]">
+                <div className="p-4 text-center text-[11px] text-[#8FA3BF]">
                   No {filter} tickets
                 </div>
               ) : tickets.map(t => (
                 <div key={t.id} onClick={() => setSelected(t)}
-                  className={`p-3 border-b border-[rgba(212,168,67,.04)] cursor-pointer transition-colors ${
+                  className={`p-3 border-b border-[rgba(34,85,204,.03)] cursor-pointer transition-colors ${
                     selected?.id === t.id
                       ? 'bg-[rgba(59,158,255,.07)] border-l-2 border-l-[#3b9eff]'
                       : 'hover:bg-[rgba(255,255,255,.02)]'
                   }`}>
                   <div className="flex justify-between mb-1">
-                    <span className="font-mono text-[10px] text-[#3b9eff]">
+                    <span className="font-['JetBrains_Mono',monospace] text-[10px] text-[#3b9eff]">
                       {t.ticket_number ?? `#${t.id.slice(0,6)}`}
                     </span>
                     <span className={`text-[9px] font-bold capitalize ${PRI_COLOR[t.priority] ?? ''}`}>
@@ -194,7 +194,7 @@ export function SupportCRMPage() {
                   </div>
                   <div className="text-[11px] font-semibold mb-[2px] truncate">{t.subject}</div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-[var(--text3)]">
+                    <span className="text-[9px] text-[#8FA3BF]">
                       {new Date(t.created_at).toLocaleDateString()}
                     </span>
                     <Badge variant={STATUS_VARIANT[t.status] ?? 'open'} className="text-[7px]">{t.status}</Badge>
@@ -203,23 +203,23 @@ export function SupportCRMPage() {
               ))}
             </div>
 
-            <div className="p-2 border-t border-[var(--bdr)] text-center text-[9px] text-[var(--text3)]">
+            <div className="p-2 border-t border-[#E8EEF8] text-center text-[9px] text-[#8FA3BF]">
               {allTickets.length} total tickets
             </div>
           </div>
 
           {/* Thread */}
           {!selected ? (
-            <div className="flex-1 flex items-center justify-center bg-[var(--bg2)] border border-[var(--bdr)] text-[var(--text3)] text-[12px]">
+            <div className="flex-1 flex items-center justify-center bg-white border border-[#E8EEF8] text-[#8FA3BF] text-[12px]">
               Select a ticket to view
             </div>
           ) : (
-            <div className="flex-1 flex flex-col bg-[var(--bg2)] border border-[var(--bdr)] overflow-hidden">
+            <div className="flex-1 flex flex-col bg-white border border-[#E8EEF8] overflow-hidden">
               {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--bdr)]">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8EEF8]">
                 <div>
-                  <div className="font-serif text-[15px] font-semibold">{selected.subject}</div>
-                  <div className="text-[10px] text-[var(--text3)]">
+                  <div className="font-sans text-[15px] font-semibold">{selected.subject}</div>
+                  <div className="text-[10px] text-[#8FA3BF]">
                     {selected.ticket_number ?? `#${selected.id.slice(0,8)}`} · {selected.department} · {selected.priority}
                   </div>
                 </div>
@@ -237,22 +237,22 @@ export function SupportCRMPage() {
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
                 {messages.length === 0 && (
-                  <div className="text-center text-[11px] text-[var(--text3)] py-8">No messages yet</div>
+                  <div className="text-center text-[11px] text-[#8FA3BF] py-8">No messages yet</div>
                 )}
                 {messages.map((m, i) => {
                   const isMe = m.sender_id === profile?.id
                   return (
                     <div key={i} className={`max-w-[75%] ${isMe ? 'self-end' : ''}`}>
-                      <div className="text-[9px] text-[var(--text3)] mb-1">
+                      <div className="text-[9px] text-[#8FA3BF] mb-1">
                         {isMe ? 'You' : 'Trader'} · {new Date(m.created_at).toLocaleTimeString()}
-                        {m.is_internal && <span className="ml-1 text-[var(--gold)]">· Internal Note</span>}
+                        {m.is_internal && <span className="ml-1 text-[#2255CC]">· Internal Note</span>}
                       </div>
                       <div className={`px-3 py-[10px] text-[12px] leading-[1.6] ${
                         m.is_internal
-                          ? 'bg-[rgba(212,168,67,.08)] border border-[rgba(212,168,67,.2)] text-[var(--text2)]'
+                          ? 'bg-[rgba(212,168,67,.08)] border border-[rgba(34,85,204,.2)] text-[#5C7A9E]'
                           : isMe
-                            ? 'bg-[rgba(59,158,255,.1)] border border-[rgba(59,158,255,.2)] text-[var(--text)]'
-                            : 'bg-[var(--bg3)] border border-[var(--bdr)] text-[var(--text2)]'
+                            ? 'bg-[rgba(59,158,255,.1)] border border-[rgba(59,158,255,.2)] text-[#1A3A6B]'
+                            : 'bg-[#F4F7FD] border border-[#E8EEF8] text-[#5C7A9E]'
                       }`}>{m.body}</div>
                     </div>
                   )
@@ -261,7 +261,7 @@ export function SupportCRMPage() {
               </div>
 
               {/* Reply box */}
-              <div className="border-t border-[var(--bdr)] p-3">
+              <div className="border-t border-[#E8EEF8] p-3">
                 <div className="flex gap-2 mb-2 overflow-x-auto pb-1">
                   {CANNED.map((c, i) => (
                     <button key={i} onClick={() => setReply(c)}
@@ -271,11 +271,11 @@ export function SupportCRMPage() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex-1 bg-[var(--bg3)] border border-[var(--dim)] focus-within:border-[var(--bdr2)] transition-colors">
+                  <div className="flex-1 bg-[#F4F7FD] border border-[#F0F4FB] focus-within:border-[#C5D5EA] transition-colors">
                     <textarea value={reply} onChange={e => setReply(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) sendReply() }}
                       placeholder="Type reply… (Ctrl+Enter to send)"
-                      className="w-full px-3 py-[8px] bg-transparent outline-none text-[var(--text)] text-[12px] resize-none min-h-[60px] placeholder-[rgba(230,226,248,.25)]"/>
+                      className="w-full px-3 py-[8px] bg-transparent outline-none text-[#1A3A6B] text-[12px] resize-none min-h-[60px] placeholder-[rgba(230,226,248,.25)]"/>
                   </div>
                   <div className="flex flex-col gap-2">
                     <Button variant="blue" onClick={() => sendReply(false)} loading={sending}>Send</Button>
@@ -288,8 +288,8 @@ export function SupportCRMPage() {
 
           {/* Ticket info sidebar */}
           {selected && (
-            <div className="w-[200px] flex-shrink-0 bg-[var(--bg2)] border border-[var(--bdr)] p-[14px] overflow-y-auto">
-              <div className="text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold mb-3">Ticket Info</div>
+            <div className="w-[200px] flex-shrink-0 bg-white border border-[#E8EEF8] p-[14px] overflow-y-auto">
+              <div className="text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold mb-3">Ticket Info</div>
               {[
                 ['ID', selected.ticket_number ?? selected.id.slice(0,8)],
                 ['Department', selected.department],
@@ -298,12 +298,12 @@ export function SupportCRMPage() {
                 ['Messages', String(messages.length)],
                 ['Opened', new Date(selected.created_at).toLocaleDateString()],
               ].map(([l, v]) => (
-                <div key={l} className="flex justify-between py-[5px] border-b border-[var(--dim)] last:border-0">
-                  <span className="text-[9px] text-[var(--text3)]">{l}</span>
-                  <span className="font-mono text-[10px] text-[var(--text2)] capitalize">{v}</span>
+                <div key={l} className="flex justify-between py-[5px] border-b border-[#F0F4FB] last:border-0">
+                  <span className="text-[9px] text-[#8FA3BF]">{l}</span>
+                  <span className="font-['JetBrains_Mono',monospace] text-[10px] text-[#5C7A9E] capitalize">{v}</span>
                 </div>
               ))}
-              <div className="mt-3 pt-3 border-t border-[var(--bdr)] flex flex-col gap-2">
+              <div className="mt-3 pt-3 border-t border-[#E8EEF8] flex flex-col gap-2">
                 {selected.status !== 'resolved' && (
                   <Button variant="success" size="sm" className="w-full" onClick={() => updateStatus('resolved')}>
                     ✓ Resolve

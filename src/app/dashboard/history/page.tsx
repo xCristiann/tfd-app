@@ -43,36 +43,36 @@ export function HistoryPage() {
             {FILTERS.map(f=>(
               <button key={f} onClick={()=>setFilter(f)}
                 className={`px-[10px] py-[5px] text-[8px] tracking-[1.5px] uppercase font-semibold cursor-pointer border transition-all ${
-                  filter===f ? 'bg-[rgba(212,168,67,.1)] border-[var(--bdr2)] text-[var(--gold)]' : 'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)] hover:text-[var(--text2)]'
+                  filter===f ? 'bg-[rgba(34,85,204,.08)] border-[#C5D5EA] text-[#2255CC]' : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF] hover:text-[#5C7A9E]'
                 }`}>{f}</button>
             ))}
           </div>
           {loading ? (
-            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/></div>
+            <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-[#2255CC] border-t-transparent rounded-full animate-spin"/></div>
           ) : trades.length === 0 ? (
-            <div className="py-12 text-center text-[11px] text-[var(--text3)]">No closed trades in this period</div>
+            <div className="py-12 text-center text-[11px] text-[#8FA3BF]">No closed trades in this period</div>
           ) : (
             <table className="w-full border-collapse text-[11px]">
               <thead>
-                <tr className="border-b border-[var(--dim)]">
+                <tr className="border-b border-[#F0F4FB]">
                   {['Symbol','Dir','Lots','Open','Close','Pips','Swap','Net P&L','Opened','Closed'].map(h=>(
-                    <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left bg-[rgba(212,168,67,.03)]">{h}</th>
+                    <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(34,85,204,.02)]">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {trades.map(t=>(
-                  <tr key={t.id} className="border-b border-[rgba(212,168,67,.04)] hover:bg-[rgba(212,168,67,.03)]">
+                  <tr key={t.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(34,85,204,.02)]">
                     <td className="px-[11px] py-[8px] font-semibold">{t.symbol}</td>
-                    <td className="px-[11px] py-[8px]"><span className={`text-[9px] font-bold ${t.direction==='buy'?'text-[var(--green)]':'text-[var(--red)]'}`}>{t.direction?.toUpperCase()}</span></td>
-                    <td className="px-[11px] py-[8px] font-mono">{t.lots}</td>
-                    <td className="px-[11px] py-[8px] font-mono">{t.open_price}</td>
-                    <td className="px-[11px] py-[8px] font-mono">{t.close_price ?? '—'}</td>
-                    <td className={`px-[11px] py-[8px] font-mono ${(t.pips??0)>=0?'text-[var(--green)]':'text-[var(--red)]'}`}>{t.pips != null ? `${t.pips > 0?'+':''}${t.pips}` : '—'}</td>
-                    <td className="px-[11px] py-[8px] font-mono text-[var(--text3)]">{t.swap != null ? fmt(t.swap) : '—'}</td>
-                    <td className={`px-[11px] py-[8px] font-mono font-semibold ${(t.net_pnl??0)>=0?'text-[var(--green)]':'text-[var(--red)]'}`}>{t.net_pnl != null ? `${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}` : '—'}</td>
-                    <td className="px-[11px] py-[8px] font-mono text-[var(--text3)] text-[10px]">{t.opened_at ? new Date(t.opened_at).toLocaleString() : '—'}</td>
-                    <td className="px-[11px] py-[8px] font-mono text-[var(--text3)] text-[10px]">{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
+                    <td className="px-[11px] py-[8px]"><span className={`text-[9px] font-bold ${t.direction==='buy'?'text-[#16A34A]':'text-[#DC2626]'}`}>{t.direction?.toUpperCase()}</span></td>
+                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{t.lots}</td>
+                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{t.open_price}</td>
+                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{t.close_price ?? '—'}</td>
+                    <td className={`px-[11px] py-[8px] font-['JetBrains_Mono',monospace] ${(t.pips??0)>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>{t.pips != null ? `${t.pips > 0?'+':''}${t.pips}` : '—'}</td>
+                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#8FA3BF]">{t.swap != null ? fmt(t.swap) : '—'}</td>
+                    <td className={`px-[11px] py-[8px] font-['JetBrains_Mono',monospace] font-semibold ${(t.net_pnl??0)>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>{t.net_pnl != null ? `${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}` : '—'}</td>
+                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#8FA3BF] text-[10px]">{t.opened_at ? new Date(t.opened_at).toLocaleString() : '—'}</td>
+                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#8FA3BF] text-[10px]">{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
                   </tr>
                 ))}
               </tbody>

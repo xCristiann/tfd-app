@@ -136,39 +136,39 @@ export function DashboardPage() {
         accountBox={account ? { id: account.account_number, label: `${phaseLabel(account.phase)} · ${prod?.funded_profit_split ?? 85}% Split` } : undefined}
         topbarRight={
           <>
-            <span className="w-[5px] h-[5px] rounded-full bg-[var(--green)] shadow-[0_0_6px_var(--green)] animate-pulse" />
-            <span className="text-[9px] text-[var(--green)] tracking-[1.5px] uppercase font-semibold">Live</span>
+            <span className="w-[5px] h-[5px] rounded-full bg-[#16A34A] shadow-[0_0_6px_#16A34A] animate-pulse" />
+            <span className="text-[9px] text-[#16A34A] tracking-[1.5px] uppercase font-semibold">Live</span>
             <Button variant="gold" size="sm" onClick={() => navigate('/platform')}>⚡ Open Platform</Button>
           </>
         }
       >
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#2255CC] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : accounts.length === 0 ? (
           <Card>
             <div className="py-16 text-center">
               <div className="text-[32px] mb-3">🎯</div>
-              <div className="font-serif text-[18px] font-bold mb-2">No Active Account</div>
-              <p className="text-[12px] text-[var(--text2)] mb-6">Purchase a challenge to start your funded trading journey.</p>
+              <div className="font-sans text-[18px] font-bold mb-2">No Active Account</div>
+              <p className="text-[12px] text-[#5C7A9E] mb-6">Purchase a challenge to start your funded trading journey.</p>
               <Button onClick={() => navigate('/dashboard/challenges')}>Buy a Challenge →</Button>
             </div>
           </Card>
         ) : (
           <>
             {/* Account selector */}
-            <div className="flex items-center gap-3 p-3 bg-[var(--bg2)] border border-[var(--bdr)] mb-1">
-              <span className="text-[8px] tracking-[2px] uppercase text-[var(--text3)] font-semibold whitespace-nowrap">Select Account</span>
+            <div className="flex items-center gap-3 p-3 bg-white border border-[#E8EEF8] mb-1">
+              <span className="text-[8px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold whitespace-nowrap">Select Account</span>
               <div className="flex gap-2 flex-wrap">
                 {accounts.map(a => {
                   const isActive = a.id === account?.id
                   return (
                     <button key={a.id} onClick={() => setSelectedId(a.id)}
-                      className={`px-3 py-[5px] text-[10px] font-mono font-semibold cursor-pointer border transition-all ${
+                      className={`px-3 py-[5px] text-[10px] font-['JetBrains_Mono',monospace] font-semibold cursor-pointer border transition-all ${
                         isActive
-                          ? 'bg-[rgba(212,168,67,.12)] border-[var(--bdr2)] text-[var(--gold)]'
-                          : 'bg-[var(--bg3)] border-[var(--dim)] text-[var(--text3)] hover:text-[var(--text2)]'
+                          ? 'bg-[rgba(34,85,204,.1)] border-[#C5D5EA] text-[#2255CC]'
+                          : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF] hover:text-[#5C7A9E]'
                       }`}>
                       {a.account_number}
                       <span className={`ml-2 text-[8px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>{phaseLabel(a.phase)}</span>
@@ -177,14 +177,14 @@ export function DashboardPage() {
                 })}
               </div>
               <button onClick={() => navigate('/dashboard/challenges')}
-                className="ml-auto text-[8px] tracking-[1px] uppercase text-[var(--text3)] hover:text-[var(--gold)] cursor-pointer bg-transparent border-none transition-colors whitespace-nowrap">
+                className="ml-auto text-[8px] tracking-[1px] uppercase text-[#8FA3BF] hover:text-[#2255CC] cursor-pointer bg-transparent border-none transition-colors whitespace-nowrap">
                 + New Challenge
               </button>
             </div>
 
             {/* Payout pending banner */}
             {account?.payout_locked && account?.status === 'suspended' && (
-              <div className="flex items-center gap-3 px-5 py-3 border border-[rgba(212,168,67,.3)] bg-[rgba(212,168,67,.06)] text-[var(--gold)]">
+              <div className="flex items-center gap-3 px-5 py-3 border border-[rgba(34,85,204,.3)] bg-[rgba(34,85,204,.05)] text-[#2255CC]">
                 <span className="text-[16px]">⏳</span>
                 <div>
                   <div className="font-semibold text-[12px]">Payout Pending — Account Locked</div>
@@ -195,7 +195,7 @@ export function DashboardPage() {
 
             {/* Warning banner — soft locked */}
             {isWarning && (
-              <div className="flex items-center gap-3 px-5 py-3 border border-[rgba(255,180,0,.3)] bg-[rgba(255,180,0,.06)] text-[#ffb400]">
+              <div className="flex items-center gap-3 px-5 py-3 border border-amber-300 bg-amber-50 text-amber-600">
                 <span className="text-[16px]">⚠️</span>
                 <div>
                   <div className="font-semibold text-[12px]">Drawdown Warning — Soft Locked</div>
@@ -208,10 +208,10 @@ export function DashboardPage() {
             {isLocked && (
               <div className={`flex items-center gap-3 px-5 py-3 border ${
                 account?.status === 'breached'
-                  ? 'border-[rgba(255,51,82,.3)] bg-[rgba(255,51,82,.06)] text-[var(--red)]'
+                  ? 'border-[rgba(255,51,82,.3)] bg-[rgba(220,38,38,.06)] text-[#DC2626]'
                   : account?.status === 'suspended'
-                  ? 'border-[rgba(255,51,82,.3)] bg-[rgba(255,51,82,.06)] text-[var(--red)]'
-                  : 'border-[rgba(212,168,67,.3)] bg-[rgba(212,168,67,.06)] text-[var(--gold)]'
+                  ? 'border-[rgba(255,51,82,.3)] bg-[rgba(220,38,38,.06)] text-[#DC2626]'
+                  : 'border-[rgba(34,85,204,.3)] bg-[rgba(34,85,204,.05)] text-[#2255CC]'
               }`}>
                 <span className="text-[16px]">
                   {account?.status === 'breached' ? '🚨' : account?.status === 'suspended' ? '⛔' : '🎯'}
@@ -238,20 +238,20 @@ export function DashboardPage() {
 
             {/* KPI Row */}
             <div className="grid grid-cols-5 gap-[11px]">
-              <KPICard label="Balance"       value={fmt(account!.balance)}  sub={`${profit >= 0 ? '+' : ''}${fmt(profit)}`}       subColor={profit >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'} />
-              <KPICard label="Equity"        value={fmt(account!.equity)}   sub="Current equity"                                  subColor="text-[var(--text2)]" />
-              <KPICard label="Withdrawable"  value={fmt(withdrawable)}      sub={`${prod?.funded_profit_split ?? 85}% split`}     subColor="text-[var(--gold)]" />
+              <KPICard label="Balance"       value={fmt(account!.balance)}  sub={`${profit >= 0 ? '+' : ''}${fmt(profit)}`}       subColor={profit >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'} />
+              <KPICard label="Equity"        value={fmt(account!.equity)}   sub="Current equity"                                  subColor="text-[#5C7A9E]" />
+              <KPICard label="Withdrawable"  value={fmt(withdrawable)}      sub={`${prod?.funded_profit_split ?? 85}% split`}     subColor="text-[#2255CC]" />
               <KPICard label="Win Rate"      value={stats ? `${stats.win_rate_pct ?? 0}%` : '—'}
-                sub={stats ? `${stats.winning_trades}/${stats.total_trades} trades` : 'No trades yet'} subColor="text-[var(--green)]" />
-              <KPICard label="Profit Factor" value={stats?.profit_factor ? String(stats.profit_factor) : '—'} sub="Target: 1.5+" subColor="text-[var(--green)]" />
+                sub={stats ? `${stats.winning_trades}/${stats.total_trades} trades` : 'No trades yet'} subColor="text-[#16A34A]" />
+              <KPICard label="Profit Factor" value={stats?.profit_factor ? String(stats.profit_factor) : '—'} sub="Target: 1.5+" subColor="text-[#16A34A]" />
             </div>
 
             {/* Charts Row */}
             <div className="grid grid-cols-2 gap-[14px]">
               <Card>
-                <CardHeader title="Equity Curve" action={<span className="text-[9px] text-[var(--text3)]">30 days</span>} />
+                <CardHeader title="Equity Curve" action={<span className="text-[9px] text-[#8FA3BF]">30 days</span>} />
                 <EquityCurve data={curve.map(s => s.balance)} />
-                {curve.length === 0 && <div className="text-center text-[11px] text-[var(--text3)] py-4">No trading history yet</div>}
+                {curve.length === 0 && <div className="text-center text-[11px] text-[#8FA3BF] py-4">No trading history yet</div>}
               </Card>
               <Card>
                 <CardHeader title="Risk Dashboard" />
@@ -262,13 +262,13 @@ export function DashboardPage() {
                 {!isFunded && (
                   <div className="mb-[11px]">
                     <div className="flex justify-between mb-[4px]">
-                      <span className="text-[9px] tracking-[1.5px] uppercase text-[var(--text3)] font-semibold">Profit Progress</span>
-                      <span className={`mono text-[11px] ${parseFloat(profitPct) >= targetPct ? 'text-[var(--green)]' : 'text-[var(--gold)]'}`}>
+                      <span className="text-[9px] tracking-[1.5px] uppercase text-[#8FA3BF] font-semibold">Profit Progress</span>
+                      <span className={`mono text-[11px] ${parseFloat(profitPct) >= targetPct ? 'text-[#16A34A]' : 'text-[#2255CC]'}`}>
                         {profitPct}% / {targetPct}% target
                       </span>
                     </div>
                     <div className="h-[4px] bg-white/5 rounded-[2px] overflow-hidden">
-                      <div className="h-full rounded-[2px] bg-[var(--green)] transition-all"
+                      <div className="h-full rounded-[2px] bg-[#16A34A] transition-all"
                         style={{ width: `${Math.min((parseFloat(profitPct) / targetPct) * 100, 100)}%` }} />
                     </div>
                   </div>
@@ -276,24 +276,24 @@ export function DashboardPage() {
 
                 {/* Funded: no target, show profit */}
                 {isFunded && (
-                  <div className="mb-[11px] p-3 bg-[rgba(212,168,67,.05)] border border-[rgba(212,168,67,.15)]">
-                    <div className="text-[8px] uppercase tracking-[1.5px] text-[var(--gold)] font-semibold mb-1">Funded Account — No Target</div>
-                    <div className="text-[11px] text-[var(--text2)]">
+                  <div className="mb-[11px] p-3 bg-[rgba(34,85,204,.04)] border border-[rgba(34,85,204,.15)]">
+                    <div className="text-[8px] uppercase tracking-[1.5px] text-[#2255CC] font-semibold mb-1">Funded Account — No Target</div>
+                    <div className="text-[11px] text-[#5C7A9E]">
                       Keep drawdown in check and request payouts anytime.
-                      Withdrawable: <span className="text-[var(--gold)] font-mono">{fmt(withdrawable)}</span>
+                      Withdrawable: <span className="text-[#2255CC] font-['JetBrains_Mono',monospace]">{fmt(withdrawable)}</span>
                     </div>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-2 mt-3">
                   {[
-                    ['Best Trade',   stats?.best_trade  != null ? fmt(stats.best_trade)  : '—', 'var(--green)'],
-                    ['Worst Trade',  stats?.worst_trade != null ? fmt(stats.worst_trade) : '—', 'var(--red)'],
-                    ['Total Trades', String(stats?.total_trades ?? 0),                           'var(--text)'],
-                    ['Total P&L',    stats?.total_pnl   != null ? fmt(stats.total_pnl)   : '—', (stats?.total_pnl ?? 0) >= 0 ? 'var(--green)' : 'var(--red)'],
+                    ['Best Trade',   stats?.best_trade  != null ? fmt(stats.best_trade)  : '—', '#16A34A'],
+                    ['Worst Trade',  stats?.worst_trade != null ? fmt(stats.worst_trade) : '—', '#DC2626'],
+                    ['Total Trades', String(stats?.total_trades ?? 0),                           '#1A3A6B'],
+                    ['Total P&L',    stats?.total_pnl   != null ? fmt(stats.total_pnl)   : '—', (stats?.total_pnl ?? 0) >= 0 ? '#16A34A' : '#DC2626'],
                   ].map(([l, v, c]) => (
-                    <div key={l} className="bg-[var(--bg3)] border border-[var(--dim)] p-[9px]">
-                      <div className="text-[7px] tracking-[1.5px] uppercase text-[var(--text3)] font-semibold mb-1">{l}</div>
+                    <div key={l} className="bg-[#F4F7FD] border border-[#F0F4FB] p-[9px]">
+                      <div className="text-[7px] tracking-[1.5px] uppercase text-[#8FA3BF] font-semibold mb-1">{l}</div>
                       <div className="mono text-[11px]" style={{ color: c }}>{v}</div>
                     </div>
                   ))}
@@ -306,26 +306,26 @@ export function DashboardPage() {
               <CardHeader title={`Open Positions (${openTrades.length})`}
                 action={<Button variant="ghost" size="sm" onClick={() => navigate('/platform')}>Open Platform →</Button>} />
               {openTrades.length === 0 ? (
-                <div className="py-8 text-center text-[11px] text-[var(--text3)]">No open positions</div>
+                <div className="py-8 text-center text-[11px] text-[#8FA3BF]">No open positions</div>
               ) : (
                 <table className="w-full border-collapse text-[11px]">
                   <thead>
-                    <tr className="border-b border-[var(--dim)]">
+                    <tr className="border-b border-[#F0F4FB]">
                       {['Symbol','Dir','Lots','Open Price','SL','TP','Opened'].map(h => (
-                        <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[var(--text3)] font-semibold text-left bg-[rgba(212,168,67,.03)]">{h}</th>
+                        <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(34,85,204,.02)]">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {openTrades.map(r => (
-                      <tr key={r.id} className="border-b border-[rgba(212,168,67,.04)] hover:bg-[rgba(212,168,67,.03)]">
+                      <tr key={r.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(34,85,204,.02)]">
                         <td className="px-[11px] py-[8px] font-semibold">{r.symbol}</td>
-                        <td className="px-[11px] py-[8px]"><span className={`text-[9px] font-bold ${r.direction==='buy'?'text-[var(--green)]':'text-[var(--red)]'}`}>{r.direction?.toUpperCase()}</span></td>
+                        <td className="px-[11px] py-[8px]"><span className={`text-[9px] font-bold ${r.direction==='buy'?'text-[#16A34A]':'text-[#DC2626]'}`}>{r.direction?.toUpperCase()}</span></td>
                         <td className="px-[11px] py-[8px] mono">{r.lots}</td>
                         <td className="px-[11px] py-[8px] mono">{r.open_price}</td>
-                        <td className="px-[11px] py-[8px] mono text-[var(--red)]">{r.sl ?? '—'}</td>
-                        <td className="px-[11px] py-[8px] mono text-[var(--green)]">{r.tp ?? '—'}</td>
-                        <td className="px-[11px] py-[8px] mono text-[var(--text3)] text-[10px]">{new Date(r.opened_at).toLocaleTimeString()}</td>
+                        <td className="px-[11px] py-[8px] mono text-[#DC2626]">{r.sl ?? '—'}</td>
+                        <td className="px-[11px] py-[8px] mono text-[#16A34A]">{r.tp ?? '—'}</td>
+                        <td className="px-[11px] py-[8px] mono text-[#8FA3BF] text-[10px]">{new Date(r.opened_at).toLocaleTimeString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -335,7 +335,7 @@ export function DashboardPage() {
 
             <div className="flex items-center gap-2">
               <Badge variant={phaseVariant(account!.phase)}>{phaseLabel(account!.phase)}</Badge>
-              <span className="text-[10px] text-[var(--text3)]">{account!.account_number}</span>
+              <span className="text-[10px] text-[#8FA3BF]">{account!.account_number}</span>
             </div>
           </>
         )}
