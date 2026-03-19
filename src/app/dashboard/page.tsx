@@ -37,8 +37,8 @@ export function DashboardPage() {
   useEffect(() => {
     if (!account) return
     setStats(null); setCurve([]); setOpenTrades([])
-    analyticsApi.getStats(account.id).then(setStats).catch(() => {})
-    analyticsApi.getEquityCurve(account.id, 30).then(setCurve).catch(() => {})
+    analyticsApi.getStats(account.id).then(setStats)
+    analyticsApi.getEquityCurve(account.id, 30).then(setCurve)
     supabase.from('trades').select('*')
       .eq('account_id', account.id).eq('status', 'open')
       .order('opened_at', { ascending: false })
@@ -87,7 +87,7 @@ export function DashboardPage() {
             account_number: acc.account_number,
             reason:         `Daily DD: ${acc.daily_dd_used}% / Max DD: ${acc.max_dd_used}%`,
             balance:        `$${(Number(acc.balance) || 0).toFixed(2)}`,
-          }).catch(() => {})
+          })
         }
       }
       return

@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       supabase.from('users').select('*').eq('id', s.user.id).single()
         .then(({ data }) => { if (mounted) setProfile(data) })
-        .catch(() => {})
+        
         .finally(() => { clearTimeout(timeout); done() })
     }).catch(() => { clearTimeout(timeout); done() })
 
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         done()
         supabase.from('users').select('*').eq('id', s.user.id).single()
           .then(({ data }) => { if (mounted) setProfile(data) })
-          .catch(() => {})
+          
 
         // Capture IP on every sign in
         if (event === 'SIGNED_IN') {
@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }).eq('id', s.user.id).then(() => {})
               
             })
-            .catch(() => {})
+            
         }
       }
     })

@@ -24,7 +24,7 @@ export function JournalPage() {
   useEffect(() => {
     if (!primary) return
     journalApi.getEntries(primary.id)
-      .then(setEntries).catch(() => {}).finally(() => setLoading(false))
+      .then(setEntries).finally(() => setLoading(false))
   }, [primary?.id])
 
   async function save() {

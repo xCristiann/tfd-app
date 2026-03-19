@@ -89,7 +89,7 @@ export function PayoutsPage() {
         amount:         `$${amount}`,
         method:         method,
         account_number: selectedAccount.account_number,
-      }).catch(() => {})
+      })
     }
   }
 

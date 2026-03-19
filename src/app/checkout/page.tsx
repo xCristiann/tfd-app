@@ -145,22 +145,24 @@ export function CheckoutPage() {
       billing_address: address,
       billing_city: city,
       billing_postal: postal,
-    }).catch(() => {})
+    })
 
     // Increment coupon uses
     if (couponCode) {
-      await supabase.from('coupons').update({ uses_count: (couponData?.uses_count ?? 0) + 1 }).eq('code', couponCode).catch(() => {})
+      try { await supabase.from('coupons').update({ uses_count: (couponData?.uses_count ?? 0) + 1 }).eq('code', couponCode) } catch {}
     }
 
     if (refCode) {
-      await supabase.rpc('record_affiliate_referral', {
-        p_code: refCode,
-        p_referred_user_id: profile.id,
-        p_referred_email: email,
-        p_product_id: product.id,
-        p_product_name: product.name,
-        p_order_amount: product.price_usd,
-      }).catch(() => {})
+      try {
+        await supabase.rpc('record_affiliate_referral', {
+          p_code: refCode,
+          p_referred_user_id: profile.id,
+          p_referred_email: email,
+          p_product_id: product.id,
+          p_product_name: product.name,
+          p_order_amount: product.price_usd,
+        })
+      } catch {}
       localStorage.removeItem('tfd_ref_code')
     }
 
@@ -224,7 +226,7 @@ export function CheckoutPage() {
     setPlacing(true)
 
     // Save profile first
-    await supabase.from('users').update({ first_name: firstName, last_name: lastName, country }).eq('id', profile.id).catch(() => {})
+    try { await supabase.from('users').update({ first_name: firstName, last_name: lastName, country }).eq('id', profile.id) } catch {}
 
     // If final price is 0 (100% coupon) — skip payment
     if (finalPrice === 0) {
