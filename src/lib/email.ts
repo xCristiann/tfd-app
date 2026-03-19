@@ -12,16 +12,30 @@ type EmailType =
   | 'phase_advanced'
   | 'ticket_reply'
   | 'password_reset'
+  | 'custom'
 
-export async function sendEmail(type: EmailType, to: string, data: Record<string, any>) {
+export async function sendEmail(
+  type: EmailType | string,
+  to: string,
+  data: Record<string, any>
+): Promise<{ ok: boolean; error?: string }> {
   try {
-    const { error } = await supabase.functions.invoke('send-email', {
+    const { data: result, error } = await supabase.functions.invoke('send-email', {
       body: { type, to, data },
     })
-    if (error) console.error('[sendEmail]', type, error)
-    return !error
-  } catch (err) {
-    console.error('[sendEmail] failed', type, err)
-    return false
+    if (error) {
+      const msg = error.message ?? JSON.stringify(error)
+      console.error('[sendEmail]', type, 'to', to, '→', msg)
+      return { ok: false, error: msg }
+    }
+    if (result?.error) {
+      console.error('[sendEmail] function error:', result.error)
+      return { ok: false, error: result.error }
+    }
+    return { ok: true }
+  } catch (err: any) {
+    const msg = err?.message ?? String(err)
+    console.error('[sendEmail] exception:', type, msg)
+    return { ok: false, error: msg }
   }
 }

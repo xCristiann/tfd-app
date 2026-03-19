@@ -177,14 +177,15 @@ export function AdminEmailPage() {
 
     let successCount = 0
     let failCount = 0
+    let lastError = ''
 
     for (const recipient of recipients) {
       const data: Record<string, any> = { first_name: recipient.first_name }
       selectedTemplate.fields.forEach((f: string) => { data[f] = fieldValues[f] ?? '' })
 
-      const ok = await sendEmail(selectedTemplate.id, recipient.email, data)
-      if (ok) successCount++
-      else failCount++
+      const result = await sendEmail(selectedTemplate.id, recipient.email, data)
+      if (result.ok) successCount++
+      else { failCount++; lastError = result.error ?? 'Unknown error' }
 
       // Small delay to avoid rate limits when sending bulk
       if (recipients.length > 1) await new Promise(r => setTimeout(r, 200))
@@ -204,8 +205,10 @@ export function AdminEmailPage() {
 
     if (failCount === 0) {
       toast('success', '📧', 'Sent!', `${successCount} email${successCount > 1 ? 's' : ''} delivered.`)
+    } else if (successCount === 0) {
+      toast('error', '❌', 'Failed', lastError || 'Edge Function error — check Supabase logs.')
     } else {
-      toast('warning', '⚠️', 'Partial', `${successCount} sent, ${failCount} failed.`)
+      toast('warning', '⚠️', 'Partial', `${successCount} sent, ${failCount} failed: ${lastError}`)
     }
   }
 
