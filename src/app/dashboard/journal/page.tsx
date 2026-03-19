@@ -92,8 +92,8 @@ export function JournalPage() {
                     <div className="flex gap-[3px] flex-wrap">
                       {(e.tags ?? []).map(t=>(
                         <span key={t} className={`text-[8px] px-[6px] py-[1px] border ${
-                          t.toLowerCase()==='win'  ? 'bg-[rgba(0,217,126,.08)] border-[rgba(0,217,126,.2)] text-[#16A34A]' :
-                          t.toLowerCase()==='loss' ? 'bg-[rgba(255,51,82,.08)] border-[rgba(255,51,82,.2)] text-[#DC2626]' :
+                          t.toLowerCase()==='win'  ? 'bg-[rgba(22,163,74,.08)] border-[rgba(22,163,74,.2)] text-[#16A34A]' :
+                          t.toLowerCase()==='loss' ? 'bg-[rgba(220,38,38,.08)] border-[rgba(220,38,38,.2)] text-[#DC2626]' :
                           'border-[#F0F4FB] text-[#8FA3BF]'
                         }`}>{t}</span>
                       ))}

@@ -129,7 +129,7 @@ export function AdminAffiliatePage() {
                 {['all','active','inactive'].map(f => (
                   <button key={f} onClick={() => setFilter(f)}
                     className={`px-[10px] py-[5px] text-[8px] tracking-[1.5px] uppercase font-semibold cursor-pointer border transition-all ${
-                      filter === f ? 'bg-[rgba(220,38,38,.1)] border-[rgba(255,51,82,.3)] text-[#DC2626]' : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'
+                      filter === f ? 'bg-[rgba(220,38,38,.1)] border-[rgba(220,38,38,.3)] text-[#DC2626]' : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'
                     }`}>{f}</button>
                 ))}
               </div>
@@ -186,8 +186,8 @@ export function AdminAffiliatePage() {
                           <button onClick={e => { e.stopPropagation(); toggleStatus(a) }}
                             className={`px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer border transition-all ${
                               a.is_active
-                                ? 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(255,51,82,.2)]'
-                                : 'bg-[rgba(22,163,74,.1)] text-[#16A34A] border-[rgba(0,217,126,.2)]'
+                                ? 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(220,38,38,.2)]'
+                                : 'bg-[rgba(22,163,74,.1)] text-[#16A34A] border-[rgba(22,163,74,.2)]'
                             }`}>
                             {a.is_active ? 'Suspend' : 'Activate'}
                           </button>
@@ -263,7 +263,7 @@ export function AdminAffiliatePage() {
                           <td className="px-2 py-[6px] text-[9px] text-[#8FA3BF]">{new Date(r.created_at).toLocaleDateString()}</td>
                           <td className="px-2 py-[6px]">{r.referred_email ?? r.referred_user_id?.slice(0,8) ?? '—'}</td>
                           <td className="px-2 py-[6px]">
-                            <span className={`text-[7px] px-1 py-[2px] font-bold uppercase ${r.status==='converted'?'bg-[rgba(22,163,74,.1)] text-[#16A34A]':'bg-[rgba(212,168,67,.08)] text-[#2255CC]'}`}>
+                            <span className={`text-[7px] px-1 py-[2px] font-bold uppercase ${r.status==='converted'?'bg-[rgba(22,163,74,.1)] text-[#16A34A]':'bg-[rgba(34,85,204,.08)] text-[#2255CC]'}`}>
                               {r.status}
                             </span>
                           </td>

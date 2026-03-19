@@ -59,7 +59,7 @@ export function AdminAccountsPage() {
                 <button key={p} onClick={()=>setPhaseFilter(p)}
                   className={`px-[10px] py-[6px] text-[8px] tracking-[1.5px] uppercase font-semibold cursor-pointer border transition-all capitalize ${
                     phaseFilter===p
-                      ? 'bg-[rgba(220,38,38,.1)] border-[rgba(255,51,82,.25)] text-[#DC2626]'
+                      ? 'bg-[rgba(220,38,38,.1)] border-[rgba(220,38,38,.25)] text-[#DC2626]'
                       : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF] hover:text-[#5C7A9E]'
                   }`}>{p}</button>
               ))}
@@ -85,7 +85,7 @@ export function AdminAccountsPage() {
                   const profitPct = a.starting_balance > 0
                     ? ((a.balance - a.starting_balance) / a.starting_balance) * 100 : 0
                   return (
-                    <tr key={a.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(212,168,67,.02)]">
+                    <tr key={a.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(34,85,204,.02)]">
                       <td className="px-[11px] py-[8px]  text-[#2255CC] text-[10px]">{a.account_number}</td>
                       <td className="px-[11px] py-[8px]">
                         <div className="font-semibold">{a.users ? `${a.users.first_name} ${a.users.last_name}` : '—'}</div>

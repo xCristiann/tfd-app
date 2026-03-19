@@ -247,7 +247,7 @@ export function AdminEmailPage() {
                       <div className="text-[9px] text-[#8FA3BF]">{t.desc}</div>
                     </div>
                     {t.auto && (
-                      <span className="text-[7px] px-[5px] py-[2px] bg-[rgba(0,217,126,.08)] text-[#16A34A] border border-[rgba(0,217,126,.15)] font-bold uppercase tracking-[1px] flex-shrink-0">Auto</span>
+                      <span className="text-[7px] px-[5px] py-[2px] bg-[rgba(22,163,74,.08)] text-[#16A34A] border border-[rgba(22,163,74,.15)] font-bold uppercase tracking-[1px] flex-shrink-0">Auto</span>
                     )}
                   </button>
                 ))}
@@ -292,7 +292,7 @@ export function AdminEmailPage() {
                     <div className="text-[10px] text-[#8FA3BF]">{selectedTemplate.desc}</div>
                   </div>
                   {selectedTemplate.auto && (
-                    <div className="ml-auto text-[10px] text-[#16A34A] bg-[rgba(0,217,126,.08)] border border-[rgba(0,217,126,.15)] px-3 py-1">
+                    <div className="ml-auto text-[10px] text-[#16A34A] bg-[rgba(22,163,74,.08)] border border-[rgba(22,163,74,.15)] px-3 py-1">
                       ✓ Sends automatically on trigger
                     </div>
                   )}
@@ -310,7 +310,7 @@ export function AdminEmailPage() {
                       <button key={key} onClick={() => setRecipientMode(key as any)}
                         className={`px-3 py-[6px] text-[9px] uppercase font-bold tracking-[1px] cursor-pointer border transition-all ${
                           recipientMode === key
-                            ? 'bg-[rgba(220,38,38,.1)] border-[rgba(255,51,82,.3)] text-[#DC2626]'
+                            ? 'bg-[rgba(220,38,38,.1)] border-[rgba(220,38,38,.3)] text-[#DC2626]'
                             : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'
                         }`}>{label}</button>
                     ))}
@@ -354,7 +354,7 @@ export function AdminEmailPage() {
                   )}
 
                   {recipientMode === 'all' && (
-                    <div className="flex items-center gap-3 px-4 py-3 bg-[rgba(220,38,38,.06)] border border-[rgba(255,51,82,.2)]">
+                    <div className="flex items-center gap-3 px-4 py-3 bg-[rgba(220,38,38,.06)] border border-[rgba(220,38,38,.2)]">
                       <span className="text-[16px]">⚠️</span>
                       <div className="text-[11px] text-[#DC2626]">
                         This will send to <strong>all {traders.length} traders</strong>. Use with caution.

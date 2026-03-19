@@ -41,10 +41,10 @@ function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?
 
   // Still loading auth or profile — always show spinner, never redirect
   if (loading || (session && !profile)) return (
-    <div className="flex h-screen items-center justify-center bg-[var(--bg)]">
+    <div className="flex h-screen items-center justify-center bg-[#F0F4FB]">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin"/>
-        <div className="text-[11px] text-[var(--text3)]">Loading…</div>
+        <div className="w-8 h-8 border-2 border-[#2255CC] border-t-transparent rounded-full animate-spin"/>
+        <div className="text-[11px] text-[#8FA3BF]">Loading…</div>
       </div>
     </div>
   )

@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 last_login_ip: ip,
                 last_login_at: now,
               }).eq('id', s.user.id).then(() => {})
-              // login history tracking removed (RPC not configured)
+              
             })
             .catch(() => {})
         }

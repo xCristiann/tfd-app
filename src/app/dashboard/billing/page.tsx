@@ -97,13 +97,13 @@ export function BillingPage() {
               <thead>
                 <tr className="border-b border-[#F0F4FB]">
                   {['Order #','Date','Product','Account Size','Amount','Discount','Status','Invoice'].map(h => (
-                    <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(212,168,67,.02)]">{h}</th>
+                    <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(34,85,204,.02)]">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {orders.map(o => (
-                  <tr key={o.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(212,168,67,.02)]">
+                  <tr key={o.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(34,85,204,.02)]">
                     <td className="px-[11px] py-[10px]  text-[#2255CC] font-bold text-[10px]">{o.order_number}</td>
                     <td className="px-[11px] py-[10px] text-[#8FA3BF] text-[10px]">{formatDate(o.created_at)}</td>
                     <td className="px-[11px] py-[10px]">

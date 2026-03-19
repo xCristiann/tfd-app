@@ -534,7 +534,7 @@ export function CheckoutPage() {
               <div className="mb-4">
                 <div className="text-[7px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-2">Coupon Code</div>
                 {couponData ? (
-                  <div className="flex items-center justify-between p-2 bg-[rgba(22,163,74,.06)] border border-[rgba(0,217,126,.2)]">
+                  <div className="flex items-center justify-between p-2 bg-[rgba(22,163,74,.06)] border border-[rgba(22,163,74,.2)]">
                     <div>
                       <div className=" font-bold text-[#16A34A] text-[11px]">{couponData.code}</div>
                       <div className="text-[9px] text-[#16A34A]">-{couponData.discount_type==='percent'?`${couponData.discount_value}%`:`$${couponData.discount_value}`} applied</div>

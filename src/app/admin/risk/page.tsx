@@ -101,7 +101,7 @@ export function AdminRiskPage() {
                   <Card>
                     <CardHeader title={`Critical Risk (${critical.length})`}/>
                     {critical.map((a,i)=>(
-                      <div key={i} className="border border-[rgba(255,51,82,.15)] bg-[rgba(220,38,38,.04)] p-[14px] mb-2">
+                      <div key={i} className="border border-[rgba(220,38,38,.15)] bg-[rgba(220,38,38,.04)] p-[14px] mb-2">
                         <div className="flex justify-between items-start mb-3">
                           <div>
                             <div className=" text-[#2255CC] text-[11px] mb-[1px]">{a.account_number}</div>
@@ -119,7 +119,7 @@ export function AdminRiskPage() {
                                 })
                                 toast('error','🚨','Alert Sent','Breach warning sent to trader.')
                               }}
-                              className="px-[10px] py-[4px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,51,82,.15)] text-[#DC2626] border border-[rgba(255,51,82,.25)]">Notify</button>
+                              className="px-[10px] py-[4px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.15)] text-[#DC2626] border border-[rgba(220,38,38,.25)]">Notify</button>
                             <button onClick={async ()=>{
                                 if (!window.confirm(`Soft-lock account ${a.account_number}? Trader will see a warning but can still view their account.`)) return
                                 await supabase.from('accounts').update({ status: 'soft_locked' }).eq('id', a.id)

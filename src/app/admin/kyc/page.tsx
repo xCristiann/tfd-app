@@ -90,7 +90,7 @@ export function AdminKycPage() {
               <div className="flex gap-[3px]">
                 {['all','pending','approved','declined','not_started'].map(f => (
                   <button key={f} onClick={() => setFilter(f)}
-                    className={`px-[9px] py-[4px] text-[7px] tracking-[1px] uppercase font-semibold cursor-pointer border transition-all ${filter===f ? 'bg-[rgba(220,38,38,.1)] border-[rgba(255,51,82,.3)] text-[#DC2626]' : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'}`}>
+                    className={`px-[9px] py-[4px] text-[7px] tracking-[1px] uppercase font-semibold cursor-pointer border transition-all ${filter===f ? 'bg-[rgba(220,38,38,.1)] border-[rgba(220,38,38,.3)] text-[#DC2626]' : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'}`}>
                     {f.replace('_',' ')}
                   </button>
                 ))}
@@ -129,11 +129,11 @@ export function AdminKycPage() {
                           {kycStatus === 'pending' && (
                             <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                               <button onClick={() => updateStatus(r.id, r.kyc?.id, 'approved')} disabled={updating}
-                                className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer bg-[rgba(22,163,74,.1)] text-[#16A34A] border border-[rgba(0,217,126,.2)] hover:bg-[rgba(0,217,126,.2)] transition-colors">
+                                className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer bg-[rgba(22,163,74,.1)] text-[#16A34A] border border-[rgba(22,163,74,.2)] hover:bg-[rgba(22,163,74,.2)] transition-colors">
                                 Approve
                               </button>
                               <button onClick={() => updateStatus(r.id, r.kyc?.id, 'declined')} disabled={updating}
-                                className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(255,51,82,.2)] hover:bg-[rgba(255,51,82,.2)] transition-colors">
+                                className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(220,38,38,.2)] hover:bg-[rgba(220,38,38,.2)] transition-colors">
                                 Decline
                               </button>
                             </div>
@@ -177,8 +177,8 @@ export function AdminKycPage() {
                 {['approved','pending','declined','needs_review'].map(s => (
                   <button key={s} onClick={() => updateStatus(selected.id, selected.kyc?.id, s)} disabled={updating}
                     className={`py-2 text-[9px] uppercase font-bold cursor-pointer border transition-all ${
-                      s === 'approved' ? 'bg-[rgba(22,163,74,.1)] text-[#16A34A] border-[rgba(0,217,126,.2)] hover:bg-[rgba(0,217,126,.2)]' :
-                      s === 'declined' ? 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(255,51,82,.2)] hover:bg-[rgba(255,51,82,.2)]' :
+                      s === 'approved' ? 'bg-[rgba(22,163,74,.1)] text-[#16A34A] border-[rgba(22,163,74,.2)] hover:bg-[rgba(22,163,74,.2)]' :
+                      s === 'declined' ? 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(220,38,38,.2)] hover:bg-[rgba(220,38,38,.2)]' :
                       'bg-[#F4F7FD] text-[#5C7A9E] border-[#F0F4FB] hover:border-[#C5D5EA]'
                     }`}>
                     Set {s.replace('_', ' ')}

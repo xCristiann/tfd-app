@@ -271,7 +271,7 @@ export function AffiliatePage() {
                         <td className="px-[11px] py-[8px]">{r.referred_email ?? r.referred_user_id?.slice(0,12) ?? '—'}</td>
                         <td className="px-[11px] py-[8px] text-[#5C7A9E]">{r.product_name ?? '—'}</td>
                         <td className="px-[11px] py-[8px]">
-                          <span className={`text-[8px] px-2 py-1 font-bold uppercase ${r.status === 'converted' ? 'bg-[rgba(22,163,74,.1)] text-[#16A34A]' : 'bg-[rgba(212,168,67,.08)] text-[#2255CC]'}`}>
+                          <span className={`text-[8px] px-2 py-1 font-bold uppercase ${r.status === 'converted' ? 'bg-[rgba(22,163,74,.1)] text-[#16A34A]' : 'bg-[rgba(34,85,204,.08)] text-[#2255CC]'}`}>
                             {r.status}
                           </span>
                         </td>

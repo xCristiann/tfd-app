@@ -238,11 +238,11 @@ export function AdminPayoutsPage() {
                             <div style={{ display:'flex', gap:4 }}>
                               {p.status === 'pending' && (<>
                                 <button onClick={() => updateStatus(p.id,'approved',name)}
-                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(22,163,74,.1)', color:'#16A34A', border:'1px solid rgba(0,217,126,.2)' }}>
+                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(22,163,74,.1)', color:'#16A34A', border:'1px solid rgba(22,163,74,.2)' }}>
                                   ✓ Approve
                                 </button>
                                 <button onClick={() => updateStatus(p.id,'rejected',name)}
-                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(220,38,38,.1)', color:'#DC2626', border:'1px solid rgba(255,51,82,.2)' }}>
+                                  style={{ padding:'3px 8px', fontSize:8, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(220,38,38,.1)', color:'#DC2626', border:'1px solid rgba(220,38,38,.2)' }}>
                                   ✕ Reject
                                 </button>
                               </>)}
@@ -339,7 +339,7 @@ export function AdminPayoutsPage() {
                     ✓ Approve Payout
                   </button>
                   <button onClick={() => updateStatus(selected.id,'rejected', selected.user?.first_name ?? '')}
-                    style={{ width:'100%', padding:'10px', fontSize:10, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(255,51,82,.12)', color:'#DC2626', border:'1px solid rgba(255,51,82,.3)' }}>
+                    style={{ width:'100%', padding:'10px', fontSize:10, letterSpacing:2, textTransform:'uppercase' as const, fontWeight:'bold', cursor:'pointer', background:'rgba(220,38,38,.12)', color:'#DC2626', border:'1px solid rgba(220,38,38,.3)' }}>
                     ✕ Reject Payout
                   </button>
                 </>)}
@@ -350,7 +350,7 @@ export function AdminPayoutsPage() {
                   </button>
                 )}
                 {selected.status === 'paid' && (
-                  <div style={{ textAlign:'center' as const, padding:10, fontSize:11, color:'#16A34A', fontFamily:'monospace', border:'1px solid rgba(0,217,126,.2)', background:'rgba(22,163,74,.05)' }}>
+                  <div style={{ textAlign:'center' as const, padding:10, fontSize:11, color:'#16A34A', fontFamily:'monospace', border:'1px solid rgba(22,163,74,.2)', background:'rgba(22,163,74,.05)' }}>
                     ✓ Payment completed
                   </div>
                 )}

@@ -194,10 +194,10 @@ function CandleChart({sym,tf,livePrice,onLastClose,openTrades,onUpdateSLTP}:Char
       const chart=LWC.createChart(el,{
         width:el.clientWidth,height:el.clientHeight,
         layout:{background:{type:'solid',color:'#0A0A0F'},textColor:'rgba(200,190,240,0.5)'},
-        grid:{vertLines:{color:'rgba(212,168,67,0.05)'},horzLines:{color:'rgba(212,168,67,0.05)'}},
+        grid:{vertLines:{color:'rgba(34,85,204,0.05)'},horzLines:{color:'rgba(34,85,204,0.05)'}},
         crosshair:{mode:1},
-        rightPriceScale:{borderColor:'rgba(212,168,67,0.15)'},
-        timeScale:{borderColor:'rgba(212,168,67,0.15)',timeVisible:true,secondsVisible:false},
+        rightPriceScale:{borderColor:'rgba(34,85,204,0.15)'},
+        timeScale:{borderColor:'rgba(34,85,204,0.15)',timeVisible:true,secondsVisible:false},
       })
       const series=chart.addCandlestickSeries({
         upColor:'#00D97E',downColor:'#FF3352',
@@ -268,18 +268,18 @@ function CandleChart({sym,tf,livePrice,onLastClose,openTrades,onUpdateSLTP}:Char
         // Create entry line
         const entryLine=series.createPriceLine({
           price:t.open_price,
-          color:t.direction==='buy'?'rgba(0,217,126,0.8)':'rgba(255,51,82,0.8)',
+          color:t.direction==='buy'?'rgba(22,163,74,0.8)':'rgba(220,38,38,0.8)',
           lineWidth:1,lineStyle:2,axisLabelVisible:true,
           title:`${t.direction.toUpperCase()} ${t.lots}`,
         })
         // Create SL line
         const slLine=t.sl?series.createPriceLine({
-          price:t.sl,color:'rgba(255,51,82,0.9)',lineWidth:1,lineStyle:1,
+          price:t.sl,color:'rgba(220,38,38,0.9)',lineWidth:1,lineStyle:1,
           axisLabelVisible:true,title:'SL',draggable:true,
         }):null
         // Create TP line
         const tpLine=t.tp?series.createPriceLine({
-          price:t.tp,color:'rgba(0,217,126,0.9)',lineWidth:1,lineStyle:1,
+          price:t.tp,color:'rgba(22,163,74,0.9)',lineWidth:1,lineStyle:1,
           axisLabelVisible:true,title:'TP',draggable:true,
         }):null
         linesRef.current.set(t.id,{entry:entryLine,sl:slLine,tp:tpLine})
@@ -709,7 +709,7 @@ export function PlatformPage(){
     {/* ── Main ── */}
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
       {!ms.open&&(
-        <div style={{background:'rgba(220,38,38,.1)',borderBottom:'1px solid rgba(255,51,82,.25)',padding:'6px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+        <div style={{background:'rgba(220,38,38,.1)',borderBottom:'1px solid rgba(220,38,38,.25)',padding:'6px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
           <span style={{fontSize:11,color:'#DC2626',fontWeight:600}}>🔴 {ms.label}</span>
           {ms.nextOpen&&<span style={{fontSize:10,color:'#8FA3BF'}}>Next open: {ms.nextOpen}</span>}
         </div>
@@ -790,12 +790,12 @@ export function PlatformPage(){
                      <td style={{padding:'5px 8px',fontFamily:'monospace',color:'#5C7A9E'}}>{t.open_price}</td>
                      <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:600,color:cur>=t.open_price?'#16A34A':'#DC2626'}}>{cur.toFixed(ti?.dec??5)}</td>
                      <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:700,fontSize:11,color:pnl>=0?'#16A34A':'#DC2626'}}>{pnl>=0?'+':''}{fmt(pnl)}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:10,fontWeight:600,color:warn?'#DC2626':ddPct<0?'rgba(255,51,82,.7)':'#16A34A'}}>{ddPct>=0?'+':''}{ddPct.toFixed(2)}%</td>
+                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:10,fontWeight:600,color:warn?'#DC2626':ddPct<0?'rgba(220,38,38,.7)':'#16A34A'}}>{ddPct>=0?'+':''}{ddPct.toFixed(2)}%</td>
                      {/* SL editable */}
                      <td style={{padding:'5px 8px'}}>
                        {isEditing
                          ?<input value={editSLTP!.sl} onChange={e=>setEditSLTP(x=>x?{...x,sl:e.target.value}:null)}
-                             style={{width:70,padding:'2px 4px',background:'rgba(220,38,38,.1)',border:'1px solid rgba(255,51,82,.4)',color:'#DC2626',fontFamily:'monospace',fontSize:9,outline:'none'}}
+                             style={{width:70,padding:'2px 4px',background:'rgba(220,38,38,.1)',border:'1px solid rgba(220,38,38,.4)',color:'#DC2626',fontFamily:'monospace',fontSize:9,outline:'none'}}
                              type="number" placeholder="SL"/>
                          :<span style={{fontFamily:'monospace',color:'#DC2626',fontSize:9,cursor:'pointer',textDecoration:'underline',textDecorationStyle:'dotted' as const}}
                              onClick={()=>setEditSLTP({id:t.id,sl:t.sl?.toString()||'',tp:t.tp?.toString()||''})}>
@@ -807,7 +807,7 @@ export function PlatformPage(){
                      <td style={{padding:'5px 8px'}}>
                        {isEditing
                          ?<input value={editSLTP!.tp} onChange={e=>setEditSLTP(x=>x?{...x,tp:e.target.value}:null)}
-                             style={{width:70,padding:'2px 4px',background:'rgba(22,163,74,.1)',border:'1px solid rgba(0,217,126,.4)',color:'#16A34A',fontFamily:'monospace',fontSize:9,outline:'none'}}
+                             style={{width:70,padding:'2px 4px',background:'rgba(22,163,74,.1)',border:'1px solid rgba(22,163,74,.4)',color:'#16A34A',fontFamily:'monospace',fontSize:9,outline:'none'}}
                              type="number" placeholder="TP"/>
                          :<span style={{fontFamily:'monospace',color:'#16A34A',fontSize:9,cursor:'pointer',textDecoration:'underline',textDecorationStyle:'dotted' as const}}
                              onClick={()=>setEditSLTP({id:t.id,sl:t.sl?.toString()||'',tp:t.tp?.toString()||''})}>
@@ -819,10 +819,10 @@ export function PlatformPage(){
                      <td style={{padding:'5px 8px',display:'flex',gap:4}}>
                        {isEditing
                          ?<>
-                            <button onClick={saveEditSLTP} style={{padding:'2px 6px',fontSize:8,cursor:'pointer',background:'rgba(0,217,126,.15)',color:'#16A34A',border:'1px solid rgba(0,217,126,.3)',fontWeight:'bold'}}>✓</button>
+                            <button onClick={saveEditSLTP} style={{padding:'2px 6px',fontSize:8,cursor:'pointer',background:'rgba(22,163,74,.15)',color:'#16A34A',border:'1px solid rgba(22,163,74,.3)',fontWeight:'bold'}}>✓</button>
                             <button onClick={()=>setEditSLTP(null)} style={{padding:'2px 6px',fontSize:8,cursor:'pointer',background:'transparent',color:'#8FA3BF',border:'1px solid rgba(26,58,107,.06)'}}>✕</button>
                           </>
-                         :<button onClick={()=>closeTrade(t)} style={{padding:'3px 8px',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:'rgba(220,38,38,.1)',color:'#DC2626',border:'1px solid rgba(255,51,82,.25)'}}>Close</button>
+                         :<button onClick={()=>closeTrade(t)} style={{padding:'3px 8px',fontSize:8,textTransform:'uppercase' as const,fontWeight:'bold',cursor:'pointer',background:'rgba(220,38,38,.1)',color:'#DC2626',border:'1px solid rgba(220,38,38,.25)'}}>Close</button>
                        }
                      </td>
                    </tr>
@@ -884,18 +884,18 @@ export function PlatformPage(){
     <div style={{width:215,flexShrink:0,background:'#fff',borderLeft:'1px solid #E8EEF8',display:'flex',flexDirection:'column'}}>
       <div style={{padding:'10px 12px',borderBottom:'1px solid #E8EEF8'}}>
         <div style={{fontSize:7,letterSpacing:2,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:8}}>Order Panel</div>
-        <div style={{marginBottom:8,padding:'5px 8px',background:ms.open?'rgba(0,217,126,.07)':'rgba(220,38,38,.07)',border:`1px solid ${ms.open?'rgba(0,217,126,.2)':'rgba(255,51,82,.2)'}`,display:'flex',alignItems:'center',gap:6}}>
+        <div style={{marginBottom:8,padding:'5px 8px',background:ms.open?'rgba(22,163,74,.07)':'rgba(220,38,38,.07)',border:`1px solid ${ms.open?'rgba(22,163,74,.2)':'rgba(220,38,38,.2)'}`,display:'flex',alignItems:'center',gap:6}}>
           <div style={{width:5,height:5,borderRadius:'50%',background:ms.open?'#16A34A':'#DC2626',flexShrink:0}}/>
           <span style={{fontSize:8,color:ms.open?'#16A34A':'#DC2626',fontWeight:600}}>{ms.label}</span>
         </div>
         <div style={{display:'flex'}}>
-          <button onClick={()=>setDir('buy')}  disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='buy'?'#16A34A':'rgba(0,217,126,.08)',color:dir==='buy'?'#000':'#16A34A'}}>Buy</button>
-          <button onClick={()=>setDir('sell')} disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='sell'?'#DC2626':'rgba(255,51,82,.08)',color:dir==='sell'?'#fff':'#DC2626'}}>Sell</button>
+          <button onClick={()=>setDir('buy')}  disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='buy'?'#16A34A':'rgba(22,163,74,.08)',color:dir==='buy'?'#000':'#16A34A'}}>Buy</button>
+          <button onClick={()=>setDir('sell')} disabled={!canTrade} style={{flex:1,padding:'9px 0',fontSize:10,letterSpacing:1,textTransform:'uppercase' as const,fontWeight:'bold',cursor:canTrade?'pointer':'not-allowed',border:'none',opacity:canTrade?1:0.4,background:dir==='sell'?'#DC2626':'rgba(220,38,38,.08)',color:dir==='sell'?'#fff':'#DC2626'}}>Sell</button>
         </div>
       </div>
       <div style={{flex:1,overflowY:'auto',padding:12,display:'flex',flexDirection:'column',gap:8}}>
         {/* Price */}
-        <div style={{textAlign:'center' as const,padding:'10px 8px',border:`1px solid ${up?'rgba(0,217,126,.25)':'rgba(255,51,82,.25)'}`,background:'#F4F7FD'}}>
+        <div style={{textAlign:'center' as const,padding:'10px 8px',border:`1px solid ${up?'rgba(22,163,74,.25)':'rgba(220,38,38,.25)'}`,background:'#F4F7FD'}}>
           <div style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase' as const,color:'#8FA3BF',fontWeight:600,marginBottom:3}}>{dir==='buy'?'Ask':'Bid'}</div>
           <div style={{fontFamily:'monospace',fontSize:22,fontWeight:700,letterSpacing:-1,color:up?'#16A34A':'#DC2626'}}>{execPrice.toFixed(inst.dec)}</div>
           <div style={{fontSize:8,color:'#8FA3BF',marginTop:3}}>spread {inst.spread.toFixed(inst.dec)}</div>

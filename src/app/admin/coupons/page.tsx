@@ -174,7 +174,7 @@ export function AdminCouponsPage() {
                   <div className="flex gap-[3px]">
                     {['all','active','expired','maxed','disabled'].map(f => (
                       <button key={f} onClick={() => setFilter(f)}
-                        className={`px-[9px] py-[4px] text-[7px] tracking-[1px] uppercase font-semibold cursor-pointer border transition-all ${filter===f?'bg-[rgba(220,38,38,.1)] border-[rgba(255,51,82,.3)] text-[#DC2626]':'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'}`}>
+                        className={`px-[9px] py-[4px] text-[7px] tracking-[1px] uppercase font-semibold cursor-pointer border transition-all ${filter===f?'bg-[rgba(220,38,38,.1)] border-[rgba(220,38,38,.3)] text-[#DC2626]':'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF]'}`}>
                         {f}
                       </button>
                     ))}
@@ -217,8 +217,8 @@ export function AdminCouponsPage() {
                       </td>
                       <td className="px-[10px] py-[10px]">
                         <div className="flex flex-col gap-[2px]">
-                          {c.single_use && <span className="text-[8px] px-1 py-[1px] bg-[rgba(212,168,67,.08)] text-[#2255CC] font-bold">Single Use</span>}
-                          {c.one_per_account && <span className="text-[8px] px-1 py-[1px] bg-[rgba(212,168,67,.08)] text-[#2255CC] font-bold">1/Account</span>}
+                          {c.single_use && <span className="text-[8px] px-1 py-[1px] bg-[rgba(34,85,204,.08)] text-[#2255CC] font-bold">Single Use</span>}
+                          {c.one_per_account && <span className="text-[8px] px-1 py-[1px] bg-[rgba(34,85,204,.08)] text-[#2255CC] font-bold">1/Account</span>}
                           {!c.single_use && !c.one_per_account && <span className="text-[8px] text-[#8FA3BF]">Unlimited</span>}
                         </div>
                       </td>
@@ -248,11 +248,11 @@ export function AdminCouponsPage() {
                             Uses
                           </button>
                           <button onClick={() => toggleActive(c)}
-                            className={`px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer border transition-colors ${c.is_active ? 'border-[rgba(255,51,82,.2)] text-[#DC2626]' : 'border-[rgba(0,217,126,.2)] text-[#16A34A]'}`}>
+                            className={`px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer border transition-colors ${c.is_active ? 'border-[rgba(220,38,38,.2)] text-[#DC2626]' : 'border-[rgba(22,163,74,.2)] text-[#16A34A]'}`}>
                             {c.is_active ? 'Off' : 'On'}
                           </button>
                           <button onClick={() => deleteCoupon(c)}
-                            className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer border border-[rgba(255,51,82,.2)] text-[#DC2626] hover:bg-[rgba(220,38,38,.1)] transition-colors">
+                            className="px-[7px] py-[3px] text-[8px] font-bold uppercase cursor-pointer border border-[rgba(220,38,38,.2)] text-[#DC2626] hover:bg-[rgba(220,38,38,.1)] transition-colors">
                             Del
                           </button>
                         </div>

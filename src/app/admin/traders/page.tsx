@@ -279,7 +279,7 @@ export function AdminTradersPage() {
                     ?? accounts.find((a:any)=>a.phase==='phase2')?.phase
                     ?? accounts[0]?.phase ?? '—'
                   return (
-                    <tr key={t.id} className={`border-b border-[rgba(220,38,38,.04)] hover:bg-[rgba(255,51,82,.03)] cursor-pointer ${t.is_banned ? 'opacity-50' : ''}`}>
+                    <tr key={t.id} className={`border-b border-[rgba(220,38,38,.04)] hover:bg-[rgba(220,38,38,.03)] cursor-pointer ${t.is_banned ? 'opacity-50' : ''}`}>
                       <td className="px-[11px] py-[8px] font-semibold" onClick={()=>openTrader(t)}>
                         <span className="hover:text-[#2255CC] transition-colors">{t.first_name} {t.last_name}</span>
                       </td>
@@ -288,7 +288,7 @@ export function AdminTradersPage() {
                       <td className="px-[11px] py-[8px]">
                         {t.last_login_ip ? (
                           <button onClick={e=>{e.stopPropagation();setIpTrader(t)}}
-                            className=" text-[10px] text-[#2255CC] bg-[rgba(212,168,67,.08)] border border-[#C5D5EA] px-[6px] py-[2px] cursor-pointer hover:bg-[rgba(34,85,204,.15)] transition-all">
+                            className=" text-[10px] text-[#2255CC] bg-[rgba(34,85,204,.08)] border border-[#C5D5EA] px-[6px] py-[2px] cursor-pointer hover:bg-[rgba(34,85,204,.15)] transition-all">
                             {t.last_login_ip}
                           </button>
                         ) : <span className="text-[#8FA3BF]">—</span>}
@@ -302,7 +302,7 @@ export function AdminTradersPage() {
                       </td>
                       <td className="px-[11px] py-[8px]">
                         {t.is_banned
-                          ? <span className="text-[8px] uppercase font-bold text-[#DC2626] bg-[rgba(220,38,38,.1)] border border-[rgba(255,51,82,.2)] px-[6px] py-[2px]">Banned</span>
+                          ? <span className="text-[8px] uppercase font-bold text-[#DC2626] bg-[rgba(220,38,38,.1)] border border-[rgba(220,38,38,.2)] px-[6px] py-[2px]">Banned</span>
                           : <span className="text-[8px] uppercase font-bold text-[#16A34A]">Active</span>
                         }
                       </td>
@@ -315,12 +315,12 @@ export function AdminTradersPage() {
                             View
                           </button>
                           <button onClick={()=>banTrader(t.id, t.is_banned)}
-                            className={`px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer border ${t.is_banned ? 'bg-[rgba(0,200,100,.1)] text-[#16A34A] border-[rgba(0,200,100,.2)]' : 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(255,51,82,.2)]'}`}>
+                            className={`px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer border ${t.is_banned ? 'bg-[rgba(0,200,100,.1)] text-[#16A34A] border-[rgba(0,200,100,.2)]' : 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(220,38,38,.2)]'}`}>
                             {t.is_banned ? 'Unban' : 'Ban'}
                           </button>
                           {t.role !== 'admin' && (
                             <button onClick={()=>setRole(t.id,'admin')}
-                              className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(255,51,82,.2)]">
+                              className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(220,38,38,.2)]">
                               Admin
                             </button>
                           )}
@@ -347,14 +347,14 @@ export function AdminTradersPage() {
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8EEF8]">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-[rgba(220,38,38,.1)] border border-[rgba(255,51,82,.2)] flex items-center justify-center font-bold text-[#DC2626] text-[13px]">
+                  <div className="w-10 h-10 rounded-full bg-[rgba(220,38,38,.1)] border border-[rgba(220,38,38,.2)] flex items-center justify-center font-bold text-[#DC2626] text-[13px]">
                     {selectedTrader.first_name?.[0]}{selectedTrader.last_name?.[0]}
                   </div>
                   <div>
                     <div className="font-sans text-[16px] font-bold">{selectedTrader.first_name} {selectedTrader.last_name}</div>
                     <div className="text-[10px] text-[#8FA3BF]">{selectedTrader.email} · {selectedTrader.country ?? '—'}</div>
                   </div>
-                  {selectedTrader.is_banned && <span className="text-[8px] uppercase font-bold text-[#DC2626] bg-[rgba(220,38,38,.1)] border border-[rgba(255,51,82,.2)] px-[8px] py-[3px]">Banned</span>}
+                  {selectedTrader.is_banned && <span className="text-[8px] uppercase font-bold text-[#DC2626] bg-[rgba(220,38,38,.1)] border border-[rgba(220,38,38,.2)] px-[8px] py-[3px]">Banned</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={()=>setAddAccModal(true)}
@@ -362,7 +362,7 @@ export function AdminTradersPage() {
                     + Add Account
                   </button>
                   <button onClick={()=>banTrader(selectedTrader.id, selectedTrader.is_banned)}
-                    className={`px-[12px] py-[6px] text-[8px] uppercase font-bold cursor-pointer border ${selectedTrader.is_banned ? 'bg-[rgba(0,200,100,.1)] text-[#16A34A] border-[rgba(0,200,100,.2)]' : 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(255,51,82,.2)]'}`}>
+                    className={`px-[12px] py-[6px] text-[8px] uppercase font-bold cursor-pointer border ${selectedTrader.is_banned ? 'bg-[rgba(0,200,100,.1)] text-[#16A34A] border-[rgba(0,200,100,.2)]' : 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(220,38,38,.2)]'}`}>
                     {selectedTrader.is_banned ? '✓ Unban' : '🚫 Ban Trader'}
                   </button>
                   <button onClick={()=>setSelectedTrader(null)} className="text-[#8FA3BF] hover:text-[#1A3A6B] text-[18px] cursor-pointer bg-none border-none ml-2">✕</button>
@@ -469,7 +469,7 @@ export function AdminTradersPage() {
                               toast('error','🗑','Deleted',`${acc.account_number} deleted.`)
                               openTrader(selectedTrader)
                             }}
-                              className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(255,51,82,.2)]">
+                              className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(220,38,38,.2)]">
                               Delete
                             </button>
                           </div>

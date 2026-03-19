@@ -249,7 +249,7 @@ export function SupportCRMPage() {
                       </div>
                       <div className={`px-3 py-[10px] text-[12px] leading-[1.6] ${
                         m.is_internal
-                          ? 'bg-[rgba(212,168,67,.08)] border border-[rgba(34,85,204,.2)] text-[#5C7A9E]'
+                          ? 'bg-[rgba(34,85,204,.08)] border border-[rgba(34,85,204,.2)] text-[#5C7A9E]'
                           : isMe
                             ? 'bg-[rgba(59,158,255,.1)] border border-[rgba(59,158,255,.2)] text-[#1A3A6B]'
                             : 'bg-[#F4F7FD] border border-[#E8EEF8] text-[#5C7A9E]'

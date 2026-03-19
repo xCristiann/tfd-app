@@ -81,7 +81,7 @@ export function AdminSupportPage() {
             action={
               <div className="flex gap-2">
                 <button onClick={load}
-                  className="px-3 py-[5px] text-[9px] tracking-[1px] uppercase font-bold border border-[#C5D5EA] text-[#2255CC] cursor-pointer bg-transparent hover:bg-[rgba(212,168,67,.08)]">
+                  className="px-3 py-[5px] text-[9px] tracking-[1px] uppercase font-bold border border-[#C5D5EA] text-[#2255CC] cursor-pointer bg-transparent hover:bg-[rgba(34,85,204,.08)]">
                   ↻ Refresh
                 </button>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/support-crm')}>
@@ -93,7 +93,7 @@ export function AdminSupportPage() {
 
           {/* Error display */}
           {error && (
-            <div className="mb-4 px-4 py-3 bg-[rgba(255,51,82,.08)] border border-[rgba(255,51,82,.25)] text-[#DC2626] text-[11px] ">
+            <div className="mb-4 px-4 py-3 bg-[rgba(220,38,38,.08)] border border-[rgba(220,38,38,.25)] text-[#DC2626] text-[11px] ">
               ❌ {error}
             </div>
           )}
@@ -155,13 +155,13 @@ export function AdminSupportPage() {
                       <div className="flex gap-1">
                         {t.status !== 'resolved' && (
                           <button onClick={() => updateStatus(t.id, 'resolved')}
-                            className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(22,163,74,.1)] text-[#16A34A] border border-[rgba(0,217,126,.2)]">
+                            className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(22,163,74,.1)] text-[#16A34A] border border-[rgba(22,163,74,.2)]">
                             Resolve
                           </button>
                         )}
                         {t.status !== 'closed' && (
                           <button onClick={() => updateStatus(t.id, 'closed')}
-                            className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(255,51,82,.2)]">
+                            className="px-[8px] py-[3px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(220,38,38,.2)]">
                             Close
                           </button>
                         )}

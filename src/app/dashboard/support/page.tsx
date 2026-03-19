@@ -253,7 +253,7 @@ export function DashboardSupportPage() {
                       </div>
                       <div className={`px-4 py-3 text-[12px] leading-[1.7] ${
                         isMe
-                          ? 'bg-[rgba(212,168,67,.08)] border border-[rgba(34,85,204,.2)] text-[#1A3A6B]'
+                          ? 'bg-[rgba(34,85,204,.08)] border border-[rgba(34,85,204,.2)] text-[#1A3A6B]'
                           : 'bg-[rgba(59,158,255,.08)] border border-[rgba(59,158,255,.2)] text-[#1A3A6B]'
                       }`}>
                         {m.body}

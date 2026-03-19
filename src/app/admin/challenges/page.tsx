@@ -159,11 +159,11 @@ export function AdminChallengePage() {
                   <button onClick={()=>toggleActive(p)}
                     className={`flex-1 py-[5px] text-[8px] uppercase font-bold cursor-pointer border transition-all ${
                       p.is_active
-                        ? 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(255,51,82,.2)]'
-                        : 'bg-[rgba(22,163,74,.1)] text-[#16A34A] border-[rgba(0,217,126,.2)]'
+                        ? 'bg-[rgba(220,38,38,.1)] text-[#DC2626] border-[rgba(220,38,38,.2)]'
+                        : 'bg-[rgba(22,163,74,.1)] text-[#16A34A] border-[rgba(22,163,74,.2)]'
                     }`}>{p.is_active ? 'Deactivate' : 'Activate'}</button>
                   <button onClick={()=>deleteProduct(p)}
-                    className="px-[8px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,51,82,.08)] text-[#DC2626] border border-[rgba(255,51,82,.15)]">🗑</button>
+                    className="px-[8px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.08)] text-[#DC2626] border border-[rgba(220,38,38,.15)]">🗑</button>
                 </div>
               </Card>
             ))}

@@ -84,13 +84,13 @@ export function AdminDashboardPage() {
             {riskAlerts.length === 0 ? (
               <div className="py-8 text-center text-[11px] text-[#16A34A]">✓ No risk alerts</div>
             ) : riskAlerts.slice(0,5).map((a,i)=>(
-              <div key={i} className="flex items-center justify-between px-[14px] py-[12px] border border-[rgba(255,51,82,.15)] bg-[rgba(220,38,38,.04)] mb-2">
+              <div key={i} className="flex items-center justify-between px-[14px] py-[12px] border border-[rgba(220,38,38,.15)] bg-[rgba(220,38,38,.04)] mb-2">
                 <div>
                   <div className="text-[12px] font-semibold">{a.account_number}</div>
                   <div className="text-[10px] text-[#8FA3BF]">Daily DD: {a.daily_dd_used}% · Max DD: {a.max_dd_used}%</div>
                 </div>
                 <button onClick={()=>toast('error','🚨','Alert','Notification sent.')}
-                  className="px-[10px] py-[4px] text-[8px] tracking-[1px] uppercase font-bold cursor-pointer bg-[rgba(255,51,82,.15)] text-[#DC2626] border border-[rgba(255,51,82,.25)]">Notify</button>
+                  className="px-[10px] py-[4px] text-[8px] tracking-[1px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.15)] text-[#DC2626] border border-[rgba(220,38,38,.25)]">Notify</button>
               </div>
             ))}
           </Card>

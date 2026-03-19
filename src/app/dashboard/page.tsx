@@ -208,9 +208,9 @@ export function DashboardPage() {
             {isLocked && (
               <div className={`flex items-center gap-3 px-5 py-3 border ${
                 account?.status === 'breached'
-                  ? 'border-[rgba(255,51,82,.3)] bg-[rgba(220,38,38,.06)] text-[#DC2626]'
+                  ? 'border-[rgba(220,38,38,.3)] bg-[rgba(220,38,38,.06)] text-[#DC2626]'
                   : account?.status === 'suspended'
-                  ? 'border-[rgba(255,51,82,.3)] bg-[rgba(220,38,38,.06)] text-[#DC2626]'
+                  ? 'border-[rgba(220,38,38,.3)] bg-[rgba(220,38,38,.06)] text-[#DC2626]'
                   : 'border-[rgba(34,85,204,.3)] bg-[rgba(34,85,204,.05)] text-[#2255CC]'
               }`}>
                 <span className="text-[16px]">

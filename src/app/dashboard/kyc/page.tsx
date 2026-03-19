@@ -17,8 +17,8 @@ type KycStatus = 'not_started' | 'pending' | 'approved' | 'declined' | 'needs_re
 const STATUS_CFG: Record<KycStatus, { label: string; color: string; bg: string; border: string; icon: string; desc: string }> = {
   not_started:  { label: 'Not Verified',  color: 'text-[#8FA3BF]', bg: 'bg-[#F4F7FD]',               border: 'border-[#F0F4FB]',               icon: '○', desc: 'Complete identity verification to unlock payouts and higher limits.' },
   pending:      { label: 'Under Review',  color: 'text-[#2255CC]',  bg: 'bg-[rgba(34,85,204,.05)]',     border: 'border-[rgba(34,85,204,.3)]',     icon: '⏳', desc: 'Your documents are being reviewed. Usually takes 1–2 business days.' },
-  approved:     { label: 'Verified',      color: 'text-[#16A34A]', bg: 'bg-[rgba(22,163,74,.06)]',      border: 'border-[rgba(0,217,126,.3)]',      icon: '✓',  desc: 'Your identity has been verified. All features are unlocked.' },
-  declined:     { label: 'Declined',      color: 'text-[#DC2626]',   bg: 'bg-[rgba(220,38,38,.06)]',      border: 'border-[rgba(255,51,82,.3)]',      icon: '✕',  desc: 'Your verification was declined. Please re-submit with valid documents.' },
+  approved:     { label: 'Verified',      color: 'text-[#16A34A]', bg: 'bg-[rgba(22,163,74,.06)]',      border: 'border-[rgba(22,163,74,.3)]',      icon: '✓',  desc: 'Your identity has been verified. All features are unlocked.' },
+  declined:     { label: 'Declined',      color: 'text-[#DC2626]',   bg: 'bg-[rgba(220,38,38,.06)]',      border: 'border-[rgba(220,38,38,.3)]',      icon: '✕',  desc: 'Your verification was declined. Please re-submit with valid documents.' },
   needs_review: { label: 'Needs Review',  color: 'text-[#2255CC]',  bg: 'bg-[rgba(34,85,204,.05)]',     border: 'border-[rgba(34,85,204,.3)]',     icon: '⚠', desc: 'Additional information required. Please contact support.' },
 }
 

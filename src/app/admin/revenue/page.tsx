@@ -212,12 +212,12 @@ export function AdminRevenuePage() {
                         <div className="w-full flex gap-[2px] items-end" style={{ height:120 }}>
                           {/* Sales bar */}
                           <div className="flex-1 rounded-t transition-all duration-500"
-                            style={{ height:`${maxMonthSales > 0 ? (m.sales/maxMonthSales)*100 : 0}%`, background:'rgba(0,217,126,0.6)', minHeight: m.sales>0?4:0 }}
+                            style={{ height:`${maxMonthSales > 0 ? (m.sales/maxMonthSales)*100 : 0}%`, background:'rgba(22,163,74,0.6)', minHeight: m.sales>0?4:0 }}
                             title={`Sales: ${fmt(m.sales)}`}
                           />
                           {/* Payouts bar */}
                           <div className="flex-1 rounded-t transition-all duration-500"
-                            style={{ height:`${maxMonthSales > 0 ? (m.payouts/maxMonthSales)*100 : 0}%`, background:'rgba(255,51,82,0.6)', minHeight: m.payouts>0?4:0 }}
+                            style={{ height:`${maxMonthSales > 0 ? (m.payouts/maxMonthSales)*100 : 0}%`, background:'rgba(220,38,38,0.6)', minHeight: m.payouts>0?4:0 }}
                             title={`Payouts: ${fmt(m.payouts)}`}
                           />
                         </div>
@@ -228,11 +228,11 @@ export function AdminRevenuePage() {
                   {/* Legend */}
                   <div className="flex gap-4 justify-center">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-sm" style={{ background:'rgba(0,217,126,0.6)' }}/>
+                      <div className="w-3 h-3 rounded-sm" style={{ background:'rgba(22,163,74,0.6)' }}/>
                       <span className="text-[9px] text-[#8FA3BF]">Sales Revenue</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-sm" style={{ background:'rgba(255,51,82,0.6)' }}/>
+                      <div className="w-3 h-3 rounded-sm" style={{ background:'rgba(220,38,38,0.6)' }}/>
                       <span className="text-[9px] text-[#8FA3BF]">Payouts</span>
                     </div>
                   </div>
