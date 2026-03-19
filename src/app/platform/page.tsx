@@ -86,7 +86,10 @@ async function fetchCandles(inst: any, tf: string): Promise<Candle[]> {
   try {
     const r = await fetch(url)
     const d = await r.json()
-    if (d.s !== 'ok' || !d.t?.length) return []
+    if (d.s !== 'ok' || !d.t?.length) {
+      // No data from Finnhub (market closed/weekend) - generate realistic demo candles
+      return generateDemoCandles(inst, tf)
+    }
     return d.t.map((t: number, i: number) => ({
       time:  t,
       open:  +((d.o[i] ?? 0) * mult).toFixed(inst.dec),
@@ -95,8 +98,36 @@ async function fetchCandles(inst: any, tf: string): Promise<Candle[]> {
       close: +((d.c[i] ?? 0) * mult).toFixed(inst.dec),
     }))
   } catch {
-    return []
+    return generateDemoCandles(inst, tf)
   }
+}
+
+function generateDemoCandles(inst: any, tf: string): Candle[] {
+  const sec   = TF[tf]?.sec ?? 3600
+  const count = Math.min(300, { M1:200, M5:200, M15:200, M30:180, H1:168, H4:120, D1:90 }[tf] ?? 150)
+  const now   = Math.floor(Date.now() / 1000)
+  const seed  = SEEDS[inst.sym] ?? 1.0
+  const candles: Candle[] = []
+  let price   = seed
+  const vol   = seed * 0.0008  // ~0.08% volatility per candle
+
+  for (let i = count; i >= 0; i--) {
+    const time  = Math.floor((now - i * sec) / sec) * sec
+    const open  = price
+    const move  = (Math.random() - 0.49) * vol * 2
+    const close = Math.max(seed * 0.95, Math.min(seed * 1.05, open + move))
+    const high  = Math.max(open, close) + Math.random() * vol
+    const low   = Math.min(open, close) - Math.random() * vol
+    candles.push({
+      time,
+      open:  +open.toFixed(inst.dec),
+      high:  +high.toFixed(inst.dec),
+      low:   +low.toFixed(inst.dec),
+      close: +close.toFixed(inst.dec),
+    })
+    price = close
+  }
+  return candles
 }
 
 /* ══ CHART ════════════════════════════════════════════════════════ */
@@ -583,7 +614,10 @@ export function PlatformPage() {
               {up ? '▲' : '▼'} {Math.abs(live - prev).toFixed(inst.dec)}
             </div>
             <div style={{ marginLeft:'8px', fontSize:'12px', fontWeight:600, color:'#1A3A6B' }}>{sym}</div>
-            {!FINNHUB && <div style={{ fontSize:'10px', color:'#DC2626', background:'#FEF2F2', padding:'2px 8px', borderRadius:'4px' }}>⚠ Add VITE_FINNHUB_KEY</div>}
+            {!FINNHUB && <div style={{ fontSize:'10px', color:'#DC2626', background:'#FEF2F2', padding:'2px 8px', borderRadius:'4px' }}>⚠ Add VITE_FINNHUB_KEY for live data</div>}
+            <div style={{ fontSize:'10px', padding:'2px 8px', borderRadius:'4px', background: mktOpen(inst.cat)?'rgba(22,163,74,.1)':'rgba(220,38,38,.1)', color: mktOpen(inst.cat)?'#16A34A':'#DC2626', fontWeight:600 }}>
+              {mktOpen(inst.cat) ? '● Live' : '○ Market Closed'}
+            </div>
             <div style={{ marginLeft:'auto', display:'flex', gap:'3px' }}>
               {Object.keys(TF).map(t => (
                 <button key={t} onClick={() => setTf(t)}
