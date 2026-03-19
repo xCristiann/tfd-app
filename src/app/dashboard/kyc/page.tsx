@@ -22,9 +22,6 @@ const STATUS_CFG: Record<KycStatus, { label: string; color: string; bg: string; 
 }
 
 // Didit API config
-const DIDIT_API_KEY    = (import.meta as any).env?.VITE_DIDIT_API_KEY ?? ''
-const DIDIT_WORKFLOW   = (import.meta as any).env?.VITE_DIDIT_WORKFLOW_ID ?? ''
-const DIDIT_API_URL    = 'https://verification.didit.me/v3/session/'
 
 export function KycPage() {
   const { profile } = useAuth()
@@ -43,13 +40,6 @@ export function KycPage() {
   async function startVerification() {
     if (!profile) return
     setStarting(true)
-
-    // If no API key — show manual fallback
-    if (!DIDIT_API_KEY || !DIDIT_WORKFLOW) {
-      toast('info', '📋', 'Manual KYC', 'Please open a support ticket and attach a photo of your government ID + selfie.')
-      setStarting(false)
-      return
-    }
 
     try {
       // Create Didit session via Vercel API route (to keep API key server-side)
@@ -79,8 +69,33 @@ export function KycPage() {
       window.open(verification_url, '_blank', 'width=500,height=700,noopener')
       toast('success', '✅', 'Session Started', 'Complete the verification in the new window. This page will update automatically.')
 
+      // Poll for status updates every 15 seconds (no webhook needed)
+      let attempts = 0
+      const poll = setInterval(async () => {
+        attempts++
+        if (attempts > 40) { clearInterval(poll); return } // stop after 10 min
+        try {
+          const statusRes = await fetch(`/api/kyc-status?sessionId=${session_id}`)
+          if (!statusRes.ok) return
+          const { status: newStatus } = await statusRes.json()
+          if (newStatus && newStatus !== 'pending') {
+            clearInterval(poll)
+            setKycRecord((prev: any) => ({ ...prev, status: newStatus }))
+            await supabase.from('kyc_verifications').update({ status: newStatus }).eq('user_id', profile.id)
+            await supabase.from('users').update({ kyc_status: newStatus }).eq('id', profile.id)
+            if (newStatus === 'approved') toast('success', '✅', 'Verified!', 'Your identity has been confirmed.')
+            else if (newStatus === 'declined') toast('error', '❌', 'Declined', 'Please re-submit with valid documents.')
+          }
+        } catch {}
+      }, 15000)
+
     } catch (err: any) {
-      toast('error', '❌', 'Error', err.message ?? 'Could not start verification')
+      const msg = err.message ?? ''
+      if (msg.includes('not configured') || msg.includes('500')) {
+        toast('info', '📋', 'Manual KYC', 'Please open a support ticket and attach a photo of your government ID + selfie.')
+      } else {
+        toast('error', '❌', 'Error', msg || 'Could not start verification. Please try again.')
+      }
     } finally {
       setStarting(false)
     }
@@ -203,9 +218,7 @@ export function KycPage() {
                 <Button onClick={startVerification} loading={starting} className="w-full py-3">
                   {starting ? 'Starting…' : canStart && status !== 'not_started' ? 'Re-submit Verification →' : 'Start Identity Verification →'}
                 </Button>
-                {!DIDIT_API_KEY && (
-                  <p className="text-[10px] text-[#8FA3BF] mt-2 text-center">Powered by Didit — secure identity verification</p>
-                )}
+                <p className="text-[10px] text-[#8FA3BF] mt-2 text-center">Powered by Didit — secure identity verification</p>
               </>
             ) : status === 'approved' ? (
               <div className="flex items-center gap-3 py-2">
