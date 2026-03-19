@@ -18,19 +18,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!r.ok) { res.status(r.status).json({ error: 'Didit error' }); return }
 
     const data = await r.json()
+    console.log('[kyc-status] Didit decision response:', JSON.stringify(data))
 
-    // Map Didit status to our status
-    const map: Record<string, string> = {
-      'Approved':    'approved',
-      'Declined':    'declined',
-      'In Review':   'pending',
-      'In Progress': 'pending',
-      'Abandoned':   'abandoned',
-      'Expired':     'expired',
-    }
+    // Normalize to lowercase for comparison
+    const raw = (data.status ?? data.decision ?? data.verification_status ?? '').toLowerCase().trim()
 
-    const status = map[data.status] ?? 'pending'
-    res.status(200).json({ status, raw: data.status })
+    let status = 'pending'
+    if (raw.includes('approv')) status = 'approved'
+    else if (raw.includes('declin') || raw.includes('reject') || raw.includes('fail')) status = 'declined'
+    else if (raw.includes('review') || raw.includes('progress') || raw.includes('pending')) status = 'pending'
+    else if (raw.includes('abandon')) status = 'abandoned'
+    else if (raw.includes('expir')) status = 'expired'
+
+    res.status(200).json({ status, raw: data.status ?? data })
 
   } catch (err: any) {
     res.status(500).json({ error: err.message })
