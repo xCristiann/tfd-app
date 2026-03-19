@@ -383,7 +383,7 @@ export function CheckoutPage() {
                           ? 'border-[#2255CC] bg-[rgba(34,85,204,.05)]'
                           : 'border-[#F0F4FB] opacity-40'
                       }`}>
-                        <div className={`font-['JetBrains_Mono',monospace] font-bold text-[13px] mb-1 ${p.id === 'cft' ? 'text-[#2255CC]' : 'text-[#8FA3BF]'}`}>{p.label}</div>
+                        <div className={` font-bold text-[13px] mb-1 ${p.id === 'cft' ? 'text-[#2255CC]' : 'text-[#8FA3BF]'}`}>{p.label}</div>
                         <div className="text-[9px] text-[#8FA3BF]">{p.sub}</div>
                       </div>
                     ))}
@@ -427,7 +427,7 @@ export function CheckoutPage() {
                       ['Total', `$${product?.price_usd}`],
                     ].map(([l,v],i) => (
                       <div key={l} className={`flex justify-between text-[12px] ${i === 2 ? 'font-bold pt-2 border-t border-[#F0F4FB] text-[#2255CC]' : 'text-[#5C7A9E]'}`}>
-                        <span>{l}</span><span className="font-['JetBrains_Mono',monospace]">{v}</span>
+                        <span>{l}</span><span className="">{v}</span>
                       </div>
                     ))}
                   </div>
@@ -472,7 +472,7 @@ export function CheckoutPage() {
                     ].map(([l,v]) => (
                       <div key={l} className="bg-[#F4F7FD] border border-[#F0F4FB] p-3">
                         <div className="text-[7px] uppercase tracking-[1.5px] text-[#8FA3BF] mb-1">{l}</div>
-                        <div className="font-['JetBrains_Mono',monospace] text-[12px] font-bold text-[#2255CC] break-all">{v}</div>
+                        <div className=" text-[12px] font-bold text-[#2255CC] break-all">{v}</div>
                       </div>
                     ))}
                   </div>
@@ -525,7 +525,7 @@ export function CheckoutPage() {
                 ].map(([l,v]) => (
                   <div key={l} className="flex justify-between text-[10px]">
                     <span className="text-[#8FA3BF]">{l}</span>
-                    <span className="font-['JetBrains_Mono',monospace] text-[#2255CC]">{v}</span>
+                    <span className=" text-[#2255CC]">{v}</span>
                   </div>
                 ))}
               </div>
@@ -536,7 +536,7 @@ export function CheckoutPage() {
                 {couponData ? (
                   <div className="flex items-center justify-between p-2 bg-[rgba(22,163,74,.06)] border border-[rgba(0,217,126,.2)]">
                     <div>
-                      <div className="font-['JetBrains_Mono',monospace] font-bold text-[#16A34A] text-[11px]">{couponData.code}</div>
+                      <div className=" font-bold text-[#16A34A] text-[11px]">{couponData.code}</div>
                       <div className="text-[9px] text-[#16A34A]">-{couponData.discount_type==='percent'?`${couponData.discount_value}%`:`$${couponData.discount_value}`} applied</div>
                     </div>
                     <button onClick={removeCoupon} className="text-[#8FA3BF] hover:text-[#DC2626] cursor-pointer bg-transparent border-none text-[14px]">✕</button>
@@ -545,7 +545,7 @@ export function CheckoutPage() {
                   <div className="flex gap-2">
                     <input value={couponInput} onChange={e => setCouponInput(e.target.value.toUpperCase())}
                       placeholder="Enter code"
-                      className="flex-1 px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] font-['JetBrains_Mono',monospace] text-[11px] uppercase outline-none focus:border-[#2255CC] transition-colors"/>
+                      className="flex-1 px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B]  text-[11px] uppercase outline-none focus:border-[#2255CC] transition-colors"/>
                     <button onClick={applyCoupon} disabled={couponLoading || !couponInput}
                       className="px-3 py-2 bg-[rgba(34,85,204,.08)] border border-[#C5D5EA] text-[#2255CC] text-[9px] font-bold uppercase cursor-pointer hover:bg-[rgba(34,85,204,.2)] transition-colors disabled:opacity-40">
                       {couponLoading ? '...' : 'Apply'}
@@ -558,15 +558,15 @@ export function CheckoutPage() {
               {discountAmount > 0 && (
                 <div className="flex justify-between text-[11px] text-[#16A34A] mb-2">
                   <span>Discount</span>
-                  <span className="font-['JetBrains_Mono',monospace]">-${discountAmount.toFixed(2)}</span>
+                  <span className="">-${discountAmount.toFixed(2)}</span>
                 </div>
               )}
 
               <div className="flex justify-between items-center mb-4">
                 <span className="text-[11px] font-semibold">Total Due</span>
                 <div className="text-right">
-                  {discountAmount > 0 && <div className="text-[10px] text-[#8FA3BF] line-through font-['JetBrains_Mono',monospace]">${product?.price_usd}</div>}
-                  <span className="font-['JetBrains_Mono',monospace] text-[18px] font-bold text-[#2255CC]">${finalPrice.toFixed(2)}</span>
+                  {discountAmount > 0 && <div className="text-[10px] text-[#8FA3BF] line-through ">${product?.price_usd}</div>}
+                  <span className=" text-[18px] font-bold text-[#2255CC]">${finalPrice.toFixed(2)}</span>
                 </div>
               </div>
 

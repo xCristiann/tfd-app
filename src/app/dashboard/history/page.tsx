@@ -65,14 +65,14 @@ export function HistoryPage() {
                   <tr key={t.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(34,85,204,.02)]">
                     <td className="px-[11px] py-[8px] font-semibold">{t.symbol}</td>
                     <td className="px-[11px] py-[8px]"><span className={`text-[9px] font-bold ${t.direction==='buy'?'text-[#16A34A]':'text-[#DC2626]'}`}>{t.direction?.toUpperCase()}</span></td>
-                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{t.lots}</td>
-                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{t.open_price}</td>
-                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{t.close_price ?? '—'}</td>
-                    <td className={`px-[11px] py-[8px] font-['JetBrains_Mono',monospace] ${(t.pips??0)>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>{t.pips != null ? `${t.pips > 0?'+':''}${t.pips}` : '—'}</td>
-                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#8FA3BF]">{t.swap != null ? fmt(t.swap) : '—'}</td>
-                    <td className={`px-[11px] py-[8px] font-['JetBrains_Mono',monospace] font-semibold ${(t.net_pnl??0)>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>{t.net_pnl != null ? `${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}` : '—'}</td>
-                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#8FA3BF] text-[10px]">{t.opened_at ? new Date(t.opened_at).toLocaleString() : '—'}</td>
-                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#8FA3BF] text-[10px]">{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
+                    <td className="px-[11px] py-[8px] ">{t.lots}</td>
+                    <td className="px-[11px] py-[8px] ">{t.open_price}</td>
+                    <td className="px-[11px] py-[8px] ">{t.close_price ?? '—'}</td>
+                    <td className={`px-[11px] py-[8px]  ${(t.pips??0)>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>{t.pips != null ? `${t.pips > 0?'+':''}${t.pips}` : '—'}</td>
+                    <td className="px-[11px] py-[8px]  text-[#8FA3BF]">{t.swap != null ? fmt(t.swap) : '—'}</td>
+                    <td className={`px-[11px] py-[8px]  font-semibold ${(t.net_pnl??0)>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>{t.net_pnl != null ? `${t.net_pnl>=0?'+':''}${fmt(t.net_pnl)}` : '—'}</td>
+                    <td className="px-[11px] py-[8px]  text-[#8FA3BF] text-[10px]">{t.opened_at ? new Date(t.opened_at).toLocaleString() : '—'}</td>
+                    <td className="px-[11px] py-[8px]  text-[#8FA3BF] text-[10px]">{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
                   </tr>
                 ))}
               </tbody>

@@ -78,7 +78,7 @@ export function JournalPage() {
               {entries.map(e=>(
                 <div key={e.id} className="bg-[#F4F7FD] border border-[#E8EEF8] p-[13px] hover:border-[#C5D5EA] transition-colors">
                   <div className="flex justify-between mb-[5px]">
-                    <span className="font-['JetBrains_Mono',monospace] text-[9px] text-[#8FA3BF]">
+                    <span className=" text-[9px] text-[#8FA3BF]">
                       {new Date(e.created_at).toLocaleDateString()} {e.title ? `· ${e.title}` : ''}
                     </span>
                     {e.pnl != null && (

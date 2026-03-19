@@ -17,7 +17,7 @@ function ProgressBar({ label, value, max, color, done }: { label:string; value:n
     <div className="mb-3">
       <div className="flex justify-between mb-1">
         <span className="text-[11px] text-[#5C7A9E]">{label}</span>
-        <span className="font-['JetBrains_Mono',monospace] text-[11px]" style={{color}}>{value.toFixed(2)}%{done?' ✓':` / ${max}%`}</span>
+        <span className=" text-[11px]" style={{color}}>{value.toFixed(2)}%{done?' ✓':` / ${max}%`}</span>
       </div>
       <div className="h-[5px] bg-white/5 rounded-[3px] overflow-hidden">
         <div className="h-full rounded-[3px] transition-all duration-500" style={{width:`${pct}%`,background:color}}/>
@@ -119,7 +119,7 @@ export function ChallengesPage() {
                   ].map(([l,v])=>(
                     <div key={l} className="flex justify-between py-[5px] border-b border-[#F0F4FB] last:border-0">
                       <span className="text-[9px] text-[#8FA3BF]">{l}</span>
-                      <span className="font-['JetBrains_Mono',monospace] text-[10px] text-[#2255CC]">{v}</span>
+                      <span className=" text-[10px] text-[#2255CC]">{v}</span>
                     </div>
                   ))}
                   <Button className="w-full mt-3"

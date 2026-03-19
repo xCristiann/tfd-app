@@ -165,7 +165,7 @@ export function DashboardPage() {
                   const isActive = a.id === account?.id
                   return (
                     <button key={a.id} onClick={() => setSelectedId(a.id)}
-                      className={`px-3 py-[5px] text-[10px] font-['JetBrains_Mono',monospace] font-semibold cursor-pointer border transition-all ${
+                      className={`px-3 py-[5px] text-[10px]  font-semibold cursor-pointer border transition-all ${
                         isActive
                           ? 'bg-[rgba(34,85,204,.1)] border-[#C5D5EA] text-[#2255CC]'
                           : 'bg-[#F4F7FD] border-[#F0F4FB] text-[#8FA3BF] hover:text-[#5C7A9E]'
@@ -255,8 +255,8 @@ export function DashboardPage() {
               </Card>
               <Card>
                 <CardHeader title="Risk Dashboard" />
-                <DrawdownBar label="Daily Drawdown" value={account!.daily_dd_used ?? 0} max={dailyLimit} />
-                <DrawdownBar label="Max Drawdown"   value={account!.max_dd_used   ?? 0} max={maxLimit} warn={60} danger={80} />
+                <DrawdownBar label="Daily Drawdown" used={account!.daily_dd_used ?? 0} max={dailyLimit} />
+                <DrawdownBar label="Max Drawdown"   used={account!.max_dd_used ?? 0} max={maxLimit} />
 
                 {/* Profit target — only for phase1/phase2 */}
                 {!isFunded && (
@@ -280,7 +280,7 @@ export function DashboardPage() {
                     <div className="text-[8px] uppercase tracking-[1.5px] text-[#2255CC] font-semibold mb-1">Funded Account — No Target</div>
                     <div className="text-[11px] text-[#5C7A9E]">
                       Keep drawdown in check and request payouts anytime.
-                      Withdrawable: <span className="text-[#2255CC] font-['JetBrains_Mono',monospace]">{fmt(withdrawable)}</span>
+                      Withdrawable: <span className="text-[#2255CC] ">{fmt(withdrawable)}</span>
                     </div>
                   </div>
                 )}
@@ -294,7 +294,7 @@ export function DashboardPage() {
                   ].map(([l, v, c]) => (
                     <div key={l} className="bg-[#F4F7FD] border border-[#F0F4FB] p-[9px]">
                       <div className="text-[7px] tracking-[1.5px] uppercase text-[#8FA3BF] font-semibold mb-1">{l}</div>
-                      <div className="mono text-[11px]" style={{ color: c }}>{v}</div>
+                      <div className="font-mono text-[11px]" style={{ color: c }}>{v}</div>
                     </div>
                   ))}
                 </div>

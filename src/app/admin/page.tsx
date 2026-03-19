@@ -105,7 +105,7 @@ export function AdminDashboardPage() {
                   <div className="text-[12px] font-semibold">{p.users?.first_name} {p.users?.last_name}</div>
                   <div className="text-[10px] text-[#8FA3BF]">{p.accounts?.account_number} · {p.method}</div>
                 </div>
-                <div className="font-['JetBrains_Mono',monospace] text-[#2255CC] text-[13px]">{fmt(p.requested_usd)}</div>
+                <div className=" text-[#2255CC] text-[13px]">{fmt(p.requested_usd)}</div>
               </div>
             ))}
           </Card>

@@ -86,7 +86,7 @@ export function AdminAccountsPage() {
                     ? ((a.balance - a.starting_balance) / a.starting_balance) * 100 : 0
                   return (
                     <tr key={a.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(212,168,67,.02)]">
-                      <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#2255CC] text-[10px]">{a.account_number}</td>
+                      <td className="px-[11px] py-[8px]  text-[#2255CC] text-[10px]">{a.account_number}</td>
                       <td className="px-[11px] py-[8px]">
                         <div className="font-semibold">{a.users ? `${a.users.first_name} ${a.users.last_name}` : '—'}</div>
                         <div className="text-[9px] text-[#8FA3BF]">{a.users?.email}</div>
@@ -94,13 +94,13 @@ export function AdminAccountsPage() {
                       <td className="px-[11px] py-[8px] text-[#5C7A9E]">{a.challenge_products?.name ?? '—'}</td>
                       <td className="px-[11px] py-[8px]"><Badge variant={phaseVariant(a.phase)}>{phaseLabel(a.phase)}</Badge></td>
                       <td className="px-[11px] py-[8px]">
-                        <div className="font-['JetBrains_Mono',monospace]">${Number(a.balance).toLocaleString()}</div>
+                        <div className="">${Number(a.balance).toLocaleString()}</div>
                         <div className={`text-[9px] ${profitPct >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
                           {profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%
                         </div>
                       </td>
-                      <td className={`px-[11px] py-[8px] font-['JetBrains_Mono',monospace] ${riskColor[risk]}`}>{(a.daily_dd_used ?? 0).toFixed(2)}%</td>
-                      <td className={`px-[11px] py-[8px] font-['JetBrains_Mono',monospace] ${riskColor[risk]}`}>{(a.max_dd_used ?? 0).toFixed(2)}%</td>
+                      <td className={`px-[11px] py-[8px]  ${riskColor[risk]}`}>{(a.daily_dd_used ?? 0).toFixed(2)}%</td>
+                      <td className={`px-[11px] py-[8px]  ${riskColor[risk]}`}>{(a.max_dd_used ?? 0).toFixed(2)}%</td>
                       <td className="px-[11px] py-[8px]">
                         <span className={`text-[8px] uppercase font-bold px-[6px] py-[2px] border ${
                           a.status === 'active'

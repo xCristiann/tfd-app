@@ -127,7 +127,7 @@ export function PayoutsPage() {
                               ? 'border-[#2255CC] bg-[rgba(34,85,204,.05)]'
                               : 'border-[#E8EEF8] bg-[#F4F7FD] hover:border-[#C5D5EA]'
                           }`}>
-                          <span className="font-['JetBrains_Mono',monospace] text-[11px] text-[#2255CC]">{a.account_number}</span>
+                          <span className=" text-[11px] text-[#2255CC]">{a.account_number}</span>
                           <span className="text-[9px] text-[#8FA3BF]">{p?.name} · {p?.funded_profit_split ?? 85}% split</span>
                           <span className="text-[10px] text-[#16A34A] mt-1">Withdrawable: {fmt(w)}</span>
                         </button>
@@ -141,7 +141,7 @@ export function PayoutsPage() {
               <Card>
                 <CardHeader title="Request Payout" action={
                   <span className="text-[10px] text-[#8FA3BF]">
-                    Account: <span className="text-[#2255CC] font-['JetBrains_Mono',monospace]">{selectedAccount?.account_number}</span>
+                    Account: <span className="text-[#2255CC] ">{selectedAccount?.account_number}</span>
                   </span>
                 }/>
 
@@ -149,17 +149,17 @@ export function PayoutsPage() {
                 <div className="flex gap-3 mb-5">
                   <div className="flex-1 p-3 bg-[rgba(34,85,204,.04)] border border-[rgba(34,85,204,.15)]">
                     <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-1">Profit</div>
-                    <div className={`font-['JetBrains_Mono',monospace] text-[15px] font-bold ${profit >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+                    <div className={` text-[15px] font-bold ${profit >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
                       {profit >= 0 ? '+' : ''}{fmt(profit)}
                     </div>
                   </div>
                   <div className="flex-1 p-3 bg-[rgba(34,85,204,.04)] border border-[rgba(34,85,204,.15)]">
                     <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-1">Your {splitPct}% Split</div>
-                    <div className="font-['JetBrains_Mono',monospace] text-[15px] font-bold text-[#2255CC]">{fmt(withdrawable)}</div>
+                    <div className=" text-[15px] font-bold text-[#2255CC]">{fmt(withdrawable)}</div>
                   </div>
                   <div className="flex-1 p-3 bg-[rgba(34,85,204,.04)] border border-[rgba(34,85,204,.15)]">
                     <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-1">Profit Split</div>
-                    <div className="font-['JetBrains_Mono',monospace] text-[15px] font-bold text-[#2255CC]">{splitPct}%</div>
+                    <div className=" text-[15px] font-bold text-[#2255CC]">{splitPct}%</div>
                   </div>
                 </div>
 
@@ -193,7 +193,7 @@ export function PayoutsPage() {
                       {payouts.map(p=>(
                         <tr key={p.id} className="border-b border-[rgba(34,85,204,.03)]">
                           <td className="px-[11px] py-[8px] text-[#5C7A9E]">{new Date(p.created_at).toLocaleDateString()}</td>
-                          <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#16A34A]">{fmt(p.requested_usd)}</td>
+                          <td className="px-[11px] py-[8px]  text-[#16A34A]">{fmt(p.requested_usd)}</td>
                           <td className="px-[11px] py-[8px] text-[#5C7A9E]">{METHOD_LABELS[p.method] ?? p.method}</td>
                           <td className="px-[11px] py-[8px]"><Badge variant={(STATUS_COLORS[p.status] ?? 'pending') as any}>{p.status}</Badge></td>
                         </tr>

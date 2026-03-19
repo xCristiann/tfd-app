@@ -288,7 +288,7 @@ export function AdminTradersPage() {
                       <td className="px-[11px] py-[8px]">
                         {t.last_login_ip ? (
                           <button onClick={e=>{e.stopPropagation();setIpTrader(t)}}
-                            className="font-['JetBrains_Mono',monospace] text-[10px] text-[#2255CC] bg-[rgba(212,168,67,.08)] border border-[#C5D5EA] px-[6px] py-[2px] cursor-pointer hover:bg-[rgba(34,85,204,.15)] transition-all">
+                            className=" text-[10px] text-[#2255CC] bg-[rgba(212,168,67,.08)] border border-[#C5D5EA] px-[6px] py-[2px] cursor-pointer hover:bg-[rgba(34,85,204,.15)] transition-all">
                             {t.last_login_ip}
                           </button>
                         ) : <span className="text-[#8FA3BF]">—</span>}
@@ -296,7 +296,7 @@ export function AdminTradersPage() {
                       <td className="px-[11px] py-[8px] text-[#8FA3BF] text-[10px]">
                         {t.last_login_at ? new Date(t.last_login_at).toLocaleString() : '—'}
                       </td>
-                      <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{accounts.length}</td>
+                      <td className="px-[11px] py-[8px] ">{accounts.length}</td>
                       <td className="px-[11px] py-[8px]">
                         {bestPhase !== '—' ? <Badge variant={bestPhase as any}>{bestPhase}</Badge> : <span className="text-[#8FA3BF]">—</span>}
                       </td>
@@ -379,7 +379,7 @@ export function AdminTradersPage() {
                 ].map(([l,v])=>(
                   <div key={l} className="px-5 py-3 border-r border-[#E8EEF8] last:border-0">
                     <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-1">{l}</div>
-                    <div className="font-['JetBrains_Mono',monospace] text-[11px] text-[#2255CC]">{v}</div>
+                    <div className=" text-[11px] text-[#2255CC]">{v}</div>
                   </div>
                 ))}
               </div>
@@ -403,7 +403,7 @@ export function AdminTradersPage() {
                         <div key={acc.id} className={`border p-4 ${acc.status === 'inactive' ? 'opacity-50 border-[#F0F4FB]' : 'border-[#C5D5EA]'}`}>
                           <div className="flex items-center justify-between mb-3">
                             <div>
-                              <div className="font-['JetBrains_Mono',monospace] text-[#2255CC] text-[11px]">{acc.account_number}</div>
+                              <div className=" text-[#2255CC] text-[11px]">{acc.account_number}</div>
                               <div className="text-[10px] text-[#8FA3BF]">{prod?.name ?? '—'} · Server: {acc.server}</div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -420,12 +420,12 @@ export function AdminTradersPage() {
                             ].map(([l,v])=>(
                               <div key={l} className="bg-[#F4F7FD] border border-[#F0F4FB] px-3 py-2">
                                 <div className="text-[8px] uppercase tracking-[1px] text-[#8FA3BF] mb-1">{l}</div>
-                                <div className="font-['JetBrains_Mono',monospace] font-bold">{v}</div>
+                                <div className=" font-bold">{v}</div>
                               </div>
                             ))}
                           </div>
                           <div className="text-[10px] text-[#8FA3BF] mb-3">
-                            Login: <span className="font-['JetBrains_Mono',monospace] text-[#1A3A6B]">{acc.platform_login}</span>
+                            Login: <span className=" text-[#1A3A6B]">{acc.platform_login}</span>
                             &nbsp;·&nbsp;P&L: <span className={profitPct >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}>{profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%</span>
                           </div>
                           <div className="flex gap-2 flex-wrap">
@@ -497,7 +497,7 @@ export function AdminTradersPage() {
               <div className="p-3 bg-[#F4F7FD] border border-[#F0F4FB] mb-4">
                 <div className="text-[8px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold mb-1">Last Login</div>
                 <div className="flex justify-between">
-                  <span className="font-['JetBrains_Mono',monospace] text-[#2255CC]">{ipTrader.last_login_ip ?? '—'}</span>
+                  <span className=" text-[#2255CC]">{ipTrader.last_login_ip ?? '—'}</span>
                   <span className="text-[10px] text-[#8FA3BF]">{ipTrader.last_login_at ? new Date(ipTrader.last_login_at).toLocaleString() : '—'}</span>
                 </div>
               </div>
@@ -506,7 +506,7 @@ export function AdminTradersPage() {
                 <div className="flex flex-col gap-[3px] max-h-[240px] overflow-y-auto">
                   {[...ipTrader.login_history].reverse().map((e: any, i: number) => (
                     <div key={i} className="flex justify-between items-center px-3 py-[5px] bg-[#F4F7FD] border border-[#F0F4FB] text-[11px]">
-                      <span className="font-['JetBrains_Mono',monospace] text-[#2255CC]">{e.ip}</span>
+                      <span className=" text-[#2255CC]">{e.ip}</span>
                       <span className="text-[#8FA3BF] text-[10px]">{new Date(e.at).toLocaleString()}</span>
                     </div>
                   ))}
@@ -557,7 +557,7 @@ export function AdminTradersPage() {
               <div className="text-[10px] text-[#8FA3BF] mb-5">{editBalAcc.account_number}</div>
               <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">New Balance (USD)</label>
               <input type="number" value={editBalValue} onChange={e=>setEditBalValue(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[13px] font-['JetBrains_Mono',monospace] outline-none focus:border-[#2255CC] mb-5"/>
+                className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[13px]  outline-none focus:border-[#2255CC] mb-5"/>
               <div className="flex gap-3">
                 <button onClick={()=>setEditBalAcc(null)}
                   className="flex-1 py-[10px] text-[9px] uppercase font-bold bg-[#F4F7FD] border border-[#F0F4FB] text-[#5C7A9E] cursor-pointer">

@@ -208,10 +208,10 @@ export function AdminCouponsPage() {
                   return (
                     <tr key={c.id} className="border-b border-[rgba(220,38,38,.04)] hover:bg-[rgba(220,38,38,.02)]">
                       <td className="px-[10px] py-[10px]">
-                        <div className="font-['JetBrains_Mono',monospace] font-bold text-[13px] text-[#2255CC] tracking-[2px]">{c.code}</div>
+                        <div className=" font-bold text-[13px] text-[#2255CC] tracking-[2px]">{c.code}</div>
                         {c.description && <div className="text-[9px] text-[#8FA3BF] mt-[2px]">{c.description}</div>}
                       </td>
-                      <td className="px-[10px] py-[10px] font-['JetBrains_Mono',monospace] font-bold text-[#2255CC]">
+                      <td className="px-[10px] py-[10px]  font-bold text-[#2255CC]">
                         {c.discount_type === 'percent' ? `${c.discount_value}%` : `$${c.discount_value}`}
                         <div className="text-[8px] text-[#8FA3BF] font-normal">{c.discount_type}</div>
                       </td>
@@ -222,7 +222,7 @@ export function AdminCouponsPage() {
                           {!c.single_use && !c.one_per_account && <span className="text-[8px] text-[#8FA3BF]">Unlimited</span>}
                         </div>
                       </td>
-                      <td className="px-[10px] py-[10px] font-['JetBrains_Mono',monospace]">
+                      <td className="px-[10px] py-[10px] ">
                         {c.uses_count ?? 0}{c.max_uses ? `/${c.max_uses}` : ''}
                       </td>
                       <td className="px-[10px] py-[10px] text-[10px]">
@@ -230,7 +230,7 @@ export function AdminCouponsPage() {
                           ? <span className={isExpired(c) ? 'text-[#DC2626]' : 'text-[#5C7A9E]'}>{formatDate(c.expires_at)}</span>
                           : <span className="text-[#8FA3BF]">Never</span>}
                       </td>
-                      <td className="px-[10px] py-[10px] font-['JetBrains_Mono',monospace] text-[10px]">{c.min_order_usd ? `$${c.min_order_usd}` : '—'}</td>
+                      <td className="px-[10px] py-[10px]  text-[10px]">{c.min_order_usd ? `$${c.min_order_usd}` : '—'}</td>
                       <td className="px-[10px] py-[10px] text-[10px]">
                         {prod ? <div><div className="font-semibold">{prod.name}</div><div className="text-[9px] text-[#8FA3BF]">${Number(prod.account_size).toLocaleString()}</div></div> : <span className="text-[#8FA3BF]">All Products</span>}
                       </td>
@@ -283,7 +283,7 @@ export function AdminCouponsPage() {
                   <div className="flex gap-2">
                     <input value={form.code} onChange={e => setForm(f=>({...f,code:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')}))}
                       disabled={!!editId}
-                      className="flex-1 px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#2255CC] font-['JetBrains_Mono',monospace] font-bold text-[13px] tracking-[2px] outline-none uppercase disabled:opacity-50"/>
+                      className="flex-1 px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#2255CC]  font-bold text-[13px] tracking-[2px] outline-none uppercase disabled:opacity-50"/>
                     {!editId && <button onClick={() => setForm(f=>({...f,code:randomCode()}))}
                       className="px-3 py-2 bg-[#F4F7FD] border border-[#F0F4FB] text-[#8FA3BF] text-[11px] cursor-pointer hover:text-[#1A3A6B] transition-colors">↺</button>}
                   </div>
@@ -306,13 +306,13 @@ export function AdminCouponsPage() {
                   </label>
                   <input type="number" value={form.discount_value} onChange={e => setForm(f=>({...f,discount_value:e.target.value}))}
                     placeholder={form.discount_type === 'percent' ? '20' : '50'} min="0" step="any"
-                    className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] font-['JetBrains_Mono',monospace] outline-none"/>
+                    className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B]  outline-none"/>
                 </div>
                 <div>
                   <label className="text-[7px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Min Order ($)</label>
                   <input type="number" value={form.min_order_usd} onChange={e => setForm(f=>({...f,min_order_usd:e.target.value}))}
                     placeholder="Optional — e.g. 100" min="0"
-                    className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] font-['JetBrains_Mono',monospace] outline-none"/>
+                    className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B]  outline-none"/>
                 </div>
               </div>
 
@@ -338,7 +338,7 @@ export function AdminCouponsPage() {
                   <label className="text-[7px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Max Total Uses (blank = unlimited)</label>
                   <input type="number" value={form.max_uses} onChange={e => setForm(f=>({...f,max_uses:e.target.value}))}
                     placeholder="e.g. 100" min="1"
-                    className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] font-['JetBrains_Mono',monospace] outline-none"/>
+                    className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B]  outline-none"/>
                 </div>
               </div>
 
@@ -371,7 +371,7 @@ export function AdminCouponsPage() {
               {/* Preview */}
               <div className="p-4 bg-[rgba(34,85,204,.05)] border border-[rgba(34,85,204,.2)]">
                 <div className="text-[8px] uppercase tracking-[1.5px] text-[#2255CC] font-semibold mb-2">Preview</div>
-                <div className="font-['JetBrains_Mono',monospace] text-[18px] font-bold text-[#2255CC] tracking-[3px] mb-2">{form.code || 'YOURCODE'}</div>
+                <div className=" text-[18px] font-bold text-[#2255CC] tracking-[3px] mb-2">{form.code || 'YOURCODE'}</div>
                 <div className="text-[11px] text-[#5C7A9E] leading-[1.6]">
                   <span className="text-[#2255CC]">{form.discount_value ? (form.discount_type === 'percent' ? `${form.discount_value}% off` : `$${form.discount_value} off`) : '— off'}</span>
                   {form.product_id ? ` on ${products.find(p=>p.id===form.product_id)?.name ?? 'selected product'}` : ' on all products'}
@@ -403,7 +403,7 @@ export function AdminCouponsPage() {
           <div className="bg-[#F0F4FB] border border-[#C5D5EA] w-[540px] max-h-[80vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-[#E8EEF8] flex items-center justify-between">
               <div>
-                <div className="font-['JetBrains_Mono',monospace] text-[16px] font-bold text-[#2255CC]">{usageModal.code}</div>
+                <div className=" text-[16px] font-bold text-[#2255CC]">{usageModal.code}</div>
                 <div className="text-[10px] text-[#8FA3BF]">{usages.length} uses recorded</div>
               </div>
               <button onClick={() => setUsageModal(null)} className="text-[#8FA3BF] hover:text-[#1A3A6B] cursor-pointer bg-transparent border-none text-[18px]">✕</button>
@@ -427,9 +427,9 @@ export function AdminCouponsPage() {
                           <div className="font-semibold">{o.users?.first_name} {o.users?.last_name}</div>
                           <div className="text-[9px] text-[#8FA3BF]">{o.users?.email}</div>
                         </td>
-                        <td className="px-[8px] py-[7px] font-['JetBrains_Mono',monospace] text-[#2255CC] text-[10px]">{o.order_number}</td>
-                        <td className="px-[8px] py-[7px] font-['JetBrains_Mono',monospace]">${o.amount_usd}</td>
-                        <td className="px-[8px] py-[7px] font-['JetBrains_Mono',monospace] text-[#16A34A]">-${o.discount_usd}</td>
+                        <td className="px-[8px] py-[7px]  text-[#2255CC] text-[10px]">{o.order_number}</td>
+                        <td className="px-[8px] py-[7px] ">${o.amount_usd}</td>
+                        <td className="px-[8px] py-[7px]  text-[#16A34A]">-${o.discount_usd}</td>
                         <td className="px-[8px] py-[7px] text-[#8FA3BF] text-[10px]">{formatDate(o.created_at)}</td>
                       </tr>
                     ))}

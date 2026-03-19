@@ -67,9 +67,9 @@ export function AnalyticsPage() {
                     {symbols.map(s=>(
                       <tr key={s.symbol} className="border-b border-[rgba(34,85,204,.03)]">
                         <td className="px-[11px] py-[8px] font-semibold">{s.symbol}</td>
-                        <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#5C7A9E]">{s.trades}</td>
-                        <td className={`px-[11px] py-[8px] font-['JetBrains_Mono',monospace] ${s.win_pct>=60?'text-[#16A34A]':s.win_pct>=50?'text-[#2255CC]':'text-[#DC2626]'}`}>{s.win_pct}%</td>
-                        <td className={`px-[11px] py-[8px] font-['JetBrains_Mono',monospace] ${s.total_pnl>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>{fmt(s.total_pnl)}</td>
+                        <td className="px-[11px] py-[8px]  text-[#5C7A9E]">{s.trades}</td>
+                        <td className={`px-[11px] py-[8px]  ${s.win_pct>=60?'text-[#16A34A]':s.win_pct>=50?'text-[#2255CC]':'text-[#DC2626]'}`}>{s.win_pct}%</td>
+                        <td className={`px-[11px] py-[8px]  ${s.total_pnl>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>{fmt(s.total_pnl)}</td>
                       </tr>
                     ))}
                   </tbody>

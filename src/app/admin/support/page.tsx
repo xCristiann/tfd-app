@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { ADMIN_NAV } from '@/lib/nav'
 
 const PRI_COLOR: Record<string,string> = {
-  urgent:'text-[#DC2626]', high:'text-[var(--orange,#ff8c42)]',
+  urgent:'text-[#DC2626]', high:'text-[#EA580C]',
   medium:'text-[#2255CC]', low:'text-[#5C7A9E]'
 }
 const STATUS_VARIANT: Record<string,any> = {
@@ -93,7 +93,7 @@ export function AdminSupportPage() {
 
           {/* Error display */}
           {error && (
-            <div className="mb-4 px-4 py-3 bg-[rgba(255,51,82,.08)] border border-[rgba(255,51,82,.25)] text-[#DC2626] text-[11px] font-['JetBrains_Mono',monospace]">
+            <div className="mb-4 px-4 py-3 bg-[rgba(255,51,82,.08)] border border-[rgba(255,51,82,.25)] text-[#DC2626] text-[11px] ">
               ❌ {error}
             </div>
           )}
@@ -138,11 +138,11 @@ export function AdminSupportPage() {
               <tbody>
                 {tickets.map(t => (
                   <tr key={t.id} className="border-b border-[rgba(220,38,38,.04)] hover:bg-[rgba(220,38,38,.02)]">
-                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#2255CC] text-[10px]">
+                    <td className="px-[11px] py-[8px]  text-[#2255CC] text-[10px]">
                       {t.ticket_number ?? `#${t.id.slice(0,6)}`}
                     </td>
                     <td className="px-[11px] py-[8px] max-w-[160px] truncate font-medium">{t.subject}</td>
-                    <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[9px] text-[#8FA3BF]">{t.user_id?.slice(0,12)}…</td>
+                    <td className="px-[11px] py-[8px]  text-[9px] text-[#8FA3BF]">{t.user_id?.slice(0,12)}…</td>
                     <td className="px-[11px] py-[8px] text-[#5C7A9E] capitalize">{t.department}</td>
                     <td className={`px-[11px] py-[8px] capitalize font-semibold text-[10px] ${PRI_COLOR[t.priority] ?? ''}`}>{t.priority}</td>
                     <td className="px-[11px] py-[8px]">

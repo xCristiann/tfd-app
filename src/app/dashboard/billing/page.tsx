@@ -104,17 +104,17 @@ export function BillingPage() {
               <tbody>
                 {orders.map(o => (
                   <tr key={o.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(212,168,67,.02)]">
-                    <td className="px-[11px] py-[10px] font-['JetBrains_Mono',monospace] text-[#2255CC] font-bold text-[10px]">{o.order_number}</td>
+                    <td className="px-[11px] py-[10px]  text-[#2255CC] font-bold text-[10px]">{o.order_number}</td>
                     <td className="px-[11px] py-[10px] text-[#8FA3BF] text-[10px]">{formatDate(o.created_at)}</td>
                     <td className="px-[11px] py-[10px]">
                       <div className="font-semibold">{o.challenge_products?.name ?? '—'}</div>
                       <div className="text-[9px] text-[#8FA3BF] mt-[1px]">{o.challenge_products?.challenge_type === '1step' ? '1-Step' : o.challenge_products?.challenge_type === 'instant' ? 'Instant' : '2-Step'} Challenge</div>
                     </td>
-                    <td className="px-[11px] py-[10px] font-['JetBrains_Mono',monospace] text-[10px]">${o.challenge_products?.account_size ? Number(o.challenge_products.account_size).toLocaleString() : '—'}</td>
-                    <td className="px-[11px] py-[10px] font-['JetBrains_Mono',monospace] font-semibold">${o.final_amount_usd ?? o.amount_usd}</td>
+                    <td className="px-[11px] py-[10px]  text-[10px]">${o.challenge_products?.account_size ? Number(o.challenge_products.account_size).toLocaleString() : '—'}</td>
+                    <td className="px-[11px] py-[10px]  font-semibold">${o.final_amount_usd ?? o.amount_usd}</td>
                     <td className="px-[11px] py-[10px]">
                       {o.discount_usd > 0
-                        ? <span className="text-[#16A34A] font-['JetBrains_Mono',monospace] text-[10px]">-${o.discount_usd} <span className="text-[9px] text-[#8FA3BF]">({o.coupon_code})</span></span>
+                        ? <span className="text-[#16A34A]  text-[10px]">-${o.discount_usd} <span className="text-[9px] text-[#8FA3BF]">({o.coupon_code})</span></span>
                         : <span className="text-[#8FA3BF]">—</span>}
                     </td>
                     <td className="px-[11px] py-[10px]">

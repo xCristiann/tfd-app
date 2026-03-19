@@ -10,7 +10,7 @@ import { sendEmail } from '@/lib/email'
 import { SUPPORT_NAV } from '@/lib/nav'
 
 const PRI_COLOR: Record<string,string> = {
-  urgent:'text-[#DC2626]', high:'text-[var(--orange,#ff8c42)]',
+  urgent:'text-[#DC2626]', high:'text-[#EA580C]',
   medium:'text-[#2255CC]', low:'text-[#5C7A9E]',
 }
 const STATUS_VARIANT: Record<string,any> = {
@@ -185,7 +185,7 @@ export function SupportCRMPage() {
                       : 'hover:bg-[rgba(255,255,255,.02)]'
                   }`}>
                   <div className="flex justify-between mb-1">
-                    <span className="font-['JetBrains_Mono',monospace] text-[10px] text-[#3b9eff]">
+                    <span className=" text-[10px] text-[#3b9eff]">
                       {t.ticket_number ?? `#${t.id.slice(0,6)}`}
                     </span>
                     <span className={`text-[9px] font-bold capitalize ${PRI_COLOR[t.priority] ?? ''}`}>
@@ -300,7 +300,7 @@ export function SupportCRMPage() {
               ].map(([l, v]) => (
                 <div key={l} className="flex justify-between py-[5px] border-b border-[#F0F4FB] last:border-0">
                   <span className="text-[9px] text-[#8FA3BF]">{l}</span>
-                  <span className="font-['JetBrains_Mono',monospace] text-[10px] text-[#5C7A9E] capitalize">{v}</span>
+                  <span className=" text-[10px] text-[#5C7A9E] capitalize">{v}</span>
                 </div>
               ))}
               <div className="mt-3 pt-3 border-t border-[#E8EEF8] flex flex-col gap-2">

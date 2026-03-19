@@ -178,7 +178,7 @@ export function DashboardSupportPage() {
                 <tbody>
                   {tickets.map(t => (
                     <tr key={t.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(34,85,204,.02)] cursor-pointer" onClick={() => openTicket(t)}>
-                      <td className="px-[11px] py-[9px] font-['JetBrains_Mono',monospace] text-[#2255CC]">{t.ticket_number ?? `#${t.id.slice(0,6)}`}</td>
+                      <td className="px-[11px] py-[9px]  text-[#2255CC]">{t.ticket_number ?? `#${t.id.slice(0,6)}`}</td>
                       <td className="px-[11px] py-[9px] font-medium max-w-[200px] truncate">{t.subject}</td>
                       <td className="px-[11px] py-[9px] text-[#8FA3BF] capitalize">{t.department}</td>
                       <td className="px-[11px] py-[9px]"><Badge variant={STATUS_VARIANT[t.status]??'open'}>{t.status}</Badge></td>

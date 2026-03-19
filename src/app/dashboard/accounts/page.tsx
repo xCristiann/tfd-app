@@ -43,13 +43,13 @@ export function AccountsPage() {
                   const profit = a.balance - a.starting_balance
                   return (
                     <tr key={a.id} className="border-b border-[rgba(34,85,204,.03)] hover:bg-[rgba(34,85,204,.02)]">
-                      <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#2255CC]">{a.account_number}</td>
+                      <td className="px-[11px] py-[8px]  text-[#2255CC]">{a.account_number}</td>
                       <td className="px-[11px] py-[8px] text-[#5C7A9E]">{fmt(a.starting_balance)}</td>
-                      <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{fmt(a.balance)}</td>
+                      <td className="px-[11px] py-[8px] ">{fmt(a.balance)}</td>
                       <td className="px-[11px] py-[8px]"><Badge variant={phaseVariant(a.phase)}>{phaseLabel(a.phase)}</Badge></td>
-                      <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#5C7A9E]">{(a.daily_dd_used ?? 0).toFixed(2)}%</td>
-                      <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#5C7A9E]">{(a.max_dd_used ?? 0).toFixed(2)}%</td>
-                      <td className={`px-[11px] py-[8px] font-['JetBrains_Mono',monospace] ${profit >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+                      <td className="px-[11px] py-[8px]  text-[#5C7A9E]">{(a.daily_dd_used ?? 0).toFixed(2)}%</td>
+                      <td className="px-[11px] py-[8px]  text-[#5C7A9E]">{(a.max_dd_used ?? 0).toFixed(2)}%</td>
+                      <td className={`px-[11px] py-[8px]  ${profit >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
                         {profit >= 0 ? '+' : ''}{fmt(profit)}
                       </td>
                       <td className="px-[11px] py-[8px]">

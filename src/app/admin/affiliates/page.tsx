@@ -165,15 +165,15 @@ export function AdminAffiliatePage() {
                           <div className="font-semibold">{a.user?.first_name} {a.user?.last_name}</div>
                           <div className="text-[9px] text-[#8FA3BF]">{a.user?.email}</div>
                         </td>
-                        <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#2255CC] font-bold">{a.code}</td>
-                        <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]">{a.total_referrals ?? 0}</td>
-                        <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] text-[#2255CC]">{fmt(a.total_earned_usd ?? 0)}</td>
-                        <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace]" style={{color: owed > 0 ? '#DC2626' : '#8FA3BF'}}>{fmt(owed)}</td>
+                        <td className="px-[11px] py-[8px]  text-[#2255CC] font-bold">{a.code}</td>
+                        <td className="px-[11px] py-[8px] ">{a.total_referrals ?? 0}</td>
+                        <td className="px-[11px] py-[8px]  text-[#2255CC]">{fmt(a.total_earned_usd ?? 0)}</td>
+                        <td className="px-[11px] py-[8px] " style={{color: owed > 0 ? '#DC2626' : '#8FA3BF'}}>{fmt(owed)}</td>
                         <td className="px-[11px] py-[8px]">
                           <select value={a.commission_pct ?? 20}
                             onChange={e => { e.stopPropagation(); updateRate(a, parseInt(e.target.value)) }}
                             onClick={e => e.stopPropagation()}
-                            className="bg-[#F4F7FD] border border-[#F0F4FB] text-[#1A3A6B] font-['JetBrains_Mono',monospace] text-[10px] px-2 py-1 cursor-pointer outline-none">
+                            className="bg-[#F4F7FD] border border-[#F0F4FB] text-[#1A3A6B]  text-[10px] px-2 py-1 cursor-pointer outline-none">
                             {[5,8,10,12,15,20,25,30].map(r => <option key={r} value={r}>{r}%</option>)}
                           </select>
                         </td>
@@ -215,7 +215,7 @@ export function AdminAffiliatePage() {
 
                 <div className="flex flex-col gap-2 mb-4">
                   {[
-                    ['Code', <span className="font-['JetBrains_Mono',monospace] font-bold text-[#2255CC]">{selected.code}</span>],
+                    ['Code', <span className=" font-bold text-[#2255CC]">{selected.code}</span>],
                     ['Referrals', selected.total_referrals ?? 0],
                     ['Total Earned', fmt(selected.total_earned_usd ?? 0)],
                     ['Total Paid', fmt(selected.total_paid_usd ?? 0)],
@@ -226,7 +226,7 @@ export function AdminAffiliatePage() {
                   ].map(([l, v]) => (
                     <div key={String(l)} className="flex justify-between items-center py-[6px] border-b border-[#F0F4FB] text-[11px] last:border-0">
                       <span className="text-[#8FA3BF]">{l}</span>
-                      <span className="font-['JetBrains_Mono',monospace]">{v as any}</span>
+                      <span className="">{v as any}</span>
                     </div>
                   ))}
                 </div>
@@ -267,7 +267,7 @@ export function AdminAffiliatePage() {
                               {r.status}
                             </span>
                           </td>
-                          <td className="px-2 py-[6px] font-['JetBrains_Mono',monospace] text-[#2255CC]">{r.commission_usd ? fmt(r.commission_usd) : '—'}</td>
+                          <td className="px-2 py-[6px]  text-[#2255CC]">{r.commission_usd ? fmt(r.commission_usd) : '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -290,7 +290,7 @@ export function AdminAffiliatePage() {
             <div className="mb-4">
               <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Amount (USD)</label>
               <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] font-['JetBrains_Mono',monospace] text-[14px] outline-none"/>
+                className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B]  text-[14px] outline-none"/>
             </div>
             <div className="flex gap-2">
               <button onClick={() => setShowPayModal(false)}

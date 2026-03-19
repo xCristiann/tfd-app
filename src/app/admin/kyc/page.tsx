@@ -119,7 +119,7 @@ export function AdminKycPage() {
                         <td className="px-[11px] py-[9px] text-[#8FA3BF] text-[10px]">{r.email}</td>
                         <td className="px-[11px] py-[9px] text-[#8FA3BF] text-[10px]">{r.country ?? '—'}</td>
                         <td className="px-[11px] py-[9px] text-[10px]">{r.kyc?.provider ?? '—'}</td>
-                        <td className="px-[11px] py-[9px] font-['JetBrains_Mono',monospace] text-[9px] text-[#8FA3BF]">{r.kyc?.inquiry_id?.slice(0,20) ?? '—'}</td>
+                        <td className="px-[11px] py-[9px]  text-[9px] text-[#8FA3BF]">{r.kyc?.inquiry_id?.slice(0,20) ?? '—'}</td>
                         <td className="px-[11px] py-[9px]">
                           <span className={`text-[8px] px-2 py-1 font-bold uppercase ${STATUS_COLORS[kycStatus] ?? STATUS_COLORS.not_started}`}>
                             {kycStatus.replace('_',' ')}
@@ -168,7 +168,7 @@ export function AdminKycPage() {
                 ].map(([l, v]) => (
                   <div key={String(l)} className="flex justify-between items-center py-[6px] border-b border-[#F0F4FB] text-[11px] last:border-0">
                     <span className="text-[#8FA3BF]">{l}</span>
-                    <span className="font-['JetBrains_Mono',monospace]">{v as any}</span>
+                    <span className="">{v as any}</span>
                   </div>
                 ))}
               </div>

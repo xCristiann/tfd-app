@@ -181,7 +181,7 @@ export function AdminRevenuePage() {
                   <div key={l} className="py-[10px] border-b border-[#F0F4FB]">
                     <div className="flex justify-between items-center mb-[6px]">
                       <span className="text-[11px] text-[#5C7A9E]">{l}</span>
-                      <span className={`font-['JetBrains_Mono',monospace] text-[14px] font-bold ${c}`}>{v}</span>
+                      <span className={` text-[14px] font-bold ${c}`}>{v}</span>
                     </div>
                     <div className="h-[3px] bg-white/5 rounded overflow-hidden">
                       <div className="h-full rounded transition-all duration-500" style={{ width:`${Math.min(100,bar)}%`, background:barC }}/>
@@ -190,11 +190,11 @@ export function AdminRevenuePage() {
                 ))}
                 <div className="pt-[10px] flex justify-between">
                   <span className="text-[10px] text-[#8FA3BF]">Avg challenge price</span>
-                  <span className="font-['JetBrains_Mono',monospace] text-[12px] text-[#2255CC]">{fmt(data.avgChallengePrice)}</span>
+                  <span className=" text-[12px] text-[#2255CC]">{fmt(data.avgChallengePrice)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[10px] text-[#8FA3BF]">Accounts sold</span>
-                  <span className="font-['JetBrains_Mono',monospace] text-[12px] text-[#1A3A6B]">{data.totalAccountsSold}</span>
+                  <span className=" text-[12px] text-[#1A3A6B]">{data.totalAccountsSold}</span>
                 </div>
               </div>
             </Card>
@@ -221,7 +221,7 @@ export function AdminRevenuePage() {
                             title={`Payouts: ${fmt(m.payouts)}`}
                           />
                         </div>
-                        <span className="text-[8px] text-[#8FA3BF] font-['JetBrains_Mono',monospace]">{m.month}</span>
+                        <span className="text-[8px] text-[#8FA3BF] ">{m.month}</span>
                       </div>
                     ))}
                   </div>
@@ -240,7 +240,7 @@ export function AdminRevenuePage() {
                   <div className="mt-3 flex gap-[6px]">
                     {monthlyRevenue.map(m => (
                       <div key={m.month} className="flex-1 text-center">
-                        <div className={`text-[8px] font-['JetBrains_Mono',monospace] font-bold ${m.net>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>
+                        <div className={`text-[8px]  font-bold ${m.net>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>
                           {m.net>=0?'+':''}{m.net>=1000?`${(m.net/1000).toFixed(1)}k`:m.net.toFixed(0)}
                         </div>
                       </div>
@@ -269,7 +269,7 @@ export function AdminRevenuePage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-['JetBrains_Mono',monospace] text-[14px] font-bold text-[#16A34A]">{fmt(p.revenue)}</div>
+                      <div className=" text-[14px] font-bold text-[#16A34A]">{fmt(p.revenue)}</div>
                       <div className="text-[9px] text-[#8FA3BF]">{((p.revenue/maxProductRev)*100).toFixed(0)}% of sales</div>
                     </div>
                   </div>
@@ -288,7 +288,7 @@ export function AdminRevenuePage() {
                 ].map(([l,v,c])=>(
                   <div key={l} className="text-center p-2 bg-[#F4F7FD] border border-[#F0F4FB]">
                     <div className="text-[7px] tracking-[1.5px] uppercase text-[#8FA3BF] font-semibold mb-1">{l}</div>
-                    <div className="font-['JetBrains_Mono',monospace] text-[12px] font-bold" style={{ color:c }}>{v}</div>
+                    <div className=" text-[12px] font-bold" style={{ color:c }}>{v}</div>
                   </div>
                 ))}
               </div>
@@ -312,15 +312,15 @@ export function AdminRevenuePage() {
                     {recentSales.map((s, i) => (
                       <tr key={i} className="border-b border-[rgba(220,38,38,.04)]">
                         <td className="px-[8px] py-[6px] font-semibold text-[10px]" style={{ maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.product}</td>
-                        <td className="px-[8px] py-[6px] font-['JetBrains_Mono',monospace] text-[#5C7A9E]">${(s.size/1000).toFixed(0)}K</td>
-                        <td className="px-[8px] py-[6px] font-['JetBrains_Mono',monospace] font-bold text-[#16A34A]">{fmt(s.price)}</td>
+                        <td className="px-[8px] py-[6px]  text-[#5C7A9E]">${(s.size/1000).toFixed(0)}K</td>
+                        <td className="px-[8px] py-[6px]  font-bold text-[#16A34A]">{fmt(s.price)}</td>
                         <td className="px-[8px] py-[6px]">
                           <span className="text-[8px] uppercase tracking-[1px] font-bold px-[5px] py-[2px]"
                             style={{ background:s.phase==='funded'?'rgba(34,85,204,.15)':'rgba(100,100,200,.1)', color:s.phase==='funded'?'#2255CC':'#8FA3BF', border:`1px solid ${s.phase==='funded'?'#C5D5EA':'transparent'}` }}>
                             {s.phase??'—'}
                           </span>
                         </td>
-                        <td className="px-[8px] py-[6px] text-[9px] text-[#8FA3BF] font-['JetBrains_Mono',monospace]">
+                        <td className="px-[8px] py-[6px] text-[9px] text-[#8FA3BF] ">
                           {s.date ? new Date(s.date).toLocaleDateString() : '—'}
                         </td>
                       </tr>

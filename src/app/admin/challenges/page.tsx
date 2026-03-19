@@ -107,7 +107,7 @@ export function AdminChallengePage() {
       <label className="text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold">{label}</label>
       <div className="flex bg-[#F4F7FD] border border-[#F0F4FB] focus-within:border-[#C5D5EA] transition-colors">
         <input type={type} value={form[k]} onChange={e=>setForm((f:any)=>({...f,[k]:e.target.value}))}
-          className="flex-1 px-3 py-[8px] bg-transparent outline-none text-[#1A3A6B] text-[12px] font-['JetBrains_Mono',monospace]"/>
+          className="flex-1 px-3 py-[8px] bg-transparent outline-none text-[#1A3A6B] text-[12px] "/>
       </div>
     </div>
   )
@@ -151,7 +151,7 @@ export function AdminChallengePage() {
                 ].map(([l,v])=>(
                   <div key={l} className="flex justify-between py-[5px] border-b border-[#F0F4FB] last:border-0">
                     <span className="text-[9px] text-[#8FA3BF]">{l}</span>
-                    <span className="font-['JetBrains_Mono',monospace] text-[10px] text-[#2255CC]">{v}</span>
+                    <span className=" text-[10px] text-[#2255CC]">{v}</span>
                   </div>
                 ))}
                 <div className="flex gap-2 mt-3">

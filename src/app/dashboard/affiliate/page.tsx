@@ -159,7 +159,7 @@ export function AffiliatePage() {
                   <div>
                     <div className="text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold mb-2">Referral Code</div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] font-['JetBrains_Mono',monospace] text-[18px] font-bold text-[#2255CC] tracking-[3px]">
+                      <div className="flex-1 px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA]  text-[18px] font-bold text-[#2255CC] tracking-[3px]">
                         {affiliate.code}
                       </div>
                       <button onClick={copyCode}
@@ -173,7 +173,7 @@ export function AffiliatePage() {
                   <div>
                     <div className="text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold mb-2">Referral Link</div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 px-3 py-2 bg-[#F4F7FD] border border-[#F0F4FB] font-['JetBrains_Mono',monospace] text-[10px] text-[#5C7A9E] truncate">
+                      <div className="flex-1 px-3 py-2 bg-[#F4F7FD] border border-[#F0F4FB]  text-[10px] text-[#5C7A9E] truncate">
                         {refLink}
                       </div>
                       <button onClick={copyLink}
@@ -192,7 +192,7 @@ export function AffiliatePage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] text-[#8FA3BF]">Commission Rate</span>
-                    <span className="font-['JetBrains_Mono',monospace] text-[14px] font-bold text-[#2255CC]">{affiliate.commission_pct ?? 20}%</span>
+                    <span className=" text-[14px] font-bold text-[#2255CC]">{affiliate.commission_pct ?? 20}%</span>
                   </div>
 
                   {/* Share buttons */}
@@ -226,7 +226,7 @@ export function AffiliatePage() {
                     ].map(([l,v,c]) => (
                       <div key={l} className="flex justify-between items-center py-2 border-b border-[#F0F4FB] last:border-0">
                         <span className="text-[10px] text-[#8FA3BF]">{l}</span>
-                        <span className="font-['JetBrains_Mono',monospace] text-[13px] font-bold" style={{color:c}}>{v}</span>
+                        <span className=" text-[13px] font-bold" style={{color:c}}>{v}</span>
                       </div>
                     ))}
                   </div>
@@ -275,7 +275,7 @@ export function AffiliatePage() {
                             {r.status}
                           </span>
                         </td>
-                        <td className="px-[11px] py-[8px] font-['JetBrains_Mono',monospace] font-semibold text-[#2255CC]">{r.commission_usd ? fmt(r.commission_usd) : '—'}</td>
+                        <td className="px-[11px] py-[8px]  font-semibold text-[#2255CC]">{r.commission_usd ? fmt(r.commission_usd) : '—'}</td>
                       </tr>
                     ))}
                   </tbody>

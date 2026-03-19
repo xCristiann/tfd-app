@@ -57,7 +57,7 @@ export function AdminRiskPage() {
                   <div key={ip} className="border border-[rgba(255,180,0,.2)] bg-[rgba(255,180,0,.04)] p-4 mb-3">
                     <div className="flex items-center gap-3 mb-3">
                       <span className="text-[#2255CC] text-[12px]">🔗</span>
-                      <span className="font-['JetBrains_Mono',monospace] text-[#2255CC] font-bold text-[12px]">{ip}</span>
+                      <span className=" text-[#2255CC] font-bold text-[12px]">{ip}</span>
                       <span className="text-[8px] uppercase tracking-[1.5px] text-[#2255CC] bg-[rgba(34,85,204,.08)] border border-[#C5D5EA] px-[8px] py-[2px] font-bold">
                         {traders.length} Accounts
                       </span>
@@ -104,7 +104,7 @@ export function AdminRiskPage() {
                       <div key={i} className="border border-[rgba(255,51,82,.15)] bg-[rgba(220,38,38,.04)] p-[14px] mb-2">
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <div className="font-['JetBrains_Mono',monospace] text-[#2255CC] text-[11px] mb-[1px]">{a.account_number}</div>
+                            <div className=" text-[#2255CC] text-[11px] mb-[1px]">{a.account_number}</div>
                             <div className="font-semibold text-[13px]">{a.trader_name ?? '—'}</div>
                             <div className="text-[10px] text-[#8FA3BF]">Balance: ${Number(a.balance ?? 0).toLocaleString()}</div>
                           </div>
@@ -135,8 +135,8 @@ export function AdminRiskPage() {
                               className="px-[10px] py-[4px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(255,140,66,.1)] text-[#2255CC] border border-[rgba(255,140,66,.25)]">Soft Lock</button>
                           </div>
                         </div>
-                        <DrawdownBar label={`Daily DD — ${a.daily_dd_used}%`} value={Number(a.daily_dd_used)} max={5} warn={60} danger={80}/>
-                        <DrawdownBar label={`Max DD — ${a.max_dd_used}%`}   value={Number(a.max_dd_used)}   max={10} warn={60} danger={80}/>
+                        <DrawdownBar label={`Daily DD — ${a.daily_dd_used}%`} used={Number(a.daily_dd_used)} max={5}/>
+                        <DrawdownBar label={`Max DD — ${a.max_dd_used}%`}   used={Number(a.max_dd_used)}   max={10}/>
                       </div>
                     ))}
                   </Card>
@@ -148,14 +148,14 @@ export function AdminRiskPage() {
                       <div key={i} className="border border-[rgba(255,140,66,.12)] bg-[rgba(255,140,66,.03)] p-[14px] mb-2">
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <div className="font-['JetBrains_Mono',monospace] text-[#2255CC] text-[11px] mb-[1px]">{a.account_number}</div>
+                            <div className=" text-[#2255CC] text-[11px] mb-[1px]">{a.account_number}</div>
                             <div className="font-semibold">{a.trader_name ?? '—'}</div>
                           </div>
                           <button onClick={()=>toast('warning','👁','Flagged','Account marked for monitoring.')}
                             className="px-[10px] py-[4px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(34,85,204,.08)] text-[#2255CC] border border-[#C5D5EA]">Watch</button>
                         </div>
-                        <DrawdownBar label={`Daily DD — ${a.daily_dd_used}%`} value={Number(a.daily_dd_used)} max={5}/>
-                        <DrawdownBar label={`Max DD — ${a.max_dd_used}%`}     value={Number(a.max_dd_used)}   max={10}/>
+                        <DrawdownBar label={`Daily DD — ${a.daily_dd_used}%`} used={Number(a.daily_dd_used)} max={5}/>
+                        <DrawdownBar label={`Max DD — ${a.max_dd_used}%`}     used={Number(a.max_dd_used)}   max={10}/>
                       </div>
                     ))}
                   </Card>

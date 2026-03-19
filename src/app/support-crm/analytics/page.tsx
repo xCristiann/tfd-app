@@ -18,7 +18,7 @@ export function SupportAnalyticsPage() {
             <div key={l} className="mb-3">
               <div className="flex justify-between mb-1">
                 <span className="text-[12px]">{l}</span>
-                <span className="font-['JetBrains_Mono',monospace] text-[11px]" style={{color:c}}>{v}%</span>
+                <span className=" text-[11px]" style={{color:c}}>{v}%</span>
               </div>
               <div className="h-[4px] bg-white/5 rounded overflow-hidden">
                 <div className="h-full rounded transition-all" style={{width:`${v}%`,background:c}}/>
@@ -28,14 +28,14 @@ export function SupportAnalyticsPage() {
         </Card>
         <Card>
           <CardHeader title="By Priority"/>
-          {[['Urgent',4,'#DC2626'],['High',11,'var(--orange)'],['Medium',8,'#2255CC'],['Low',5,'#5C7A9E']].map(([l,v,c])=>(
+          {[['Urgent',4,'#DC2626'],['High',11,'#EA580C'],['Medium',8,'#2255CC'],['Low',5,'#5C7A9E']].map(([l,v,c])=>(
             <div key={l} className="flex justify-between items-center py-[8px] border-b border-[#F0F4FB] last:border-0">
               <span className="text-[12px]">{l}</span>
               <div className="flex items-center gap-3">
                 <div className="w-[80px] h-[4px] bg-white/5 rounded overflow-hidden">
                   <div className="h-full rounded" style={{width:`${(v as number)/28*100}%`,background:c}}/>
                 </div>
-                <span className="font-['JetBrains_Mono',monospace] text-[11px] w-[20px] text-right" style={{color:c}}>{v}</span>
+                <span className=" text-[11px] w-[20px] text-right" style={{color:c}}>{v}</span>
               </div>
             </div>
           ))}

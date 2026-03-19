@@ -51,7 +51,7 @@ export function SettingsPage() {
             <div className="flex flex-col gap-3">
               <div className="bg-[#F4F7FD] border border-[#F0F4FB] p-3 mb-1">
                 <div className="text-[9px] text-[#8FA3BF] mb-1">Email (cannot be changed)</div>
-                <div className="text-[12px] font-['JetBrains_Mono',monospace] text-[#5C7A9E]">{profile?.email}</div>
+                <div className="text-[12px]  text-[#5C7A9E]">{profile?.email}</div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1"><Label l="First Name"/><div className={wrap}><input value={fn} onChange={e=>setFn(e.target.value)} className={inp}/></div></div>
@@ -71,7 +71,7 @@ export function SettingsPage() {
               <div className="h-[1px] bg-[rgba(26,58,107,.06)]"/>
               <div className="bg-[#F4F7FD] border border-[#F0F4FB] p-3">
                 <div className="text-[9px] text-[#8FA3BF] mb-1">Account Role</div>
-                <div className="text-[12px] font-['JetBrains_Mono',monospace] text-[#2255CC] capitalize">{profile?.role ?? 'trader'}</div>
+                <div className="text-[12px]  text-[#2255CC] capitalize">{profile?.role ?? 'trader'}</div>
               </div>
             </div>
           </Card>

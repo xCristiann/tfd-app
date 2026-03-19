@@ -265,7 +265,7 @@ export function AdminEmailPage() {
                         <div className="font-semibold">{l.template}</div>
                         <div className="text-[9px] text-[#8FA3BF]">{l.time} · {l.recipients} recipient{l.recipients>1?'s':''}</div>
                       </div>
-                      <span className={`font-['JetBrains_Mono',monospace] font-bold ${l.fail > 0 ? 'text-[#2255CC]' : 'text-[#16A34A]'}`}>
+                      <span className={` font-bold ${l.fail > 0 ? 'text-[#2255CC]' : 'text-[#16A34A]'}`}>
                         {l.success}/{l.recipients}
                       </span>
                     </div>
@@ -389,7 +389,7 @@ export function AdminEmailPage() {
                               onChange={e => setFieldValues(v => ({ ...v, [f]: e.target.value }))}
                               placeholder={f === 'body' ? 'Write your custom email body here. HTML is supported.' : 'Write the support reply here…'}
                               rows={5}
-                              className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[11px] outline-none focus:border-[#2255CC] transition-colors resize-y font-['JetBrains_Mono',monospace]"
+                              className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#C5D5EA] text-[#1A3A6B] text-[11px] outline-none focus:border-[#2255CC] transition-colors resize-y "
                             />
                           ) : (
                             <input
