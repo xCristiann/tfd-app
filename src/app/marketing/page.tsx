@@ -18,8 +18,8 @@ export function MarketingPage() {
 
   const S: Record<string, React.CSSProperties> = {
     page:    { fontFamily:"'Inter',system-ui,sans-serif", background:'#fff', color:'#1A3A6B', minHeight:'100vh' },
-    nav:     { height:'64px', display:'flex', alignItems:'center', padding:'0 48px', borderBottom:'1px solid #E8EEF8', background:'#fff', position:'sticky' as const, top:0, zIndex:100 },
-    logo:    { fontFamily:"'Playfair Display',serif", fontSize:'18px', fontWeight:700, color:'#1A3A6B', marginRight:'auto', letterSpacing:'-0.3px', textDecoration:'none' },
+    nav:     { height:'64px', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 32px', borderBottom:'1px solid #E8EEF8', background:'#fff', position:'sticky' as const, top:0, zIndex:100 },
+    logo:    { fontFamily:"'Playfair Display',serif", fontSize:'18px', fontWeight:700, color:'#1A3A6B', marginRight:'32px', letterSpacing:'-0.3px', textDecoration:'none', flexShrink:0 },
     section: { padding:'72px 48px', borderBottom:'1px solid #E8EEF8' },
     eyebrow: { display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' },
     line:    { width:'28px', height:'2px', background:'#2255CC', borderRadius:'1px' },
@@ -34,13 +34,13 @@ export function MarketingPage() {
       {/* ── NAV ── */}
       <nav style={S.nav}>
         <a href="/" style={S.logo}>The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span></a>
-        <div style={{display:'flex'}}>
+        <div style={{display:'flex',flex:'0 0 auto'}}>
           {[['How It Works','#how'],['Challenge Plans','#plans'],['Payouts','#payouts'],['Features','#features'],['FAQ','#faq']].map(([l,h])=>(
             <a key={l} href={h} style={{fontSize:'12px',fontWeight:500,color:'#5C7A9E',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s'}}
               onMouseEnter={e=>(e.currentTarget.style.color='#1A3A6B')} onMouseLeave={e=>(e.currentTarget.style.color='#5C7A9E')}>{l}</a>
           ))}
         </div>
-        <div style={{display:'flex',gap:'10px',marginLeft:'32px'}}>
+        <div style={{display:'flex',gap:'10px',marginLeft:'32px',flexShrink:0}}>
           {isLoggedIn ? (
             <button onClick={()=>navigate('/dashboard')} style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>Dashboard →</button>
           ) : (
