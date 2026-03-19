@@ -1,9 +1,3 @@
-import { supabase } from '@/lib/supabase'
-
-// Supabase project config - needed for direct fetch
-const SUPABASE_URL     = (import.meta as any).env?.VITE_SUPABASE_URL     ?? ''
-const SUPABASE_ANON    = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ?? ''
-
 type EmailType =
   | 'welcome' | 'order_confirmation' | 'kyc_approved' | 'kyc_declined'
   | 'payout_approved' | 'payout_paid' | 'payout_rejected' | 'account_breached'
@@ -15,16 +9,10 @@ export async function sendEmail(
   data: Record<string, any>
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    // Use direct fetch instead of supabase.functions.invoke to avoid CORS issues
-    const url = `${SUPABASE_URL}/functions/v1/send-email`
-
-    const res = await fetch(url, {
+    // Use Vercel API route — same domain, no CORS issues
+    const res = await fetch('/api/send-email', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON}`,
-        'apikey': SUPABASE_ANON,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, to, data }),
     })
 
@@ -37,12 +25,9 @@ export async function sendEmail(
     }
 
     const result = await res.json()
-    if (result?.error) {
-      console.error('[sendEmail] function error:', result.error)
-      return { ok: false, error: result.error }
-    }
-
+    if (result?.error) return { ok: false, error: result.error }
     return { ok: true }
+
   } catch (err: any) {
     const msg = err?.message ?? String(err)
     console.error('[sendEmail] exception:', type, msg)
