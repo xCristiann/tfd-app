@@ -77,8 +77,9 @@ function loadLWC(): Promise<void> {
 /* ══ FCS API — fetch candles ══════════════════════════════════════ */
 async function fetchCandles(inst: any, tf: TF): Promise<Candle[]> {
   const length = 500
-  // FCS API v4 - correct endpoint and params
-  const url = `https://api-v4.fcsapi.com/forex/history?symbol=${encodeURIComponent(inst.fcs)}&period=${tf.fcs}&number=${length}&access_key=${FCS_KEY}`
+  // FCS API v4 - correct endpoint with type param
+  const fcsType = inst.fcsType ?? 'forex'
+  const url = `https://api-v4.fcsapi.com/forex/history?symbol=${inst.fcs}&period=${tf.fcs}&number=${length}&type=${fcsType}&access_key=${FCS_KEY}`
   try {
     const r = await fetch(url)
     const d = await r.json()
@@ -87,12 +88,13 @@ async function fetchCandles(inst: any, tf: TF): Promise<Candle[]> {
     const arr = Array.isArray(d.response) ? d.response : Object.values(d.response||{})
     if (!arr.length) return generateDemo(inst, tf)
     const candles: Candle[] = arr.map((e: any) => {
-      // FCS uses tm (unix timestamp) or t
-      const time  = parseInt(e.tm || e.t || e.date || 0)
-      const open  = parseFloat(e.o || e.open  || 0)
-      const high  = parseFloat(e.h || e.high  || 0)
-      const low   = parseFloat(e.l || e.low   || 0)
-      const close = parseFloat(e.c || e.close || 0)
+      // FCS history: each item has {o,h,l,c,t} or nested active:{o,h,l,c,t}
+      const data  = e.active ?? e
+      const time  = parseInt(data.t || data.tm || data.date || e.t || e.tm || 0)
+      const open  = parseFloat(data.o || data.open  || 0)
+      const high  = parseFloat(data.h || data.high  || 0)
+      const low   = parseFloat(data.l || data.low   || 0)
+      const close = parseFloat(data.c || data.close || 0)
       return { time, open, high, low, close }
     }).filter((c:Candle) => c.time>0 && c.open>0)
     candles.sort((a,b) => a.time - b.time)
@@ -267,36 +269,29 @@ function usePriceFeed() {
       if(dead) return
       // FCS latest prices - fetch in small batches to avoid URL length limits
       try {
-        const fxSyms  = INSTRUMENTS.filter(i=>i.cat==='Forex'||i.cat==='Metals').map(i=>(i as any).fcs).join(',')
-        const idxSyms = INSTRUMENTS.filter(i=>i.cat==='Indices'||i.cat==='Commodities').map(i=>(i as any).fcs).join(',')
-
-        // Forex + metals
-        const r1=await fetch(`https://api-v4.fcsapi.com/forex/latest?symbol=${encodeURIComponent(fxSyms)}&access_key=${FCS_KEY}`)
-        const d1=await r1.json()
-        if(d1.status&&d1.response) {
-          const arr1 = Array.isArray(d1.response) ? d1.response : Object.values(d1.response)
-          for(const item of arr1 as any[]){
-            const s=item.s||item.symbol||item.id
-            const inst=INSTRUMENTS.find(i=>(i as any).fcs===s) as any
-            if(!inst) continue
-            const price=parseFloat(item.c||item.price||item.last||item.close||0)
-            if(price>0) { push(inst.sym,+price.toFixed(inst.dec)); }
-          }
-        }
-        await new Promise(r=>setTimeout(r,200))
-
-        // Indices
-        const r2=await fetch(`https://api-v4.fcsapi.com/forex/latest?symbol=${encodeURIComponent(idxSyms)}&access_key=${FCS_KEY}`)
-        const d2=await r2.json()
-        if(d2.status&&d2.response) {
-          const arr2 = Array.isArray(d2.response) ? d2.response : Object.values(d2.response)
-          for(const item of arr2 as any[]){
-            const s=item.s||item.symbol||item.id
-            const inst=INSTRUMENTS.find(i=>(i as any).fcs===s) as any
-            if(!inst) continue
-            const price=parseFloat(item.c||item.price||item.last||item.close||0)
-            if(price>0) push(inst.sym,+price.toFixed(inst.dec))
-          }
+        // Fetch each type separately - FCS requires type param
+        const groups = [
+          { type:'forex',     syms: INSTRUMENTS.filter(i=>i.cat==='Forex').map(i=>(i as any).fcs) },
+          { type:'commodity', syms: INSTRUMENTS.filter(i=>i.cat==='Metals'||i.cat==='Commodities').map(i=>(i as any).fcs) },
+          { type:'indices',   syms: INSTRUMENTS.filter(i=>i.cat==='Indices').map(i=>(i as any).fcs) },
+        ]
+        for (const grp of groups) {
+          if (!grp.syms.length) continue
+          try {
+            const r=await fetch(`https://api-v4.fcsapi.com/forex/latest?symbol=${grp.syms.join(',')}&type=${grp.type}&access_key=${FCS_KEY}`)
+            const d=await r.json()
+            if(!d.status||!d.response) continue
+            const arr=Array.isArray(d.response)?d.response:Object.values(d.response)
+            for(const item of arr as any[]){
+              const s=item.s||item.id||item.symbol||item.ticker
+              const inst=INSTRUMENTS.find(i=>(i as any).fcs===s) as any
+              if(!inst) continue
+              // FCS latest: active.c = close price
+              const price=parseFloat((item.active?.c)||item.c||item.price||item.last||0)
+              if(price>0) push(inst.sym,+price.toFixed(inst.dec))
+            }
+          } catch{}
+          await new Promise(r=>setTimeout(r,150))
         }
       } catch(e){ console.warn('[FCS latest]',e) }
       // Finnhub removed
@@ -435,16 +430,13 @@ export function PlatformPage(){
   // One-time FCS API test on mount
   useEffect(()=>{
     // Test FCS candle endpoint and log raw response
-    fetch(`https://api-v4.fcsapi.com/forex/history?symbol=XAU/USD&period=1h&number=5&access_key=${FCS_KEY}`)
+    fetch(`https://api-v4.fcsapi.com/forex/history?symbol=XAUUSD&period=1h&number=5&type=commodity&access_key=${FCS_KEY}`)
       .then(r=>r.json())
-      .then(d=>{
-        console.log('[FCS test] XAU/USD 1h response:', JSON.stringify(d).slice(0,400))
-      })
+      .then(d=>console.log('[FCS test] XAUUSD 1h:', JSON.stringify(d).slice(0,500)))
       .catch(e=>console.error('[FCS test error]',e))
-    // Test latest price
-    fetch(`https://api-v4.fcsapi.com/forex/latest?symbol=XAU/USD&access_key=${FCS_KEY}`)
+    fetch(`https://api-v4.fcsapi.com/forex/latest?symbol=EURUSD&type=forex&access_key=${FCS_KEY}`)
       .then(r=>r.json())
-      .then(d=>console.log('[FCS latest test] XAU/USD:', JSON.stringify(d).slice(0,300)))
+      .then(d=>console.log('[FCS latest] EURUSD:', JSON.stringify(d).slice(0,300)))
       .catch(e=>console.error('[FCS latest error]',e))
   },[])
 
