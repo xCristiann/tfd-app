@@ -42,7 +42,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{fontFamily:"'Sora',system-ui,sans-serif",background:'#F0F4FB'}}>
+    <div className="min-h-screen flex" style={{fontFamily:"'Inter',system-ui,sans-serif",background:'#F0F4FB'}}>
       {/* Left — branding */}
       <div className="hidden lg:flex flex-col justify-between w-[420px] flex-shrink-0 p-12" style={{background:'#1A3A6B'}}>
         <div>
