@@ -177,7 +177,7 @@ export function CheckoutPage() {
       login,
       password,
       server:         'CFT-Live-01',
-      amount:         _finalPrice.toFixed(2),
+      amount:         (Number(_finalPrice) || 0).toFixed(2),
       phase:          'Phase 1',
     })
 
@@ -446,7 +446,7 @@ export function CheckoutPage() {
                   </button>
                   <button onClick={proceedToPayment} disabled={placing}
                     className="flex-1 py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[#2255CC] text-[#F0F4FB] border-none cursor-pointer hover:bg-[#1A44B0] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                    {placing ? 'Redirecting to Stripe…' : `Pay $${finalPrice.toFixed(2)} Securely →`}
+                    {placing ? 'Redirecting to Stripe…' : `Pay $${(Number(finalPrice) || 0).toFixed(2)} Securely →`}
                   </button>
                 </div>
               </div>
@@ -558,7 +558,7 @@ export function CheckoutPage() {
               {discountAmount > 0 && (
                 <div className="flex justify-between text-[11px] text-[#16A34A] mb-2">
                   <span>Discount</span>
-                  <span className="">-${discountAmount.toFixed(2)}</span>
+                  <span className="">-${(Number(discountAmount) || 0).toFixed(2)}</span>
                 </div>
               )}
 
@@ -566,7 +566,7 @@ export function CheckoutPage() {
                 <span className="text-[11px] font-semibold">Total Due</span>
                 <div className="text-right">
                   {discountAmount > 0 && <div className="text-[10px] text-[#8FA3BF] line-through ">${product?.price_usd}</div>}
-                  <span className=" text-[18px] font-bold text-[#2255CC]">${finalPrice.toFixed(2)}</span>
+                  <span className=" text-[18px] font-bold text-[#2255CC]">${(Number(finalPrice) || 0).toFixed(2)}</span>
                 </div>
               </div>
 

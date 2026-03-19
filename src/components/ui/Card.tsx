@@ -89,18 +89,20 @@ export function Modal({ open, onClose, title, children, width = '520px' }: Modal
 
 interface DrawdownBarProps { label: string; used: number; max: number; color?: string }
 export function DrawdownBar({ label, used, max, color = '#2255CC' }: DrawdownBarProps) {
-  const pct = Math.min(100, (used / max) * 100)
+  const safeUsed = Number(used) || 0
+  const safeMax  = Number(max)  || 1
+  const pct    = Math.min(100, (safeUsed / safeMax) * 100)
   const danger = pct > 80
-  const warn = pct > 60
-  const c = danger ? '#DC2626' : warn ? '#D97706' : color
+  const warn   = pct > 60
+  const col    = danger ? '#DC2626' : warn ? '#D97706' : color
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex justify-between items-center">
         <span className="text-[11px] text-[#5C7A9E]">{label}</span>
-        <span className="text-[11px] font-500" style={{fontFamily:"'JetBrains Mono',monospace",color:c,fontWeight:500}}>{used.toFixed(1)}% / {max}%</span>
+        <span className="text-[11px]" style={{fontFamily:"'JetBrains Mono',monospace",color:col,fontWeight:500}}>{(Number(safeUsed) || 0).toFixed(1)}% / {safeMax}%</span>
       </div>
       <div className="h-[5px] bg-[#EEF3FF] rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-500" style={{width:`${pct}%`,background:c}}/>
+        <div className="h-full rounded-full transition-all duration-500" style={{width:`${pct}%`,background:col}}/>
       </div>
     </div>
   )

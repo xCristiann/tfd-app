@@ -241,7 +241,7 @@ export function AdminRevenuePage() {
                     {monthlyRevenue.map(m => (
                       <div key={m.month} className="flex-1 text-center">
                         <div className={`text-[8px]  font-bold ${m.net>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>
-                          {m.net>=0?'+':''}{m.net>=1000?`${(m.net/1000).toFixed(1)}k`:m.net.toFixed(0)}
+                          {m.net>=0?'+':''}{m.net>=1000?`${(m.net/1000).toFixed(1)}k`:m.(Number(net) || 0).toFixed(0)}
                         </div>
                       </div>
                     ))}

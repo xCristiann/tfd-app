@@ -431,12 +431,12 @@ function useRiskMonitor(
       const dailyFloor=dailyHigh-dailyHigh*(dailyDDPct/100)
       const floatPnl=trades.reduce((s:number,t:any)=>s+calcPnl(t,prices[t.symbol]||SEED[t.symbol]||t.open_price),0)
       const equity=balance+floatPnl
-      if(equity<=maxDDFloor){firedRef.current=true;cbRef.current(`Max drawdown breached — equity $${equity.toFixed(2)} ≤ floor $${maxDDFloor.toFixed(2)} (${maxDDPct}%)`,trades);return}
-      if(equity<=dailyFloor){firedRef.current=true;cbRef.current(`Daily drawdown breached — equity $${equity.toFixed(2)} ≤ floor $${dailyFloor.toFixed(2)} (${dailyDDPct}% daily)`,trades);return}
+      if(equity<=maxDDFloor){firedRef.current=true;cbRef.current(`Max drawdown breached — equity $${(Number(equity) || 0).toFixed(2)} ≤ floor $${(Number(maxDDFloor) || 0).toFixed(2)} (${maxDDPct}%)`,trades);return}
+      if(equity<=dailyFloor){firedRef.current=true;cbRef.current(`Daily drawdown breached — equity $${(Number(equity) || 0).toFixed(2)} ≤ floor $${(Number(dailyFloor) || 0).toFixed(2)} (${dailyDDPct}% daily)`,trades);return}
       for(const t of trades){
         const cur=prices[t.symbol]||SEED[t.symbol]||t.open_price
         const pct=(calcPnl(t,cur)/startBal)*100
-        if(pct<=-5){firedRef.current=true;cbRef.current(`${t.symbol} loss ${pct.toFixed(2)}% of account (limit -5%)`,trades);return}
+        if(pct<=-5){firedRef.current=true;cbRef.current(`${t.symbol} loss ${(Number(pct) || 0).toFixed(2)}% of account (limit -5%)`,trades);return}
       }
     },500)
     return ()=>clearInterval(iv)
@@ -571,7 +571,7 @@ export function PlatformPage(){
     if(!ms.open)                                                      {toast('error','🔴','Market Closed',`${ms.label}. Next: ${ms.nextOpen}`);return}
     if((primary as any).payout_locked||primary.status==='suspended') {toast('error','⛔','Locked','Payout pending');return}
     if(primary.status==='breached'||primary.status==='passed')       {toast('error','⛔','Locked','Account not active');return}
-    if(reqMargin>freeMargin)                                          {toast('error','⛔','Margin',`Need $${reqMargin.toFixed(2)}, free: $${freeMargin.toFixed(2)}`);return}
+    if(reqMargin>freeMargin)                                          {toast('error','⛔','Margin',`Need $${(Number(reqMargin) || 0).toFixed(2)}, free: $${(Number(freeMargin) || 0).toFixed(2)}`);return}
     setPlacing(true);setConfirm(false)
     const {data,error}=await supabase.from('trades').insert({
       account_id:primary.id,user_id:primary.user_id,symbol:sym,direction:dir,lots:lotsNum,
@@ -726,7 +726,7 @@ export function PlatformPage(){
             {l:'EQUITY', v:fmt(equity), c:equity>=balance?'#16A34A':'#DC2626'},
             {l:'P&L',    v:`${openPnl>=0?'+':''}${fmt(openPnl)}`,c:openPnl>=0?'#16A34A':'#DC2626'},
             {l:'FREE MARGIN',v:fmt(freeMargin),c:freeMargin<0?'#DC2626':'#5C7A9E'},
-            ...(usedMargin>0?[{l:'MARGIN LVL',v:`${marginLvl.toFixed(0)}%`,c:marginLvl<150?'#DC2626':'#5C7A9E'}]:[]),
+            ...(usedMargin>0?[{l:'MARGIN LVL',v:`${(Number(marginLvl) || 0).toFixed(0)}%`,c:marginLvl<150?'#DC2626':'#5C7A9E'}]:[]),
           ].map(({l,v,c})=>(
             <div key={l} style={{flexShrink:0}}>
               <div style={{fontSize:7,letterSpacing:1.5,color:'#8FA3BF',fontWeight:600,textTransform:'uppercase' as const}}>{l}</div>
@@ -790,7 +790,7 @@ export function PlatformPage(){
                      <td style={{padding:'5px 8px',fontFamily:'monospace',color:'#5C7A9E'}}>{t.open_price}</td>
                      <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:600,color:cur>=t.open_price?'#16A34A':'#DC2626'}}>{cur.toFixed(ti?.dec??5)}</td>
                      <td style={{padding:'5px 8px',fontFamily:'monospace',fontWeight:700,fontSize:11,color:pnl>=0?'#16A34A':'#DC2626'}}>{pnl>=0?'+':''}{fmt(pnl)}</td>
-                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:10,fontWeight:600,color:warn?'#DC2626':ddPct<0?'rgba(220,38,38,.7)':'#16A34A'}}>{ddPct>=0?'+':''}{ddPct.toFixed(2)}%</td>
+                     <td style={{padding:'5px 8px',fontFamily:'monospace',fontSize:10,fontWeight:600,color:warn?'#DC2626':ddPct<0?'rgba(220,38,38,.7)':'#16A34A'}}>{ddPct>=0?'+':''}{(Number(ddPct) || 0).toFixed(2)}%</td>
                      {/* SL editable */}
                      <td style={{padding:'5px 8px'}}>
                        {isEditing
@@ -863,7 +863,7 @@ export function PlatformPage(){
                 ['Open P&L',   `${openPnl>=0?'+':''}${fmt(openPnl)}`, openPnl>=0?'#16A34A':'#DC2626'],
                 ['Free Margin',fmt(freeMargin),                         freeMargin<0?'#DC2626':'#1A3A6B'],
                 ['Used Margin',fmt(usedMargin),                         '#1A3A6B'],
-                ['Margin Lvl', usedMargin>0?`${marginLvl.toFixed(0)}%`:'∞', marginLvl<150&&usedMargin>0?'#DC2626':'#16A34A'],
+                ['Margin Lvl', usedMargin>0?`${(Number(marginLvl) || 0).toFixed(0)}%`:'∞', marginLvl<150&&usedMargin>0?'#DC2626':'#16A34A'],
                 ['Leverage',   `1:${LEVERAGE}`,                         '#5C7A9E'],
                 ['Open Pos.',  String(openTrades.length),               '#1A3A6B'],
                 ['Account',    primary?.account_number??'—',            '#2255CC'],

@@ -3,10 +3,35 @@ import type { DailySnapshot, TraderStats, JournalEntry, Notification, TradeSenti
 
 export const analyticsApi = {
   async getStats(accountId: string): Promise<TraderStats | null> {
-    const { data, error } = await supabase
-      .from('v_trader_stats').select('*').eq('account_id', accountId).single()
-    if (error) return null
-    return data
+    // Calculate stats directly from trades table (v_trader_stats view may not exist)
+    const { data: trades, error } = await supabase
+      .from('trades')
+      .select('net_pnl, status, direction')
+      .eq('account_id', accountId)
+      .eq('status', 'closed')
+    if (error || !trades || trades.length === 0) return null
+
+    const total   = trades.length
+    const winners = trades.filter(t => (t.net_pnl ?? 0) > 0)
+    const losers  = trades.filter(t => (t.net_pnl ?? 0) <= 0)
+    const grossWin  = winners.reduce((s, t) => s + (t.net_pnl ?? 0), 0)
+    const grossLoss = Math.abs(losers.reduce((s, t) => s + (t.net_pnl ?? 0), 0))
+    const totalPnl  = trades.reduce((s, t) => s + (t.net_pnl ?? 0), 0)
+    const allPnl    = trades.map(t => t.net_pnl ?? 0)
+
+    return {
+      account_id:      accountId,
+      total_trades:    total,
+      winning_trades:  winners.length,
+      losing_trades:   losers.length,
+      win_rate_pct:    total > 0 ? Math.round((winners.length / total) * 100) : 0,
+      profit_factor:   grossLoss > 0 ? Math.round((grossWin / grossLoss) * 100) / 100 : grossWin > 0 ? 99 : 0,
+      total_pnl:       Math.round(totalPnl * 100) / 100,
+      best_trade:      allPnl.length ? Math.max(...allPnl) : 0,
+      worst_trade:     allPnl.length ? Math.min(...allPnl) : 0,
+      avg_win:         winners.length ? grossWin / winners.length : 0,
+      avg_loss:        losers.length  ? grossLoss / losers.length : 0,
+    } as TraderStats
   },
 
   async getEquityCurve(accountId: string, days = 30): Promise<DailySnapshot[]> {
@@ -42,9 +67,19 @@ export const analyticsApi = {
   },
 
   async adminRiskAlerts() {
-    const { data, error } = await supabase.from('v_risk_alerts').select('*')
-    if (error) throw error
-    return data ?? []
+    // Calculate risk alerts directly from accounts
+    const { data, error } = await supabase
+      .from('accounts')
+      .select('*, users(first_name, last_name, email)')
+      .in('status', ['active', 'suspended'])
+      .not('phase', 'in', '("breached","passed","inactive")')
+    if (error) return []
+    return (data ?? []).filter((a: any) =>
+      (a.daily_dd_used ?? 0) > 3 || (a.max_dd_used ?? 0) > 6
+    ).map((a: any) => ({
+      ...a,
+      alert_level: (a.daily_dd_used ?? 0) > 4.5 || (a.max_dd_used ?? 0) > 9 ? 'critical' : 'warning',
+    }))
   },
 }
 

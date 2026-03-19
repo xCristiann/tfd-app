@@ -17,7 +17,7 @@ function ProgressBar({ label, value, max, color, done }: { label:string; value:n
     <div className="mb-3">
       <div className="flex justify-between mb-1">
         <span className="text-[11px] text-[#5C7A9E]">{label}</span>
-        <span className=" text-[11px]" style={{color}}>{value.toFixed(2)}%{done?' ✓':` / ${max}%`}</span>
+        <span className=" text-[11px]" style={{color}}>{(Number(value) || 0).toFixed(2)}%{done?' ✓':` / ${max}%`}</span>
       </div>
       <div className="h-[5px] bg-white/5 rounded-[3px] overflow-hidden">
         <div className="h-full rounded-[3px] transition-all duration-500" style={{width:`${pct}%`,background:color}}/>

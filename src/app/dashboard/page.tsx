@@ -86,7 +86,7 @@ export function DashboardPage() {
             first_name:     profile.first_name ?? 'Trader',
             account_number: acc.account_number,
             reason:         `Daily DD: ${acc.daily_dd_used}% / Max DD: ${acc.max_dd_used}%`,
-            balance:        `$${acc.balance.toFixed(2)}`,
+            balance:        `$${(Number(acc.balance) || 0).toFixed(2)}`,
           }).catch(() => {})
         }
       }
@@ -110,7 +110,7 @@ export function DashboardPage() {
           user_id: null, // admin sentinel
           type: 'admin_target_reached',
           title: `Trader Target Reached — ${acc.account_number}`,
-          body: `${profile?.first_name} ${profile?.last_name} reached ${profitPct.toFixed(2)}% on ${acc.account_number}. Review and advance phase.`,
+          body: `${profile?.first_name} ${profile?.last_name} reached ${Number(profitPct || 0).toFixed(2)}% on ${acc.account_number}. Review and advance phase.`,
           is_read: false,
         }
       ]).then(() => {})
@@ -118,8 +118,8 @@ export function DashboardPage() {
     }
   }
 
-  const profit     = account ? (account.balance - account.starting_balance) : 0
-  const profitPct  = account && account.starting_balance > 0 ? ((profit / account.starting_balance) * 100).toFixed(2) : '0.00'
+  const profit     = account ? ((Number(account.balance) || 0) - (Number(account.starting_balance) || 0)) : 0
+  const profitPct  = account && (Number(account.starting_balance) || 0) > 0 ? ((profit / Number(account.starting_balance)) * 100).toFixed(2) : '0.00'
   const withdrawable = profit > 0 ? profit * ((prod?.funded_profit_split ?? 85) / 100) : 0
   const dailyLimit = prod?.ph1_daily_dd ?? 5
   const maxLimit   = prod?.ph1_max_dd   ?? 10
