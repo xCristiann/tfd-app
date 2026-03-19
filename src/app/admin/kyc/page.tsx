@@ -81,7 +81,7 @@ export function AdminKycPage() {
     for (const r of records) {
       const sessionId = r.kyc?.inquiry_id
       const currentStatus = r.kyc?.status ?? r.kyc_status
-      if (!sessionId || !['pending','in_review','in_progress','not_started'].includes(currentStatus ?? '')) continue
+      if (!sessionId) continue  // sync regardless of current status
       try {
         const res = await fetch(`/api/kyc-status?sessionId=${sessionId}`)
         if (!res.ok) continue

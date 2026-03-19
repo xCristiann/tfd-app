@@ -86,7 +86,8 @@ export function KycPage() {
       setKycRecord(record)
 
       // If pending/in_review, sync from Didit API
-      if (record?.inquiry_id && ['pending','in_review','in_progress'].includes(record.status)) {
+      // Always sync from Didit if we have a session ID
+      if (record?.inquiry_id) {
         await syncFromDidit(record.inquiry_id, record)
       }
     } catch (e) {
