@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -26,6 +27,7 @@ const STATUS_CFG: Record<KycStatus, { label: string; color: string; bg: string; 
 export function KycPage() {
   const { profile } = useAuth()
   const { toasts, toast, dismiss } = useToast()
+  const [searchParams] = useSearchParams()
   const [kycRecord, setKycRecord] = useState<any>(null)
   const [loading, setLoading]     = useState(true)
   const [starting, setStarting]   = useState(false)
@@ -41,13 +43,55 @@ export function KycPage() {
       const { data } = await supabase
         .from('kyc_verifications').select('*').eq('user_id', profile!.id).limit(1)
       const record = data?.[0] ?? null
+
+      // Check if Didit returned status in URL params (after redirect back)
+      const urlSessionId = searchParams.get('verificationSessionId')
+      const urlStatus    = searchParams.get('status')
+
+      if (urlSessionId && urlStatus) {
+        // Didit redirected back with status in URL
+        const normalized = urlStatus.toLowerCase()
+        let mapped = 'pending'
+        if (normalized.includes('approv'))  mapped = 'approved'
+        else if (normalized.includes('declin') || normalized.includes('fail')) mapped = 'declined'
+        else if (normalized.includes('abandon')) mapped = 'abandoned'
+
+        // Update DB with URL status
+        if (record) {
+          await supabase.from('kyc_verifications')
+            .update({ status: mapped, updated_at: new Date().toISOString() })
+            .eq('user_id', profile!.id)
+          await supabase.from('users').update({ kyc_status: mapped }).eq('id', profile!.id)
+          const updated = { ...record, status: mapped }
+          setKycRecord(updated)
+          if (mapped === 'approved') toast('success', '✅', 'Verified!', 'Your identity has been confirmed. Payouts unlocked.')
+          else if (mapped === 'declined') toast('error', '❌', 'Declined', 'Please re-submit with valid documents.')
+          else toast('info', '⏳', 'Under Review', 'Your documents are being reviewed.')
+        } else {
+          // No record yet - create one
+          const newRecord = {
+            user_id: profile!.id,
+            provider: 'didit',
+            inquiry_id: urlSessionId,
+            status: mapped,
+          }
+          await supabase.from('kyc_verifications').upsert(newRecord, { onConflict: 'user_id' })
+          await supabase.from('users').update({ kyc_status: mapped }).eq('id', profile!.id)
+          setKycRecord(newRecord)
+        }
+        setLoading(false)
+        return
+      }
+
       setKycRecord(record)
 
-      // If we have a pending/in_review session, sync status from Didit immediately
+      // If pending/in_review, sync from Didit API
       if (record?.inquiry_id && ['pending','in_review','in_progress'].includes(record.status)) {
         await syncFromDidit(record.inquiry_id, record)
       }
-    } catch {}
+    } catch (e) {
+      console.error('[KYC loadAndSync]', e)
+    }
     setLoading(false)
   }
 
