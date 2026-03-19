@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
 import { supabase } from '@/lib/supabase'
+import { sendEmail } from '@/lib/email'
 import { formatDate } from '@/lib/utils'
 import { ADMIN_NAV } from '@/lib/nav'
 
@@ -46,6 +47,18 @@ export function AdminKycPage() {
     setRecords(prev => prev.map(r => r.id === userId ? { ...r, kyc_status: status, kyc: r.kyc ? { ...r.kyc, status } : null } : r))
     if (selected?.id === userId) setSelected((s: any) => ({ ...s, kyc_status: status }))
     toast('success', '✅', 'Updated', `KYC status set to ${status}.`)
+
+    // Email notification
+    try {
+      const trader = records.find(r => r.id === userId)
+      if (trader?.email) {
+        if (status === 'approved') {
+          await sendEmail('kyc_approved', trader.email, { first_name: trader.first_name ?? 'Trader' })
+        } else if (status === 'declined') {
+          await sendEmail('kyc_declined', trader.email, { first_name: trader.first_name ?? 'Trader' })
+        }
+      }
+    } catch (e) { console.error('[email]', e) }
     setUpdating(false)
   }
 

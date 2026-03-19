@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
 import { supabase } from '@/lib/supabase'
+import { sendEmail } from '@/lib/email'
 import { fmt } from '@/lib/utils'
 import { ADMIN_NAV } from '@/lib/nav'
 
@@ -122,6 +123,26 @@ export function AdminPayoutsPage() {
       ? `✕ Rejected — balance reset to $${(payout.account?.starting_balance ?? 0).toLocaleString()}, account reactivated`
       : `Updated → ${status}`
     toast('success','✅', name, action)
+
+    // Email notification to trader
+    try {
+      const payout = payouts.find(p => p.id === id)
+      if (payout) {
+        const { data: trader } = await supabase
+          .from('users').select('email, first_name').eq('id', payout.user_id).single()
+        if (trader?.email) {
+          const amt = `$${payout.requested_usd}`
+          const accNum = payout.accounts?.account_number ?? ''
+          if (status === 'approved') {
+            await sendEmail('payout_approved', trader.email, { first_name: trader.first_name ?? 'Trader', amount: amt, account_number: accNum, method: payout.method ?? 'crypto' })
+          } else if (status === 'paid') {
+            await sendEmail('payout_paid', trader.email, { first_name: trader.first_name ?? 'Trader', amount: amt, method: payout.method ?? 'crypto', tx_hash: payout.tx_hash, tx_reference: payout.tx_reference })
+          } else if (status === 'rejected') {
+            await sendEmail('payout_rejected', trader.email, { first_name: trader.first_name ?? 'Trader', amount: amt, reason: payout.rejection_reason })
+          }
+        }
+      }
+    } catch (e) { console.error('[email]', e) }
   }
 
   const counts = {

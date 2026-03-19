@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { sendEmail } from '@/lib/email'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
 
@@ -158,7 +159,23 @@ export function CheckoutPage() {
       localStorage.removeItem('tfd_ref_code')
     }
 
-    setCreatedAccount({ accountNumber, login, password, server: 'CFT-Live-01', balance: product.account_size })
+    const creds = { accountNumber, login, password, server: 'CFT-Live-01', balance: product.account_size }
+    setCreatedAccount(creds)
+
+    // Send order confirmation email
+    await sendEmail('order_confirmation', email || profile.email, {
+      first_name:     firstName || profile.first_name,
+      order_number:   orderNum ?? accountNumber,
+      product_name:   product.name,
+      account_size:   Number(product.account_size).toLocaleString(),
+      account_number: accountNumber,
+      login,
+      password,
+      server:         'CFT-Live-01',
+      amount:         finalPrice.toFixed(2),
+      phase:          'Phase 1',
+    })
+
     setLoading(false)
     setStep(3)
   }

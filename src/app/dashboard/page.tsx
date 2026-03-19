@@ -11,6 +11,7 @@ import { ToastContainer } from '@/components/ui/Toast'
 import { fmt, phaseLabel } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { sendEmail } from '@/lib/email'
 import { analyticsApi } from '@/lib/api/analytics'
 import { TRADER_NAV } from '@/lib/nav'
 import type { TraderStats, DailySnapshot, Account } from '@/types/database'
@@ -79,6 +80,15 @@ export function DashboardPage() {
           }
         ]).then(() => {})
         toast('error', '🚨', 'Account Breached', 'Your drawdown limit was exceeded. Account locked.')
+        // Send breach email
+        if (profile?.email) {
+          sendEmail('account_breached', profile.email, {
+            first_name:     profile.first_name ?? 'Trader',
+            account_number: acc.account_number,
+            reason:         `Daily DD: ${acc.daily_dd_used}% / Max DD: ${acc.max_dd_used}%`,
+            balance:        `$${acc.balance.toFixed(2)}`,
+          }).catch(() => {})
+        }
       }
       return
     }

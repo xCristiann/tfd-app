@@ -6,6 +6,7 @@ import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { sendEmail } from '@/lib/email'
 import { SUPPORT_NAV } from '@/lib/nav'
 
 const PRI_COLOR: Record<string,string> = {
@@ -100,6 +101,20 @@ export function SupportCRMPage() {
       await supabase.from('support_tickets').update({
         status: 'pending', updated_at: new Date().toISOString()
       }).eq('id', selected.id)
+      // Email trader about the reply
+      try {
+        const { data: trader } = await supabase
+          .from('users').select('email, first_name').eq('id', selected.user_id).single()
+        if (trader?.email) {
+          await sendEmail('ticket_reply', trader.email, {
+            first_name:    trader.first_name ?? 'Trader',
+            ticket_number: selected.ticket_number,
+            subject:       selected.subject,
+            reply_body:    reply,
+            agent_name:    `${profile.first_name} ${profile.last_name}`,
+          })
+        }
+      } catch (e) { console.error('[email]', e) }
       const updated = allTickets.map(t => t.id === selected.id ? { ...t, status: 'pending' } : t)
       setAllTickets(updated)
       setSelected((s: any) => ({ ...s, status: 'pending' }))

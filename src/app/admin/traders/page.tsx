@@ -6,6 +6,7 @@ import { Badge, phaseVariant } from '@/components/ui/Badge'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
 import { supabase } from '@/lib/supabase'
+import { sendEmail } from '@/lib/email'
 import { phaseLabel } from '@/lib/utils'
 import { ADMIN_NAV } from '@/lib/nav'
 
@@ -127,6 +128,23 @@ export function AdminTradersPage() {
     })
     if (error) { toast('error', '❌', 'Error', error.message); return }
     toast('success', '✅', 'Advanced', `Account moved to ${nextPhase}.`)
+
+    // Send phase advance email to trader
+    try {
+      const { data: trader } = await supabase
+        .from('users').select('email, first_name').eq('id', selectedTrader.id).single()
+      if (trader?.email) {
+        await sendEmail('phase_advanced', trader.email, {
+          first_name:     trader.first_name ?? 'Trader',
+          account_number: accountNumber,
+          from_phase:     account.phase,
+          to_phase:       nextPhase,
+          login,
+          server:         'CFT-Live-01',
+        })
+      }
+    } catch (e) { console.error('[email]', e) }
+
     openTrader(selectedTrader)
   }
 
