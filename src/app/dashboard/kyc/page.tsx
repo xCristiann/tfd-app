@@ -8,83 +8,87 @@ import { useToast } from '@/hooks/useToast'
 import { supabase } from '@/lib/supabase'
 import { TRADER_NAV } from '@/lib/nav'
 
-const PERSONA_TEMPLATE = typeof import.meta !== 'undefined'
-  ? (import.meta as any).env?.VITE_PERSONA_TEMPLATE_ID ?? ''
-  : ''
-
-type KycStatus = 'not_started' | 'pending' | 'approved' | 'declined' | 'needs_review'
+type KycStatus = 'not_started' | 'pending' | 'approved' | 'declined' | 'needs_review' | 'in_review' | 'expired' | 'abandoned'
 
 const STATUS_CFG: Record<KycStatus, { label: string; color: string; bg: string; border: string; icon: string; desc: string }> = {
-  not_started:  { label: 'Not Verified',  color: 'text-[#8FA3BF]', bg: 'bg-[#F4F7FD]',               border: 'border-[#F0F4FB]',               icon: '○', desc: 'Complete identity verification to unlock payouts and higher limits.' },
-  pending:      { label: 'Under Review',  color: 'text-[#2255CC]',  bg: 'bg-[rgba(34,85,204,.05)]',     border: 'border-[rgba(34,85,204,.3)]',     icon: '⏳', desc: 'Your documents are being reviewed. Usually takes 1–2 business days.' },
-  approved:     { label: 'Verified',      color: 'text-[#16A34A]', bg: 'bg-[rgba(22,163,74,.06)]',      border: 'border-[rgba(22,163,74,.3)]',      icon: '✓',  desc: 'Your identity has been verified. All features are unlocked.' },
-  declined:     { label: 'Declined',      color: 'text-[#DC2626]',   bg: 'bg-[rgba(220,38,38,.06)]',      border: 'border-[rgba(220,38,38,.3)]',      icon: '✕',  desc: 'Your verification was declined. Please re-submit with valid documents.' },
-  needs_review: { label: 'Needs Review',  color: 'text-[#2255CC]',  bg: 'bg-[rgba(34,85,204,.05)]',     border: 'border-[rgba(34,85,204,.3)]',     icon: '⚠', desc: 'Additional information required. Please contact support.' },
+  not_started:  { label: 'Not Verified',  color: '#8FA3BF', bg: '#F4F7FD',                     border: '#E8EEF8',   icon: '○', desc: 'Complete identity verification to unlock payouts and higher limits.' },
+  pending:      { label: 'Under Review',  color: '#D97706', bg: 'rgba(217,119,6,.06)',           border: 'rgba(217,119,6,.3)',  icon: '⏳', desc: 'Your documents are being reviewed. Usually takes 1–2 business days.' },
+  in_review:    { label: 'Under Review',  color: '#D97706', bg: 'rgba(217,119,6,.06)',           border: 'rgba(217,119,6,.3)',  icon: '⏳', desc: 'Your documents are being reviewed. Usually takes 1–2 business days.' },
+  approved:     { label: 'Verified',      color: '#16A34A', bg: 'rgba(22,163,74,.06)',           border: 'rgba(22,163,74,.3)', icon: '✓',  desc: 'Your identity has been verified. All features are unlocked.' },
+  declined:     { label: 'Declined',      color: '#DC2626', bg: 'rgba(220,38,38,.06)',           border: 'rgba(220,38,38,.3)', icon: '✕',  desc: 'Your verification was declined. Please re-submit with valid documents.' },
+  needs_review: { label: 'Needs Review',  color: '#D97706', bg: 'rgba(217,119,6,.06)',           border: 'rgba(217,119,6,.3)',  icon: '⚠', desc: 'Additional information required. Please contact support.' },
+  expired:      { label: 'Expired',       color: '#DC2626', bg: 'rgba(220,38,38,.06)',           border: 'rgba(220,38,38,.3)', icon: '✕',  desc: 'Your verification session expired. Please start a new verification.' },
+  abandoned:    { label: 'Incomplete',    color: '#8FA3BF', bg: '#F4F7FD',                     border: '#E8EEF8',   icon: '○', desc: 'Verification was not completed. Click below to start again.' },
 }
+
+// Didit API config
+const DIDIT_API_KEY    = (import.meta as any).env?.VITE_DIDIT_API_KEY ?? ''
+const DIDIT_WORKFLOW   = (import.meta as any).env?.VITE_DIDIT_WORKFLOW_ID ?? ''
+const DIDIT_API_URL    = 'https://verification.didit.me/v3/session/'
 
 export function KycPage() {
   const { profile } = useAuth()
   const { toasts, toast, dismiss } = useToast()
   const [kycRecord, setKycRecord] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [starting, setStarting] = useState(false)
+  const [loading, setLoading]     = useState(true)
+  const [starting, setStarting]   = useState(false)
 
   useEffect(() => {
-    if (!profile) return
-    // Load KYC record from DB — source of truth
-    supabase
-      .from('kyc_verifications')
-      .select('*')
-      .eq('user_id', profile.id)
-      .limit(1)
-      .then(({ data }) => {
-        setKycRecord(data && data.length > 0 ? data[0] : null)
-        setLoading(false)
-      })
+    if (!profile?.id) return
+    supabase.from('kyc_verifications').select('*').eq('user_id', profile.id).limit(1)
+      .then(({ data }) => { setKycRecord(data?.[0] ?? null); setLoading(false) })
       .catch(() => setLoading(false))
   }, [profile?.id])
 
-  function startPersonaVerification() {
-    if (!PERSONA_TEMPLATE) {
-      // No Persona configured — show manual fallback
-      toast('info', '📋', 'Manual KYC',
-        'Persona is not yet configured. Please open a support ticket and attach a photo of your government ID + selfie.')
+  async function startVerification() {
+    if (!profile) return
+    setStarting(true)
+
+    // If no API key — show manual fallback
+    if (!DIDIT_API_KEY || !DIDIT_WORKFLOW) {
+      toast('info', '📋', 'Manual KYC', 'Please open a support ticket and attach a photo of your government ID + selfie.')
+      setStarting(false)
       return
     }
-    setStarting(true)
-    const script = document.createElement('script')
-    script.src = 'https://cdn.withpersona.com/dist/persona-v4-latest.js'
-    script.onload = async () => {
-      const client = new (window as any).Persona.Client({
-        templateId: PERSONA_TEMPLATE,
-        referenceId: profile!.id,
-        environmentId: (import.meta as any).env?.VITE_PERSONA_ENV_ID ?? 'sandbox',
-        onReady: () => { client.open(); setStarting(false) },
-        onComplete: async ({ inquiryId, status }: any) => {
-          const kycStatus = status === 'completed' ? 'pending' : 'declined'
-          const { data, error } = await supabase
-            .from('kyc_verifications')
-            .upsert({ user_id: profile!.id, provider: 'persona', inquiry_id: inquiryId, status: kycStatus }, { onConflict: 'user_id' })
-            .select().single()
-          if (!error && data) {
-            setKycRecord(data)
-            await supabase.from('users').update({ kyc_status: kycStatus }).eq('id', profile!.id)
-            toast('success', '✅', 'Submitted', 'KYC submitted successfully. Under review.')
-          }
-        },
-        onCancel: () => setStarting(false),
-        onError: (e: any) => { setStarting(false); toast('error', '❌', 'Error', e?.message ?? 'Verification failed') },
+
+    try {
+      // Create Didit session via Vercel API route (to keep API key server-side)
+      const res = await fetch('/api/kyc-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: profile.id }),
       })
+
+      if (!res.ok) throw new Error('Could not create verification session')
+
+      const { verification_url, session_id } = await res.json()
+
+      // Save session to DB
+      await supabase.from('kyc_verifications').upsert({
+        user_id:    profile.id,
+        provider:   'didit',
+        inquiry_id: session_id,
+        status:     'pending',
+      }, { onConflict: 'user_id' })
+
+      await supabase.from('users').update({ kyc_status: 'pending' }).eq('id', profile.id)
+
+      setKycRecord({ provider: 'didit', inquiry_id: session_id, status: 'pending', created_at: new Date().toISOString() })
+
+      // Open Didit hosted verification page
+      window.open(verification_url, '_blank', 'width=500,height=700,noopener')
+      toast('success', '✅', 'Session Started', 'Complete the verification in the new window. This page will update automatically.')
+
+    } catch (err: any) {
+      toast('error', '❌', 'Error', err.message ?? 'Could not start verification')
+    } finally {
+      setStarting(false)
     }
-    script.onerror = () => { setStarting(false); toast('error', '❌', 'Load Error', 'Could not load Persona SDK.') }
-    document.head.appendChild(script)
   }
 
-  // Determine status purely from DB record, not from profile.kyc_status
-  // to avoid stale data
   const status: KycStatus = (kycRecord?.status ?? 'not_started') as KycStatus
-  const cfg = STATUS_CFG[status]
-  const canStart = status === 'not_started' || status === 'declined'
+  const cfg = STATUS_CFG[status] ?? STATUS_CFG.not_started
+  const canStart = ['not_started', 'declined', 'expired', 'abandoned'].includes(status)
 
   if (loading) return (
     <DashboardLayout title="Identity Verification (KYC)" nav={TRADER_NAV} accentColor="gold">
@@ -97,44 +101,45 @@ export function KycPage() {
   return (
     <>
       <DashboardLayout title="Identity Verification (KYC)" nav={TRADER_NAV} accentColor="gold">
-        <div className="max-w-[660px]">
+        <div className="max-w-[640px]">
 
           {/* Status Banner */}
-          <div className={`flex items-center gap-4 p-4 mb-4 border ${cfg.bg} ${cfg.border}`}>
-            <div className={`w-[44px] h-[44px] border-2 flex items-center justify-center text-[20px] font-bold flex-shrink-0 ${cfg.color} ${cfg.border}`}>
+          <div className="flex items-center gap-4 p-4 mb-4 rounded-xl border" style={{background:cfg.bg, borderColor:cfg.border}}>
+            <div className="w-11 h-11 rounded-xl border-2 flex items-center justify-center text-xl font-bold flex-shrink-0" style={{color:cfg.color, borderColor:cfg.border}}>
               {cfg.icon}
             </div>
             <div>
-              <div className={`text-[15px] font-bold mb-[2px] ${cfg.color}`}>{cfg.label}</div>
-              <p className="text-[11px] text-[#5C7A9E] leading-[1.5]">{cfg.desc}</p>
+              <div className="text-[15px] font-semibold mb-0.5" style={{color:cfg.color}}>{cfg.label}</div>
+              <p className="text-[12px] text-[#5C7A9E] leading-relaxed">{cfg.desc}</p>
             </div>
           </div>
 
-          {/* Steps progress */}
+          {/* Progress steps */}
           <Card className="mb-4">
             <CardHeader title="Verification Steps"/>
-            <div className="flex items-center gap-0 mb-2">
+            <div className="flex items-center gap-0 mt-1">
               {[
-                { label: 'Personal Info',  done: status !== 'not_started' },
-                { label: 'Documents',      done: ['approved','pending','needs_review'].includes(status) },
+                { label: 'Personal Info',  done: status !== 'not_started' && status !== 'abandoned' },
+                { label: 'Documents',      done: ['approved','pending','in_review','needs_review'].includes(status) },
                 { label: 'Admin Review',   done: status === 'approved' },
               ].map((step, i) => (
                 <div key={step.label} className="flex items-center flex-1">
-                  {i > 0 && <div className={`flex-1 h-[1px] ${step.done ? 'bg-[#2255CC]' : 'bg-[rgba(26,58,107,.06)]'}`}/>}
-                  <div className="flex flex-col items-center gap-1">
-                    <div className={`w-[24px] h-[24px] rounded-full flex items-center justify-center text-[9px] font-bold border ${step.done ? 'bg-[#2255CC] border-[#2255CC] text-[#F0F4FB]' : 'border-[#F0F4FB] text-[#8FA3BF]'}`}>
+                  {i > 0 && <div className="flex-1 h-[2px]" style={{background: step.done ? '#2255CC' : '#E8EEF8'}}/>}
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all"
+                      style={{background: step.done ? '#2255CC' : '#fff', borderColor: step.done ? '#2255CC' : '#E8EEF8', color: step.done ? '#fff' : '#8FA3BF'}}>
                       {step.done ? '✓' : i + 1}
                     </div>
-                    <span className={`text-[8px] uppercase tracking-[1px] font-semibold whitespace-nowrap ${step.done ? 'text-[#2255CC]' : 'text-[#8FA3BF]'}`}>{step.label}</span>
+                    <span className="text-[9px] uppercase tracking-[1px] font-semibold whitespace-nowrap" style={{color: step.done ? '#2255CC' : '#8FA3BF'}}>{step.label}</span>
                   </div>
-                  {i < 2 && <div className={`flex-1 h-[1px] ${['approved','pending','needs_review'].includes(status) && i === 1 ? 'bg-[#2255CC]' : 'bg-[rgba(26,58,107,.06)]'}`}/>}
+                  {i < 2 && <div className="flex-1 h-[2px]" style={{background: status === 'approved' && i === 1 ? '#2255CC' : '#E8EEF8'}}/>}
                 </div>
               ))}
             </div>
           </Card>
 
-          {/* Why verify — shown only if not started */}
-          {status === 'not_started' && (
+          {/* Why verify */}
+          {canStart && (
             <Card className="mb-4">
               <CardHeader title="Why Verify?"/>
               <div className="grid grid-cols-3 gap-3 mb-5">
@@ -143,24 +148,24 @@ export function KycPage() {
                   ['🔒', 'Secure Account', 'Protect from unauthorized access and fraud'],
                   ['⚡', '5 Minutes', 'Fast guided process — just your ID + selfie'],
                 ].map(([ico, t, d]) => (
-                  <div key={t} className="p-3 bg-[#F4F7FD] border border-[#F0F4FB] text-center">
-                    <div className="text-[20px] mb-2">{ico}</div>
-                    <div className="text-[11px] font-semibold mb-1">{t}</div>
-                    <div className="text-[9px] text-[#8FA3BF] leading-[1.5]">{d}</div>
+                  <div key={t} className="p-3 bg-[#F4F7FD] border border-[#E8EEF8] rounded-xl text-center">
+                    <div className="text-xl mb-2">{ico}</div>
+                    <div className="text-[12px] font-semibold text-[#1A3A6B] mb-1">{t}</div>
+                    <div className="text-[11px] text-[#8FA3BF] leading-relaxed">{d}</div>
                   </div>
                 ))}
               </div>
-              <div className="p-4 bg-[#F4F7FD] border border-[#F0F4FB]">
-                <div className="text-[8px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold mb-3">What You Need</div>
+              <div className="p-4 bg-[#F4F7FD] border border-[#E8EEF8] rounded-xl">
+                <div className="text-[10px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold mb-3">What You Need</div>
                 {[
-                  ['🪪', 'Government-Issued Photo ID', 'Passport, national ID card, or driver\'s licence'],
-                  ['🤳', 'Selfie / Liveness Check', 'A live photo for identity matching — no printed photos'],
+                  ['🪪', 'Government-issued photo ID', "Passport, national ID card, or driver's licence"],
+                  ['🤳', 'Selfie / Liveness check', 'A live photo for identity matching — no printed photos'],
                 ].map(([ico, t, d]) => (
                   <div key={t} className="flex items-start gap-3 mb-3 last:mb-0">
-                    <span className="text-[18px] flex-shrink-0">{ico}</span>
+                    <span className="text-lg flex-shrink-0">{ico}</span>
                     <div>
-                      <div className="text-[11px] font-semibold mb-[2px]">{t}</div>
-                      <div className="text-[9px] text-[#8FA3BF]">{d}</div>
+                      <div className="text-[12px] font-semibold text-[#1A3A6B] mb-0.5">{t}</div>
+                      <div className="text-[11px] text-[#8FA3BF]">{d}</div>
                     </div>
                   </div>
                 ))}
@@ -168,23 +173,21 @@ export function KycPage() {
             </Card>
           )}
 
-          {/* Submission record — shown if submitted */}
-          {kycRecord && (
+          {/* Submission record */}
+          {kycRecord && !canStart && (
             <Card className="mb-4">
               <CardHeader title="Submission Details"/>
-              <div className="flex flex-col gap-0">
-                {[
-                  ['Provider', kycRecord.provider ?? 'Persona'],
-                  ['Inquiry ID', kycRecord.inquiry_id ?? '—'],
-                  ['Submitted', kycRecord.created_at ? new Date(kycRecord.created_at).toLocaleString() : '—'],
-                  ['Last Updated', kycRecord.updated_at ? new Date(kycRecord.updated_at).toLocaleString() : '—'],
-                ].map(([l, v]) => (
-                  <div key={l} className="flex justify-between items-center py-[8px] border-b border-[#F0F4FB] last:border-0 text-[11px]">
-                    <span className="text-[#8FA3BF]">{l}</span>
-                    <span className=" text-[10px]">{v}</span>
-                  </div>
-                ))}
-              </div>
+              {[
+                ['Provider', kycRecord.provider === 'didit' ? 'Didit Identity' : kycRecord.provider ?? 'Didit'],
+                ['Session ID', kycRecord.inquiry_id ?? '—'],
+                ['Submitted', kycRecord.created_at ? new Date(kycRecord.created_at).toLocaleString() : '—'],
+                ['Last Updated', kycRecord.updated_at ? new Date(kycRecord.updated_at).toLocaleString() : '—'],
+              ].map(([l, v]) => (
+                <div key={l} className="flex justify-between items-center py-2 border-b border-[#F4F7FD] last:border-0 text-[12px]">
+                  <span className="text-[#8FA3BF]">{l}</span>
+                  <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'11px'}} className="text-[#1A3A6B]">{v}</span>
+                </div>
+              ))}
             </Card>
           )}
 
@@ -192,34 +195,32 @@ export function KycPage() {
           <Card>
             {canStart ? (
               <>
-                <div className="text-[11px] text-[#5C7A9E] mb-4 leading-[1.6]">
-                  {status === 'declined'
-                    ? 'Your previous submission was declined. Please re-submit with a valid, unexpired government-issued photo ID.'
-                    : 'Click below to start the identity verification process. You\'ll be guided through each step.'}
-                </div>
-                <Button onClick={startPersonaVerification} loading={starting} className="w-full">
-                  {starting ? 'Loading…' : status === 'declined' ? 'Re-submit Verification →' : 'Start Identity Verification →'}
+                <p className="text-[12px] text-[#5C7A9E] mb-4 leading-relaxed">
+                  {status === 'declined' || status === 'expired'
+                    ? 'Please re-submit with a valid, unexpired government-issued photo ID.'
+                    : "Click below to start the identity verification process. You'll be guided through each step in a new window."}
+                </p>
+                <Button onClick={startVerification} loading={starting} className="w-full py-3">
+                  {starting ? 'Starting…' : canStart && status !== 'not_started' ? 'Re-submit Verification →' : 'Start Identity Verification →'}
                 </Button>
-                {!PERSONA_TEMPLATE && (
-                  <p className="text-[9px] text-[#8FA3BF] mt-2 text-center">
-                    Persona not configured — clicking will open a support ticket request.
-                  </p>
+                {!DIDIT_API_KEY && (
+                  <p className="text-[10px] text-[#8FA3BF] mt-2 text-center">Powered by Didit — secure identity verification</p>
                 )}
               </>
             ) : status === 'approved' ? (
               <div className="flex items-center gap-3 py-2">
-                <span className="text-[22px]">✅</span>
+                <span className="text-2xl">✅</span>
                 <div>
-                  <div className="font-semibold text-[#16A34A] mb-[2px]">Fully Verified</div>
-                  <div className="text-[11px] text-[#5C7A9E]">Your identity has been confirmed. All platform features are available.</div>
+                  <div className="font-semibold text-[#16A34A] mb-0.5">Fully Verified</div>
+                  <div className="text-[12px] text-[#5C7A9E]">Your identity has been confirmed. All platform features are available.</div>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-3 py-2">
-                <span className="text-[22px]">⏳</span>
+                <span className="text-2xl">⏳</span>
                 <div>
-                  <div className="font-semibold text-[#2255CC] mb-[2px]">Review In Progress</div>
-                  <div className="text-[11px] text-[#5C7A9E]">We'll notify you once the review is complete. Usually 1–2 business days.</div>
+                  <div className="font-semibold text-[#D97706] mb-0.5">Review In Progress</div>
+                  <div className="text-[12px] text-[#5C7A9E]">We'll notify you once the review is complete. Usually 1–2 business days.</div>
                 </div>
               </div>
             )}
@@ -228,19 +229,18 @@ export function KycPage() {
           {/* Privacy */}
           <Card className="mt-4">
             <CardHeader title="Privacy & Security"/>
-            <div className="flex flex-col gap-2">
-              {[
-                ['🔒', 'AES-256 encryption at rest and in transit'],
-                ['🇪🇺', 'GDPR compliant — data processed per EU regulations'],
-                ['🗑️', 'Documents deleted automatically after verification'],
-                ['👁️', 'Powered by Persona — trusted KYC provider'],
-              ].map(([ico, t]) => (
-                <div key={t} className="flex items-center gap-3 py-2 border-b border-[#F0F4FB] last:border-0 text-[11px] text-[#5C7A9E]">
-                  <span className="text-[14px]">{ico}</span>{t}
-                </div>
-              ))}
-            </div>
+            {[
+              ['🔒', 'AES-256 encryption at rest and in transit'],
+              ['🇪🇺', 'GDPR compliant — data processed per EU regulations'],
+              ['🗑️', 'Documents deleted automatically after verification'],
+              ['👁️', 'Powered by Didit — trusted KYC provider, 500 free verifications/month'],
+            ].map(([ico, t]) => (
+              <div key={t} className="flex items-center gap-3 py-2 border-b border-[#F4F7FD] last:border-0 text-[12px] text-[#5C7A9E]">
+                <span className="text-sm">{ico}</span>{t}
+              </div>
+            ))}
           </Card>
+
         </div>
       </DashboardLayout>
       <ToastContainer toasts={toasts} dismiss={dismiss}/>
