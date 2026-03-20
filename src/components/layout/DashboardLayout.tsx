@@ -191,7 +191,7 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
         {/* Top strip — marketing links */}
         <div className="h-10 bg-[#1A3A6B] flex items-center px-5 flex-shrink-0">
           <div className="flex items-center gap-0 mr-auto">
-            {[['How It Works','/#how'],['Challenge Plans','/#plans'],['Payouts','/#payouts'],['Features','/#features'],['FAQ','/#faq']].map(([l,h])=>(
+            {[['How It Works','/#how'],['Challenge Plans','/#plans'],['Payouts','/#payouts'],['Features','/#features'],['Help Centre','/help']].map(([l,h])=>(
               <a key={l} href={h} className="text-[10px] font-500 text-[rgba(255,255,255,.4)] hover:text-white transition-colors no-underline px-3 h-10 flex items-center" style={{fontWeight:500}}>{l}</a>
             ))}
           </div>
