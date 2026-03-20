@@ -10,401 +10,426 @@ const LOT_SIZE = 100_000
 
 /* ── Instruments ─────────────────────────────────────────────────── */
 const ALL_INSTRUMENTS = [
-  // tv = TradingView widget symbol (chart — same OANDA source as Polygon)
-  { sym:'EUR/USD', tv:'OANDA:EURUSD',    market:'forex', spread:0.00010, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', tv:'OANDA:GBPUSD',    market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/JPY', tv:'OANDA:USDJPY',    market:'forex', spread:0.010,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'USD/CHF', tv:'OANDA:USDCHF',    market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'AUD/USD', tv:'OANDA:AUDUSD',    market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/CAD', tv:'OANDA:USDCAD',    market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>1/p*LOT_SIZE },
-  { sym:'NZD/USD', tv:'OANDA:NZDUSD',    market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/JPY', tv:'OANDA:GBPJPY',    market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'EUR/JPY', tv:'OANDA:EURJPY',    market:'forex', spread:0.025,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'EUR/GBP', tv:'OANDA:EURGBP',    market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
-  { sym:'AUD/JPY', tv:'OANDA:AUDJPY',    market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'CAD/JPY', tv:'OANDA:CADJPY',    market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'XAU/USD', tv:'OANDA:XAUUSD',    market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', tv:'OANDA:XAGUSD',    market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
-  { sym:'NAS100',  tv:'OANDA:NAS100USD',  market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   tv:'OANDA:SPX500USD',  market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    tv:'OANDA:US30USD',    market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   tv:'OANDA:DE30EUR',    market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
-  { sym:'WTI',     tv:'OANDA:WTICOUSD',   market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
+  { sym:'EUR/USD', market:'forex', spread:0.00010, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/JPY', market:'forex', spread:0.010,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(_:number)=>LOT_SIZE   },
+  { sym:'USD/CHF', market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'AUD/USD', market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/CAD', market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>1/p*LOT_SIZE },
+  { sym:'NZD/USD', market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/JPY', market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'EUR/JPY', market:'forex', spread:0.025,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'EUR/GBP', market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
+  { sym:'AUD/JPY', market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'CAD/JPY', market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'XAU/USD', market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
+  { sym:'XAG/USD', market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
+  { sym:'NAS100',  market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
+  { sym:'US500',   market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
+  { sym:'US30',    market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
+  { sym:'WTI',     market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
 
-// Seed prices — shown briefly before APIs connect (~2-5 seconds)
-// Updated to approximate current market levels (Mar 2025)
 const SEED: Record<string,number> = {
   'EUR/USD':1.0850,'GBP/USD':1.2940,'USD/JPY':149.50,'USD/CHF':0.8840,
   'AUD/USD':0.6290,'USD/CAD':1.4390,'NZD/USD':0.5720,'GBP/JPY':193.50,
   'EUR/JPY':162.20,'EUR/GBP':0.8380,'AUD/JPY':94.00,'CAD/JPY':104.20,
-  'XAU/USD':3050.0,'XAG/USD':34.00,
+  'XAU/USD':3300.0,'XAG/USD':34.00,
   'NAS100':21800,'US500':5750,'US30':43500,'GER40':22800,'WTI':71.50,
 }
 
-const TF_LIST = ['1','5','15','30','60','240','D','W']
+const TF_LIST = ['1','5','15','30','60','240','D','W'] as const
 const TF_LABEL: Record<string,string> = {'1':'1m','5':'5m','15':'15m','30':'30m','60':'1h','240':'4h','D':'1D','W':'1W'}
+const TF_SEC:   Record<string,number> = {'1':60,'5':300,'15':900,'30':1800,'60':3600,'240':14400,'D':86400,'W':604800}
 
 function lsGet(k:string,fb:string){try{return localStorage.getItem(k)||fb}catch{return fb}}
 function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
 
-/* ── TradingView Widget ───────────────────────────────────────────── */
-/* ── Global postMessage price bus ─────────────────────────────────
-   Set up ONCE before any iframe loads.
-   TV Advanced Chart fires {name:"quoteUpdate", data:{lp:price}} on every tick.
-   We catch all window messages and route the price to whoever needs it.
-   ─────────────────────────────────────────────────────────────── */
-type PriceCb = (price: number) => void
-const _priceBus = new Set<PriceCb>()
+type Candle = {time:number;open:number;high:number;low:number;close:number}
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('message', (e: MessageEvent) => {
-    try {
-      const raw = e.data
-      const d = typeof raw === 'string' ? JSON.parse(raw) : raw
-      if (!d) return
-
-      let price = 0
-
-      // TV Advanced Chart: quoteUpdate
-      if (d.name === 'quoteUpdate' && d.data?.lp > 0)
-        price = d.data.lp
-
-      // TV widget: QUOTES_UPDATE  
-      else if (d.type === 'QUOTES_UPDATE' && Array.isArray(d.quotes)) {
-        for (const q of d.quotes) {
-          const lp = q.v?.lp ?? q.v?.last_price ?? 0
-          if (lp > 0) { price = lp; break }
-        }
-      }
-
-      // TV internal du format
-      else if (d.name === 'du' && d.data?.sds_1?.s?.[0]?.v) {
-        const v = d.data.sds_1.s[0].v
-        price = v.close ?? v.lp ?? v.last_price ?? 0
-      }
-
-      if (price > 0) _priceBus.forEach(cb => cb(price))
-    } catch {}
-  }, { passive: true })
+/* ── LWC loader ──────────────────────────────────────────────────── */
+let _lwcReady = false
+const _lwcQ: Array<()=>void> = []
+function loadLWC(): Promise<void> {
+  return new Promise(res => {
+    if (_lwcReady) { res(); return }
+    _lwcQ.push(res)
+    if (document.getElementById('lwc-script')) return
+    const s = document.createElement('script')
+    s.id  = 'lwc-script'
+    s.src = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js'
+    s.onload = () => { _lwcReady = true; _lwcQ.forEach(f=>f()); _lwcQ.length=0 }
+    document.head.appendChild(s)
+  })
 }
 
-/* ── TradingView Widget ───────────────────────────────────────────── */
-function TVChart({tvSym, interval, onPrice}: {tvSym:string; interval:string; onPrice:(p:number)=>void}) {
-  const ref    = useRef<HTMLDivElement>(null)
-  const keyRef = useRef('')
-  const idRef  = useRef(`tv_${Math.random().toString(36).slice(2)}`)
-
-  // Subscribe to global price bus
-  useEffect(()=>{
-    _priceBus.add(onPrice)
-    return () => { _priceBus.delete(onPrice) }
-  }, [onPrice])
-
-  useEffect(()=>{
-    const el = ref.current; if(!el) return
-    const key = `${tvSym}:${interval}`
-    if(keyRef.current === key) return
-    keyRef.current = key
-    el.innerHTML = ''
-
-    const wrap = document.createElement('div')
-    wrap.className = 'tradingview-widget-container'
-    wrap.style.cssText = 'width:100%;height:100%'
-    const inner = document.createElement('div')
-    inner.id = idRef.current
-    inner.className = 'tradingview-widget-container__widget'
-    inner.style.cssText = 'width:100%;height:calc(100% - 32px)'
-    const script = document.createElement('script')
-    script.src   = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
-    script.async = true
-    script.innerHTML = JSON.stringify({
-      container_id: idRef.current,
-      autosize:true, symbol:tvSym, interval,
-      timezone:'Etc/UTC', theme:'light', style:'1', locale:'en',
-      enable_publishing:false, hide_top_toolbar:false, save_image:false,
-      backgroundColor:'rgba(250,251,255,1)', gridColor:'rgba(34,85,204,0.05)',
-      hide_volume:false, support_host:'https://www.tradingview.com',
-    })
-    wrap.appendChild(inner)
-    wrap.appendChild(script)
-    el.appendChild(wrap)
-  },[tvSym, interval])
-
-  return <div ref={ref} style={{width:'100%',height:'100%'}}/>
+/* ── Candle chart ────────────────────────────────────────────────── */
+interface ChartProps {
+  sym: string
+  tf:  string
+  livePrice: number
+  openTrades: any[]
+  onUpdateSLTP: (id:string, sl:number|null, tp:number|null)=>void
 }
 
-/* ── Price Feed: /api/prices — Vercel serverless, server-side fetch ─
-   Our own API route fetches Yahoo Finance + Frankfurter from the server.
-   No CORS, no API keys exposed, no browser restrictions.
-   Updates every 5 seconds.
-   ─────────────────────────────────────────────────────────────── */
-function usePriceFeed() {
-  const [prices, setPrices] = useState<Record<string,number>>({...SEED})
-  const refPrev   = useRef<Record<string,number>>({...SEED})
-  const refPrices = useRef<Record<string,number>>({...SEED})
-  const activeTvSym = useRef<string>('')
+function CandleChart({ sym, tf, livePrice, openTrades, onUpdateSLTP }: ChartProps) {
+  const divRef   = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<any>(null)
+  const serRef   = useRef<any>(null)
+  const lastRef  = useRef<Candle|null>(null)
+  const linesRef = useRef<Map<string,{entry:any;sl:any;tp:any}>>(new Map())
 
-  const push = useCallback((sym:string, price:number)=>{
-    if(!price||isNaN(price)||price<=0) return
-    refPrev.current[sym]   = refPrices.current[sym] || price
-    refPrices.current[sym] = price
-    setPrices(p => p[sym]===price ? p : {...p,[sym]:price})
-  },[])
-
-  useEffect(()=>{
+  // Build chart + fetch candles
+  useEffect(() => {
+    const el = divRef.current; if (!el) return
     let dead = false
 
-    // Background poll: all symbols every 4s via /api/prices
-    // Real-time for active symbol comes from TV postMessage (global price bus)
-    const pollAll = async () => {
-      if(dead) return
-      try{
-        const r = await fetch('/api/prices', { signal: AbortSignal.timeout(8000) })
-        if(!r.ok) return
-        const d = await r.json()
-        for(const [s, p] of Object.entries(d.prices ?? {})){
-          if(typeof p === 'number' && p > 0) push(s, p)
+    loadLWC().then(async () => {
+      if (dead || !divRef.current) return
+      try { chartRef.current?.remove() } catch {}
+      linesRef.current.clear()
+
+      const LWC = (window as any).LightweightCharts
+      const chart = LWC.createChart(el, {
+        width: el.clientWidth, height: el.clientHeight,
+        layout:    { background:{ type:'solid', color:'#F0F4FB' }, textColor:'#5C7A9E' },
+        grid:      { vertLines:{ color:'rgba(34,85,204,.06)' }, horzLines:{ color:'rgba(34,85,204,.06)' } },
+        crosshair: { mode: 1 },
+        rightPriceScale: { borderColor:'#E8EEF8' },
+        timeScale:       { borderColor:'#E8EEF8', timeVisible:true, secondsVisible:false },
+      })
+      const series = chart.addCandlestickSeries({
+        upColor:'#16A34A', downColor:'#DC2626',
+        borderUpColor:'#16A34A', borderDownColor:'#DC2626',
+        wickUpColor:'#16A34A', wickDownColor:'#DC2626',
+      })
+      chartRef.current = chart
+      serRef.current   = series
+
+      const ro = new ResizeObserver(() => {
+        if (chartRef.current && divRef.current)
+          chartRef.current.resize(divRef.current.clientWidth, divRef.current.clientHeight)
+      })
+      ro.observe(el)
+
+      // Fetch candle history from our API
+      try {
+        const r = await fetch(`/api/candles?sym=${encodeURIComponent(sym)}&tf=${tf}`, {
+          signal: AbortSignal.timeout(10000)
+        })
+        if (r.ok) {
+          const d = await r.json()
+          if (d.candles?.length > 0) {
+            series.setData(d.candles)
+            lastRef.current = d.candles[d.candles.length - 1]
+            chart.timeScale().fitContent()
+            // CRITICAL: seed live price from latest candle close
+            // This ensures our price = chart price from the start
+            if (d.latestPrice > 0) {
+              // Use latestPrice from API meta (most accurate)
+              ;(window as any).__tfd_push?.(sym, d.latestPrice)
+            } else {
+              ;(window as any).__tfd_push?.(sym, lastRef.current.close)
+            }
+          }
         }
-      }catch{}
-    }
+      } catch {}
 
-    pollAll()
-    const iv = setInterval(pollAll, 4000)
-    return ()=>{ dead=true; clearInterval(iv) }
-  },[push])
+      return () => ro.disconnect()
+    })
+    return () => { dead = true }
+  }, [sym, tf])
 
-  // onTVPrice: called by TVChart via global price bus for active symbol
-  const onTVPrice = useCallback((price: number) => {
-    const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
-    if(sym && price > 0) push(sym, price)
-  }, [push])
+  // Update live candle every time livePrice changes
+  useEffect(() => {
+    if (!serRef.current || livePrice <= 0) return
+    const sec = TF_SEC[tf] ?? 3600
+    const now = Math.floor(Date.now() / 1000)
+    const cTime = Math.floor(now / sec) * sec
+    const prev = lastRef.current
 
-  const setActiveSym = useCallback((tvSym: string) => {
-    activeTvSym.current = tvSym
-  }, [])
+    const c: Candle = (!prev || cTime > prev.time)
+      ? { time:cTime, open:livePrice, high:livePrice, low:livePrice, close:livePrice }
+      : { time:prev.time, open:prev.open, high:Math.max(prev.high,livePrice), low:Math.min(prev.low,livePrice), close:livePrice }
 
-  // Fallback: read price from document.title which TV updates live
-  // Format: "3858.38 XAUUSD — Gold Spot / U.S. Dollar — TradingView"
-  useEffect(()=>{
-    let lastTitle = ''
-    const iv = setInterval(()=>{
-      const title = document.title
-      if(title === lastTitle) return
-      lastTitle = title
-      // Extract leading number from title
-      const m = title.match(/^([0-9,]+\.?[0-9]*)\s/)
-      if(!m) return
-      const price = parseFloat(m[1].replace(/,/g,''))
-      if(price > 0){
-        const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
-        if(sym) push(sym, price)
+    lastRef.current = c
+    try { serRef.current.update(c) } catch {}
+  }, [livePrice, tf])
+
+  // Draw SL/TP/Entry lines for open trades on this symbol
+  useEffect(() => {
+    const series = serRef.current; if (!series) return
+    const trades = openTrades.filter(t => t.symbol === sym)
+    const existing = new Set(linesRef.current.keys())
+
+    // Remove stale lines
+    existing.forEach(id => {
+      if (!trades.find(t => t.id === id)) {
+        const lines = linesRef.current.get(id)
+        if (lines) {
+          try { series.removePriceLine(lines.entry) } catch {}
+          try { if (lines.sl) series.removePriceLine(lines.sl) } catch {}
+          try { if (lines.tp) series.removePriceLine(lines.tp) } catch {}
+        }
+        linesRef.current.delete(id)
       }
-    }, 200)
-    return ()=>clearInterval(iv)
-  },[push])
+    })
 
-  // Heartbeat — re-render every 200ms so P&L stays current
-  useEffect(()=>{
-    const iv = setInterval(()=> setPrices(p=>({...p})), 200)
-    return ()=>clearInterval(iv)
-  },[])
+    // Add/update
+    trades.forEach(t => {
+      if (!linesRef.current.has(t.id)) {
+        const entry = series.createPriceLine({
+          price: t.open_price,
+          color: t.direction === 'buy' ? 'rgba(22,163,74,.8)' : 'rgba(220,38,38,.8)',
+          lineWidth:1, lineStyle:2, axisLabelVisible:true,
+          title: `${t.direction.toUpperCase()} ${t.lots}`,
+        })
+        const sl = t.sl ? series.createPriceLine({
+          price:t.sl, color:'rgba(220,38,38,.9)', lineWidth:1, lineStyle:1,
+          axisLabelVisible:true, title:'SL',
+        }) : null
+        const tp = t.tp ? series.createPriceLine({
+          price:t.tp, color:'rgba(22,163,74,.9)', lineWidth:1, lineStyle:1,
+          axisLabelVisible:true, title:'TP',
+        }) : null
+        linesRef.current.set(t.id, { entry, sl, tp })
+      }
+    })
+  }, [openTrades, sym])
 
-  return { prices, refPrev, refPrices, push, onTVPrice, setActiveSym }
+  return <div ref={divRef} style={{width:'100%',height:'100%'}}/>
 }
 
-
-/* ── P&L ──────────────────────────────────────────────────────────── */
+/* ── P&L ─────────────────────────────────────────────────────────── */
 function calcPnl(trade:any, price:number): number {
   const inst = ALL_INSTRUMENTS.find(i=>i.sym===trade.symbol) as any
-  if(!inst||!price) return 0
+  if (!inst || !price) return 0
   const diff = trade.direction==='buy' ? price-trade.open_price : trade.open_price-price
   const isJpy = trade.symbol.includes('JPY')
   return diff * (isJpy ? LOT_SIZE/price : inst.lotUSD(1)) * trade.lots
 }
 
+/* ── Price feed ──────────────────────────────────────────────────── */
+function usePriceFeed() {
+  const [prices, setPrices]   = useState<Record<string,number>>({...SEED})
+  const refPrev   = useRef<Record<string,number>>({...SEED})
+  const refPrices = useRef<Record<string,number>>({...SEED})
+
+  const push = useCallback((sym:string, price:number) => {
+    if (!price || isNaN(price) || price <= 0) return
+    refPrev.current[sym]   = refPrices.current[sym] || price
+    refPrices.current[sym] = price
+    setPrices(p => ({...p, [sym]: price}))
+  }, [])
+
+  // Expose push globally so CandleChart can seed price after candle load
+  useEffect(() => {
+    (window as any).__tfd_push = push
+    return () => { delete (window as any).__tfd_push }
+  }, [push])
+
+  // Background poll: /api/prices every 4s (watchlist prices, metals, indices)
+  useEffect(() => {
+    let dead = false
+    const poll = async () => {
+      if (dead) return
+      try {
+        const r = await fetch('/api/prices', { signal: AbortSignal.timeout(8000) })
+        if (!r.ok) return
+        const d = await r.json()
+        for (const [s, p] of Object.entries(d.prices ?? {})) {
+          if (typeof p === 'number' && p > 0) push(s, p)
+        }
+      } catch {}
+    }
+    poll()
+    const iv = setInterval(poll, 4000)
+    return () => { dead = true; clearInterval(iv) }
+  }, [push])
+
+  // Re-render heartbeat every 200ms
+  useEffect(() => {
+    const iv = setInterval(() => setPrices(p => ({...p})), 200)
+    return () => clearInterval(iv)
+  }, [])
+
+  return { prices, refPrev, refPrices, push }
+}
+
 /* ── Risk monitor ────────────────────────────────────────────────── */
-function useRiskMonitor(tradesRef:any,refPrices:any,primaryRef:any,accountId:any,onBreach:any){
-  const fired=useRef(false)
-  const cb=useRef(onBreach); cb.current=onBreach
-  useEffect(()=>{
-    const iv=setInterval(()=>{
-      const pr=primaryRef.current,trades=tradesRef.current
-      if(!pr||!trades.length||fired.current) return
-      if(pr.status==='breached'||pr.status==='passed') return
-      const bal=pr.balance??0,start=pr.starting_balance??bal
-      if(bal<=0||start<=0) return
-      const cp=(pr as any).challenge_products,ph=pr.phase??'phase1'
-      const maxDD  =ph==='funded'?(cp?.funded_max_dd??10):(ph==='phase2'?(cp?.ph2_max_dd??10):(cp?.ph1_max_dd??10))
-      const dailyDD=ph==='funded'?(cp?.funded_daily_dd??5):(ph==='phase2'?(cp?.ph2_daily_dd??5):(cp?.ph1_daily_dd??5))
-      const floor =start-start*(maxDD/100)
-      const dFloor=(pr.daily_high_balance??start)-(pr.daily_high_balance??start)*(dailyDD/100)
-      const equity=bal+trades.reduce((s:number,t:any)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]),0)
-      if(equity<=floor){fired.current=true;cb.current(`Max DD breached`,trades)}
-      else if(equity<=dFloor){fired.current=true;cb.current(`Daily DD breached`,trades)}
-    },500)
-    return()=>clearInterval(iv)
-  },[])
-  useEffect(()=>{fired.current=false},[accountId])
+function useRiskMonitor(tradesRef:any, refPrices:any, primaryRef:any, accountId:any, onBreach:any) {
+  const fired = useRef(false)
+  const cb    = useRef(onBreach); cb.current = onBreach
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const pr=primaryRef.current, trades=tradesRef.current
+      if (!pr || !trades.length || fired.current) return
+      if (pr.status==='breached' || pr.status==='passed') return
+      const bal=pr.balance??0, start=pr.starting_balance??bal
+      if (bal<=0||start<=0) return
+      const cp=(pr as any).challenge_products, ph=pr.phase??'phase1'
+      const maxDD  = ph==='funded'?(cp?.funded_max_dd??10):(ph==='phase2'?(cp?.ph2_max_dd??10):(cp?.ph1_max_dd??10))
+      const dailyDD= ph==='funded'?(cp?.funded_daily_dd??5):(ph==='phase2'?(cp?.ph2_daily_dd??5):(cp?.ph1_daily_dd??5))
+      const floor  = start - start*(maxDD/100)
+      const dFloor = (pr.daily_high_balance??start) - (pr.daily_high_balance??start)*(dailyDD/100)
+      const equity = bal + trades.reduce((s:number,t:any)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]),0)
+      if (equity<=floor)  { fired.current=true; cb.current(`Max DD breached`,trades) }
+      else if (equity<=dFloor) { fired.current=true; cb.current(`Daily DD breached`,trades) }
+    }, 500)
+    return () => clearInterval(iv)
+  }, [])
+  useEffect(() => { fired.current = false }, [accountId])
 }
 
 /* ── Platform Page ───────────────────────────────────────────────── */
 export function PlatformPage() {
-  const navigate  = useNavigate()
-  const {toasts,toast,dismiss} = useToast()
-  const {accounts,primary:defPrimary} = useAccount()
-  const [selAccId,setSelAccId] = useState<string|null>(null)
-  const primary = accounts.find(a=>a.id===selAccId)??defPrimary
+  const navigate = useNavigate()
+  const { toasts, toast, dismiss } = useToast()
+  const { accounts, primary:defPrimary } = useAccount()
+  const [selAccId, setSelAccId] = useState<string|null>(null)
+  const primary = accounts.find(a=>a.id===selAccId) ?? defPrimary
 
-  const [sym,    setSym]   = useState(()=>{ const s=lsGet('tfd_sym','EUR/USD'); return ALL_INSTRUMENTS.find(i=>i.sym===s)?s:'EUR/USD' })
-  const [tf,     setTf]    = useState(()=>lsGet('tfd_tf','60'))
-  const [dir,    setDir]   = useState<'buy'|'sell'>('buy')
-  const [lots,   setLots]  = useState('0.10')
-  const [sl,     setSl]    = useState('')
-  const [tp,     setTp]    = useState('')
-  const [tab,    setTab]   = useState<'positions'|'history'>('positions')
-  const [search, setSearch]= useState('')
-  const [placing,setPlacing]=useState(false)
-  const [editSLTP,setEditSLTP]=useState<any>(null)
-  const [openTrades,   setOpenTrades]  =useState<any[]>([])
-  const [closedTrades, setClosedTrades]=useState<any[]>([])
-  const [favorites,setFavorites]=useState<Set<string>>(()=>{
-    try{return new Set(JSON.parse(localStorage.getItem('tfd_favs')||'[]'))}catch{return new Set(['EUR/USD','XAU/USD','NAS100'])}
+  const [sym,    setSym]    = useState(()=>{ const s=lsGet('tfd_sym','EUR/USD'); return ALL_INSTRUMENTS.find(i=>i.sym===s)?s:'EUR/USD' })
+  const [tf,     setTf]     = useState(()=>lsGet('tfd_tf','60'))
+  const [dir,    setDir]    = useState<'buy'|'sell'>('buy')
+  const [lots,   setLots]   = useState('0.10')
+  const [sl,     setSl]     = useState('')
+  const [tp,     setTp]     = useState('')
+  const [tab,    setTab]    = useState<'positions'|'history'>('positions')
+  const [search, setSearch] = useState('')
+  const [placing,setPlacing]= useState(false)
+  const [editSLTP, setEditSLTP] = useState<any>(null)
+  const [openTrades,   setOpenTrades]   = useState<any[]>([])
+  const [closedTrades, setClosedTrades] = useState<any[]>([])
+  const [favorites, setFavorites] = useState<Set<string>>(()=>{
+    try { return new Set(JSON.parse(localStorage.getItem('tfd_favs')||'[]')) } catch { return new Set(['EUR/USD','XAU/USD','NAS100']) }
   })
 
-  const {prices,refPrev,refPrices,push,onTVPrice,setActiveSym}=usePriceFeed()
-  const tradesRef =useRef(openTrades); tradesRef.current=openTrades
-  const primaryRef=useRef(primary);    primaryRef.current=primary
-  const closingRef=useRef<Set<string>>(new Set())
+  const { prices, refPrev, refPrices, push } = usePriceFeed()
+  const tradesRef  = useRef(openTrades);  tradesRef.current  = openTrades
+  const primaryRef = useRef(primary);     primaryRef.current = primary
+  const closingRef = useRef<Set<string>>(new Set())
 
-  // Force P&L re-render every 200ms — snappy P&L display
-  const [tick,setTick]=useState(0)
-  useEffect(()=>{
-    const iv=setInterval(()=>{ setTick(n=>n+1) }, 200)
-    return()=>clearInterval(iv)
-  },[])
+  useEffect(() => { lsSet('tfd_sym',sym) }, [sym])
+  useEffect(() => { lsSet('tfd_tf',tf)   }, [tf])
 
-  const inst      = (ALL_INSTRUMENTS.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0]) as any
-  const livePrice = refPrices.current[sym]||prices[sym]||SEED[sym]
-  const prevPrice = refPrev.current[sym]||livePrice
-  const up        = livePrice>=prevPrice
-  const execPrice = +(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
-  const lotsNum   = Math.max(0.01,parseFloat(lots)||0.01)
-  const balance   = primary?.balance??0
-  // Use refPrices.current directly — always latest value, not stale state
-  const openPnl   = openTrades.reduce((s,t)=>{ const p=refPrices.current[t.symbol]||SEED[t.symbol]; return s+calcPnl(t,p) },0)
-  const equity    = balance+openPnl
-  const usedMgn   = openTrades.reduce((s,t)=>{
-    const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-    const cur=refPrices.current[t.symbol]||SEED[t.symbol]
-    return s+(i?.lotUSD(cur)*t.lots/LEVERAGE||0)
-  },0)
-  const freeMgn   = equity-usedMgn
-  const mgnLvl    = usedMgn>0?(equity/usedMgn)*100:Infinity
-  const reqMgn    = inst.lotUSD(execPrice)*lotsNum/LEVERAGE
-  const maxLots   = freeMgn>0?Math.floor(freeMgn*LEVERAGE/inst.lotUSD(execPrice)*100)/100:0
+  // Derived values — all use refPrices.current for latest price
+  const inst       = (ALL_INSTRUMENTS.find(i=>i.sym===sym) ?? ALL_INSTRUMENTS[0]) as any
+  const livePrice  = refPrices.current[sym] || SEED[sym]
+  const prevPrice  = refPrev.current[sym]   || livePrice
+  const up         = livePrice >= prevPrice
+  const execPrice  = +(dir==='buy' ? livePrice+inst.spread : livePrice).toFixed(inst.dec)
+  const lotsNum    = Math.max(0.01, parseFloat(lots)||0.01)
+  const balance    = primary?.balance ?? 0
+  const openPnl    = openTrades.reduce((s,t) => s + calcPnl(t, refPrices.current[t.symbol]||SEED[t.symbol]), 0)
+  const equity     = balance + openPnl
+  const usedMgn    = openTrades.reduce((s,t) => {
+    const i = ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
+    const cur = refPrices.current[t.symbol] || SEED[t.symbol]
+    return s + (i?.lotUSD(cur) * t.lots / LEVERAGE || 0)
+  }, 0)
+  const freeMgn    = equity - usedMgn
+  const reqMgn     = inst.lotUSD(execPrice) * lotsNum / LEVERAGE
+  const maxLots    = freeMgn > 0 ? Math.floor(freeMgn*LEVERAGE/inst.lotUSD(execPrice)*100)/100 : 0
 
-  useEffect(()=>{
-    lsSet('tfd_sym',sym)
-    const tvSym = (ALL_INSTRUMENTS.find(i=>i.sym===sym) as any)?.tv
-    if (tvSym) setActiveSym(tvSym)
-  },[sym])
-  useEffect(()=>lsSet('tfd_tf',tf),[tf])
-
-  useEffect(()=>{
-    if(!primary?.id) return
+  useEffect(() => {
+    if (!primary?.id) return
     supabase.from('trades').select('*').eq('account_id',primary.id).eq('status','open')
       .order('opened_at',{ascending:false}).then(({data})=>setOpenTrades(data??[]))
     supabase.from('trades').select('*').eq('account_id',primary.id).eq('status','closed')
       .order('closed_at',{ascending:false}).limit(50).then(({data})=>setClosedTrades(data??[]))
-  },[primary?.id])
+  }, [primary?.id])
 
-  useRiskMonitor(tradesRef,refPrices,primaryRef,primary?.id,async(reason:string,trades:any[])=>{
+  useRiskMonitor(tradesRef, refPrices, primaryRef, primary?.id, async(reason:string, trades:any[])=>{
     toast('error','🚨','Account Breached',reason)
-    if(!primary?.id) return
-    for(const t of trades){
-      const cur=refPrices.current[t.symbol]||SEED[t.symbol]
-      const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-      const cp=+(t.direction==='buy'?cur:cur+(i?.spread??0)).toFixed(i?.dec??5)
-      const diff=t.direction==='buy'?cp-t.open_price:t.open_price-cp
-      const isJpy=t.symbol.includes('JPY')
-      const netPnl=+(diff*(isJpy?LOT_SIZE/cp:i?.lotUSD(1))*t.lots).toFixed(2)
+    if (!primary?.id) return
+    for (const t of trades) {
+      const cur = refPrices.current[t.symbol] || SEED[t.symbol]
+      const i   = ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
+      const cp  = +(t.direction==='buy'?cur:cur+(i?.spread??0)).toFixed(i?.dec??5)
+      const diff= t.direction==='buy'?cp-t.open_price:t.open_price-cp
+      const isJpy = t.symbol.includes('JPY')
+      const netPnl = +(diff*(isJpy?LOT_SIZE/cp:i?.lotUSD(1))*t.lots).toFixed(2)
       await supabase.from('trades').update({status:'closed',close_price:cp,net_pnl:netPnl,closed_at:new Date().toISOString()}).eq('id',t.id)
     }
-    const nb=+(balance+trades.reduce((s,t)=>{
+    const nb = +(balance+trades.reduce((s,t)=>{
       const cur=refPrices.current[t.symbol]||t.open_price
       const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-      const isJpy=t.symbol.includes('JPY')
-      return s+(t.direction==='buy'?cur-t.open_price:t.open_price-cur)*(isJpy?LOT_SIZE/cur:i?.lotUSD(1))*t.lots
+      return s+(t.direction==='buy'?cur-t.open_price:t.open_price-cur)*(t.symbol.includes('JPY')?LOT_SIZE/cur:i?.lotUSD(1))*t.lots
     },0)).toFixed(2)
     await supabase.from('accounts').update({status:'breached',phase:'breached',balance:nb,equity:nb}).eq('id',primary.id)
     setOpenTrades([])
   })
 
-  // Auto-close SL/TP
-  useEffect(()=>{
-    if(!primary?.id) return
-    const iv=setInterval(async()=>{
-      const trades=tradesRef.current,pr=primaryRef.current
-      if(!trades.length||!pr) return
-      for(const t of trades){
-        if(closingRef.current.has(t.id)||(!t.sl&&!t.tp)) continue
-        const cur=refPrices.current[t.symbol]
-        if(!cur||cur<=0) continue
-        const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-        if(!i) continue
-        let hit=''
-        if(t.sl){const sl=Number(t.sl);if(sl>0){const h=t.direction==='buy'?cur<=sl:cur>=sl;if(h)hit=`SL @ ${cur.toFixed(i.dec)}`}}
-        if(!hit&&t.tp){const tp=Number(t.tp);if(tp>0){const h=t.direction==='buy'?cur>=tp:cur<=tp;if(h)hit=`TP @ ${cur.toFixed(i.dec)}`}}
-        if(!hit) continue
+  // Auto SL/TP
+  useEffect(() => {
+    if (!primary?.id) return
+    const iv = setInterval(async () => {
+      const trades=tradesRef.current, pr=primaryRef.current
+      if (!trades.length||!pr) return
+      for (const t of trades) {
+        if (closingRef.current.has(t.id)||(!t.sl&&!t.tp)) continue
+        const cur = refPrices.current[t.symbol]; if (!cur||cur<=0) continue
+        const i = ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any; if (!i) continue
+        let hit = ''
+        if (t.sl) { const sl=Number(t.sl); if (sl>0&&(t.direction==='buy'?cur<=sl:cur>=sl)) hit=`SL @ ${cur.toFixed(i.dec)}` }
+        if (!hit&&t.tp) { const tp=Number(t.tp); if (tp>0&&(t.direction==='buy'?cur>=tp:cur<=tp)) hit=`TP @ ${cur.toFixed(i.dec)}` }
+        if (!hit) continue
         closingRef.current.add(t.id)
-        try{
+        try {
           const cp=+(t.direction==='buy'?cur:cur+i.spread).toFixed(i.dec)
           const diff=t.direction==='buy'?cp-t.open_price:t.open_price-cp
-          const isJpy=t.symbol.includes('JPY')
-          const netPnl=+(diff*(isJpy?LOT_SIZE/cp:i.lotUSD(1))*t.lots).toFixed(2)
+          const netPnl=+(diff*(t.symbol.includes('JPY')?LOT_SIZE/cp:i.lotUSD(1))*t.lots).toFixed(2)
           const pips=+(diff/i.pip).toFixed(1)
-          if(Math.abs(netPnl)>(pr.balance??0)*2){closingRef.current.delete(t.id);continue}
           const now=new Date().toISOString()
           await supabase.from('trades').update({status:'closed',close_price:cp,net_pnl:netPnl,pips,closed_at:now}).eq('id',t.id)
           await supabase.from('accounts').update({balance:+((pr.balance??0)+netPnl).toFixed(2)}).eq('id',pr.id)
           setOpenTrades(p=>p.filter(x=>x.id!==t.id))
           setClosedTrades(p=>[{...t,status:'closed',close_price:cp,net_pnl:netPnl,pips,closed_at:now},...p])
           toast(netPnl>=0?'success':'error',netPnl>=0?'🎯':'🛑',`${hit} — ${t.symbol}`,`${netPnl>=0?'+':''}$${netPnl.toFixed(2)}`)
-        }catch{closingRef.current.delete(t.id)}
+        } catch { closingRef.current.delete(t.id) }
       }
-    },1000)
-    return()=>clearInterval(iv)
-  },[primary?.id])
+    }, 1000)
+    return () => clearInterval(iv)
+  }, [primary?.id])
 
-  const toggleFav=(s:string)=>{
-    setFavorites(prev=>{const n=new Set(prev);n.has(s)?n.delete(s):n.add(s);localStorage.setItem('tfd_favs',JSON.stringify([...n]));return n})
+  const toggleFav = (s:string) => {
+    setFavorites(prev => {
+      const n = new Set(prev); n.has(s)?n.delete(s):n.add(s)
+      localStorage.setItem('tfd_favs', JSON.stringify([...n])); return n
+    })
   }
 
-  async function placeOrder(){
-    if(!primary?.id){toast('error','❌','No Account','Select an account');return}
-    if(primary.status==='breached'){toast('error','❌','Breached','Account is breached');return}
-    if(reqMgn>freeMgn){toast('error','❌','Insufficient Margin',`Max ${maxLots} lots`);return}
+  const handleUpdateSLTP = useCallback(async(id:string, newSl:number|null, newTp:number|null) => {
+    await supabase.from('trades').update({sl:newSl,tp:newTp}).eq('id',id)
+    setOpenTrades(t=>t.map(x=>x.id===id?{...x,sl:newSl,tp:newTp}:x))
+  },[])
+
+  async function placeOrder() {
+    if (!primary?.id)              { toast('error','❌','No Account','Select an account'); return }
+    if (primary.status==='breached'){ toast('error','❌','Breached','Account is breached'); return }
+    if (reqMgn>freeMgn)            { toast('error','❌','Margin',`Max ${maxLots} lots`); return }
     setPlacing(true)
-    const {data,error}=await supabase.from('trades').insert({
-      account_id:primary.id,user_id:primary.user_id,
-      symbol:sym,direction:dir,lots:lotsNum,
-      open_price:execPrice,status:'open',
-      sl:sl?parseFloat(sl):null,tp:tp?parseFloat(tp):null,
+    const {data,error} = await supabase.from('trades').insert({
+      account_id:primary.id, user_id:primary.user_id,
+      symbol:sym, direction:dir, lots:lotsNum,
+      open_price:execPrice, status:'open',
+      sl:sl?parseFloat(sl):null, tp:tp?parseFloat(tp):null,
       opened_at:new Date().toISOString(),
     }).select().single()
     setPlacing(false)
-    if(error){toast('error','❌','Error',error.message);return}
+    if (error) { toast('error','❌','Error',error.message); return }
     setOpenTrades(p=>[data,...p])
     toast('success','✅',`${dir.toUpperCase()} ${sym}`,`${lotsNum} lots @ ${execPrice}`)
-    setSl('');setTp('')
+    setSl(''); setTp('')
   }
 
-  async function closeTrade(t:any){
-    const cur=refPrices.current[t.symbol]||prices[t.symbol]||SEED[t.symbol]
-    const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-    const cp=+(t.direction==='buy'?cur:cur+(i?.spread??0)).toFixed(i?.dec??5)
-    const diff=t.direction==='buy'?cp-t.open_price:t.open_price-cp
+  async function closeTrade(t:any) {
+    const cur = refPrices.current[t.symbol] || SEED[t.symbol]
+    const i   = ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
+    const cp  = +(t.direction==='buy'?cur:cur+(i?.spread??0)).toFixed(i?.dec??5)
+    const diff= t.direction==='buy'?cp-t.open_price:t.open_price-cp
     const isJpy=t.symbol.includes('JPY')
     const netPnl=+(diff*(isJpy?LOT_SIZE/cp:i?.lotUSD(1))*t.lots).toFixed(2)
     const pips=+(diff/(i?.pip??0.0001)).toFixed(1)
@@ -416,36 +441,33 @@ export function PlatformPage() {
     toast(netPnl>=0?'success':'error',netPnl>=0?'💰':'📉',`Closed ${t.symbol}`,`${netPnl>=0?'+':''}$${netPnl.toFixed(2)}`)
   }
 
-  async function saveEditSLTP(){
-    if(!editSLTP) return
-    const updates={sl:editSLTP.sl?parseFloat(editSLTP.sl):null,tp:editSLTP.tp?parseFloat(editSLTP.tp):null}
-    await supabase.from('trades').update(updates).eq('id',editSLTP.id)
-    setOpenTrades(p=>p.map(t=>t.id===editSLTP.id?{...t,...updates}:t))
+  async function saveEditSLTP() {
+    if (!editSLTP) return
+    const newSl = editSLTP.sl ? parseFloat(editSLTP.sl) : null
+    const newTp = editSLTP.tp ? parseFloat(editSLTP.tp) : null
+    await handleUpdateSLTP(editSLTP.id, newSl, newTp)
     setEditSLTP(null)
     toast('success','✅','SL/TP Updated','')
   }
 
-  const watchlist = useMemo(()=>{
-    const q=search.toLowerCase()
-    const filtered=ALL_INSTRUMENTS.filter(i=>!q||i.sym.toLowerCase().includes(q))
-    return [...filtered].sort((a,b)=>{
-      const af=favorites.has(a.sym)?0:1, bf=favorites.has(b.sym)?0:1
-      return af-bf
-    })
-  },[search,favorites])
+  const watchlist = useMemo(() => {
+    const q = search.toLowerCase()
+    const filtered = ALL_INSTRUMENTS.filter(i=>!q||i.sym.toLowerCase().includes(q))
+    return [...filtered].sort((a,b)=>(favorites.has(a.sym)?0:1)-(favorites.has(b.sym)?0:1))
+  }, [search, favorites])
 
-  const mono={fontFamily:"'JetBrains Mono',monospace"} as const
-  const prod=(primary as any)?.challenge_products
+  const mono = {fontFamily:"'JetBrains Mono',monospace"} as const
+  const isLive = livePrice !== SEED[sym]
 
-  return(
+  return (
     <div style={{fontFamily:"'Inter',system-ui,sans-serif",background:'#F0F4FB',color:'#1A3A6B',height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
 
       {/* TOPBAR */}
       <div style={{height:'48px',background:'#1A3A6B',display:'flex',alignItems:'center',padding:'0 12px',gap:'8px',flexShrink:0}}>
         <button onClick={()=>navigate('/dashboard')} style={{background:'rgba(255,255,255,.1)',border:'none',color:'#fff',padding:'5px 10px',borderRadius:'6px',cursor:'pointer',fontSize:'11px',fontWeight:600}}>← Dashboard</button>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',fontWeight:700,color:'#fff'}}>The Funded <span style={{color:'#60A5FA',fontStyle:'italic'}}>Diaries</span></div>
-        <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#4ADE80',boxShadow:'0 0 8px #4ADE80',marginLeft:'4px'}}/>
-        <span style={{fontSize:'9px',color:'#4ADE80',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase'}}>Live</span>
+        <div style={{width:'6px',height:'6px',borderRadius:'50%',background:isLive?'#4ADE80':'#F59E0B',boxShadow:isLive?'0 0 8px #4ADE80':'none',marginLeft:'4px'}}/>
+        <span style={{fontSize:'9px',color:isLive?'#4ADE80':'#F59E0B',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase'}}>{isLive?'Live':'Loading'}</span>
         <div style={{marginLeft:'auto',display:'flex',gap:'4px'}}>
           {accounts.map(a=>(
             <button key={a.id} onClick={()=>setSelAccId(a.id)} style={{padding:'3px 8px',background:a.id===primary?.id?'rgba(96,165,250,.2)':'rgba(255,255,255,.06)',border:a.id===primary?.id?'1px solid rgba(96,165,250,.4)':'1px solid rgba(255,255,255,.1)',borderRadius:'4px',color:a.id===primary?.id?'#60A5FA':'rgba(255,255,255,.4)',fontSize:'9px',...mono,cursor:'pointer'}}>
@@ -471,14 +493,14 @@ export function PlatformPage() {
           </div>
           <div style={{flex:1,overflowY:'auto'}}>
             {watchlist.map(i=>{
-              const price=prices[i.sym]||SEED[i.sym]
-              const pv=refPrev.current[i.sym]||price
-              const isUp=price>=pv
-              const active=sym===i.sym
-              const isFav=favorites.has(i.sym)
-              return(
-                <div key={i.sym} style={{padding:'5px 7px',borderBottom:'1px solid #F0F4FB',display:'flex',alignItems:'center',background:active?'#EEF3FF':'transparent',borderLeft:active?'3px solid #2255CC':'3px solid transparent',cursor:'pointer'}}
-                  onClick={()=>setSym(i.sym)}>
+              const price = refPrices.current[i.sym] || SEED[i.sym]
+              const pv    = refPrev.current[i.sym]   || price
+              const isUp  = price >= pv
+              const active= sym===i.sym
+              const isFav = favorites.has(i.sym)
+              return (
+                <div key={i.sym} onClick={()=>setSym(i.sym)}
+                  style={{padding:'5px 7px',borderBottom:'1px solid #F0F4FB',display:'flex',alignItems:'center',background:active?'#EEF3FF':'transparent',borderLeft:active?'3px solid #2255CC':'3px solid transparent',cursor:'pointer'}}>
                   <button onClick={e=>{e.stopPropagation();toggleFav(i.sym)}} style={{background:'none',border:'none',cursor:'pointer',fontSize:'11px',color:isFav?'#F59E0B':'#D1D5DB',padding:'0 3px 0 0',flexShrink:0}}>{isFav?'★':'☆'}</button>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:'10px',fontWeight:600,color:active?'#2255CC':'#1A3A6B'}}>{i.sym}</div>
@@ -498,25 +520,23 @@ export function PlatformPage() {
         <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
           {/* Chart topbar */}
           <div style={{height:'38px',background:'#fff',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',padding:'0 12px',gap:'8px',flexShrink:0}}>
-            <div style={{...mono,fontSize:'18px',fontWeight:700,color:up?'#16A34A':'#DC2626'}}>{livePrice.toFixed(inst.dec)}</div>
+            <div style={{...mono,fontSize:'20px',fontWeight:700,color:up?'#16A34A':'#DC2626'}}>{livePrice.toFixed(inst.dec)}</div>
             <div style={{fontSize:'10px',color:up?'#16A34A':'#DC2626'}}>{up?'▲':'▼'} {Math.abs(livePrice-prevPrice).toFixed(inst.dec)}</div>
             <div style={{fontSize:'13px',fontWeight:700,color:'#1A3A6B'}}>{sym}</div>
-            <button onClick={()=>toggleFav(sym)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'14px',color:favorites.has(sym)?'#F59E0B':'#D1D5DB',padding:'0'}}>{favorites.has(sym)?'★':'☆'}</button>
+            <button onClick={()=>toggleFav(sym)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'14px',color:favorites.has(sym)?'#F59E0B':'#D1D5DB'}}>{favorites.has(sym)?'★':'☆'}</button>
             <div style={{display:'flex',gap:'2px',marginLeft:'8px'}}>
               {TF_LIST.map(t=>(
                 <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 8px',fontSize:'9px',fontWeight:700,border:'none',borderRadius:'4px',cursor:'pointer',background:tf===t?'#2255CC':'#F4F7FD',color:tf===t?'#fff':'#5C7A9E'}}>{TF_LABEL[t]}</button>
               ))}
             </div>
-            <div style={{marginLeft:'auto',fontSize:'9px',
-              color: livePrice!==SEED[sym]?'#16A34A':'#D97706',
-              background: livePrice!==SEED[sym]?'rgba(22,163,74,.08)':'rgba(217,119,6,.08)',
-              padding:'2px 8px',borderRadius:'20px',fontWeight:600}}>
-              {livePrice!==SEED[sym]?'● Live':'○ Connecting…'}
+            <div style={{marginLeft:'auto',fontSize:'9px',color:isLive?'#16A34A':'#F59E0B',background:isLive?'rgba(22,163,74,.08)':'rgba(245,158,11,.08)',padding:'2px 8px',borderRadius:'20px',fontWeight:600}}>
+              {isLive?'● Live':'○ Loading…'}
             </div>
           </div>
           {/* Chart */}
-          <div style={{flex:1}}>
-            <TVChart tvSym={inst.tv} interval={tf} onPrice={onTVPrice}/>
+          <div style={{flex:1}} key={`${sym}_${tf}`}>
+            <CandleChart sym={sym} tf={tf} livePrice={livePrice}
+              openTrades={openTrades} onUpdateSLTP={handleUpdateSLTP}/>
           </div>
         </div>
 
@@ -529,23 +549,9 @@ export function PlatformPage() {
               <button onClick={()=>setDir('sell')} style={{padding:'9px',border:'none',borderRadius:'7px',cursor:'pointer',fontWeight:700,fontSize:'12px',background:dir==='sell'?'#DC2626':'#F4F7FD',color:dir==='sell'?'#fff':'#5C7A9E'}}>SELL</button>
             </div>
             <div style={{background:dir==='buy'?'rgba(22,163,74,.08)':'rgba(220,38,38,.08)',border:`1px solid ${dir==='buy'?'rgba(22,163,74,.2)':'rgba(220,38,38,.2)'}`,borderRadius:'8px',padding:'8px',marginBottom:'8px',textAlign:'center'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',marginBottom:'2px'}}>
-                <div style={{fontSize:'8px',color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1px'}}>
-                  {dir==='buy'?'Ask':'Bid'} · Execution
-                </div>
-                {/* Live dot — green when Polygon price received */}
-                <div style={{width:'5px',height:'5px',borderRadius:'50%',
-                  background: livePrice!==SEED[sym] ? '#4ADE80' : '#8FA3BF',
-                  boxShadow: livePrice!==SEED[sym] ? '0 0 5px #4ADE80' : 'none',
-                  animation: livePrice!==SEED[sym] ? 'livePulse 2s infinite' : 'none',
-                }} title={livePrice!==SEED[sym]?'Live price':'Connecting to price feed…'}/>
-              </div>
-              <div style={{...mono,fontSize:'22px',fontWeight:700,color:dir==='buy'?'#16A34A':'#DC2626'}}>
-                {execPrice.toFixed(inst.dec)}
-              </div>
-              <div style={{fontSize:'8px',color:'#8FA3BF'}}>
-                spread {inst.spread.toFixed(inst.dec)} · {livePrice!==SEED[sym]?'● live':'○ connecting…'}
-              </div>
+              <div style={{fontSize:'8px',color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'2px'}}>{dir==='buy'?'Ask':'Bid'} · {isLive?'Live':'Seed'}</div>
+              <div style={{...mono,fontSize:'22px',fontWeight:700,color:dir==='buy'?'#16A34A':'#DC2626'}}>{execPrice.toFixed(inst.dec)}</div>
+              <div style={{fontSize:'8px',color:'#8FA3BF'}}>spread {inst.spread.toFixed(inst.dec)}</div>
             </div>
             <div style={{marginBottom:'7px'}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'3px'}}>
@@ -579,7 +585,7 @@ export function PlatformPage() {
                   <span style={{...mono,color:String(c),fontWeight:500}}>{v}</span>
                 </div>
               ))}
-              {lotsNum>maxLots&&<div style={{marginTop:'4px',fontSize:'9px',color:'#DC2626',fontWeight:600}}>⚠ Max {maxLots} lots at 1:{LEVERAGE}</div>}
+              {lotsNum>maxLots && <div style={{marginTop:'4px',fontSize:'9px',color:'#DC2626',fontWeight:600}}>⚠ Max {maxLots} lots</div>}
             </div>
             <button onClick={placeOrder} disabled={placing||!primary||primary.status==='breached'||lotsNum>maxLots}
               style={{width:'100%',padding:'10px',fontSize:'12px',fontWeight:700,border:'none',borderRadius:'7px',cursor:lotsNum>maxLots?'not-allowed':'pointer',background:lotsNum>maxLots?'#9CA3AF':dir==='buy'?'#16A34A':'#DC2626',color:'#fff',opacity:placing||!primary?0.6:1,textTransform:'uppercase'}}>
@@ -598,84 +604,93 @@ export function PlatformPage() {
       </div>
 
       {/* BOTTOM */}
-      <div style={{height:'175px',background:'#fff',borderTop:'1px solid #E8EEF8',flexShrink:0,display:'flex',flexDirection:'column'}}>
+      <div style={{height:'180px',background:'#fff',borderTop:'1px solid #E8EEF8',flexShrink:0,display:'flex',flexDirection:'column'}}>
         <div style={{display:'flex',alignItems:'center',borderBottom:'1px solid #E8EEF8',height:'32px',padding:'0 12px',flexShrink:0}}>
           {(['positions','history'] as const).map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{padding:'0 12px',height:'32px',fontSize:'10px',fontWeight:600,border:'none',borderBottom:tab===t?'2px solid #2255CC':'2px solid transparent',background:'transparent',color:tab===t?'#2255CC':'#8FA3BF',cursor:'pointer',textTransform:'capitalize'}}>
-              {t}{t==='positions'&&openTrades.length>0?` (${openTrades.length})`:''}
-            </button>
+              {t}{t==='positions'&&openTrades.length>0?` (${openTrades.length})`:''}</button>
           ))}
           <div style={{marginLeft:'auto',...mono,fontSize:'11px',fontWeight:600,color:openPnl>=0?'#16A34A':'#DC2626'}}>
             Float: {openPnl>=0?'+':''}${(openPnl||0).toFixed(2)}
           </div>
         </div>
         <div style={{overflowY:'auto',flex:1}}>
-          {tab==='positions'?(
+          {tab==='positions' ? (
             openTrades.length===0
-              ?<div style={{padding:'16px',textAlign:'center',fontSize:'11px',color:'#8FA3BF'}}>No open positions</div>
-              :<table style={{width:'100%',borderCollapse:'collapse',fontSize:'10px'}}>
-                <thead><tr>{['Symbol','Dir','Lots','Entry','Live','P&L','Pips','SL','TP','Margin','Actions'].map(h=>(
-                  <th key={h} style={{padding:'3px 7px',fontSize:'8px',textTransform:'uppercase',letterSpacing:'1px',color:'#8FA3BF',fontWeight:600,textAlign:'left',background:'#FAFBFF',borderBottom:'1px solid #F0F4FB',whiteSpace:'nowrap'}}>{h}</th>
-                ))}</tr></thead>
-                <tbody>{openTrades.map(t=>{
-                  const cur=refPrices.current[t.symbol]||prices[t.symbol]||SEED[t.symbol]
-                  const pnl=calcPnl(t,cur)
-                  const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-                  const pipD=i?(t.direction==='buy'?cur-t.open_price:t.open_price-cur)/(i.pip??0.0001):0
-                  const tMgn=i?(i.lotUSD(cur)*t.lots/LEVERAGE):0
-                  return(
-                    <tr key={t.id} style={{borderBottom:'1px solid #F4F7FD'}}>
-                      <td style={{padding:'4px 7px',fontWeight:600}}>
-                        <button onClick={()=>setSym(t.symbol)} style={{background:'none',border:'none',cursor:'pointer',fontWeight:600,color:'#2255CC',fontSize:'10px',padding:0}}>{t.symbol}</button>
-                      </td>
-                      <td style={{padding:'4px 7px',fontWeight:700,color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction.toUpperCase()}</td>
-                      <td style={{padding:'4px 7px',...mono}}>{t.lots}</td>
-                      <td style={{padding:'4px 7px',...mono,color:'#5C7A9E'}}>{(Number(t.open_price)||0).toFixed(i?.dec??5)}</td>
-                      <td style={{padding:'4px 7px',...mono,color:cur>=t.open_price?'#16A34A':'#DC2626'}}>{cur.toFixed(i?.dec??5)}</td>
-                      <td style={{padding:'4px 7px',...mono,fontWeight:700,color:pnl>=0?'#16A34A':'#DC2626'}}>{pnl>=0?'+':''}${(pnl||0).toFixed(2)}</td>
-                      <td style={{padding:'4px 7px',...mono,color:pipD>=0?'#16A34A':'#DC2626'}}>{pipD>=0?'+':''}{(pipD||0).toFixed(1)}</td>
-                      <td style={{padding:'4px 7px',...mono,color:'#DC2626',fontSize:'9px'}}>{t.sl??'—'}</td>
-                      <td style={{padding:'4px 7px',...mono,color:'#16A34A',fontSize:'9px'}}>{t.tp??'—'}</td>
-                      <td style={{padding:'4px 7px',...mono,color:'#5C7A9E',fontSize:'9px'}}>${(tMgn||0).toFixed(2)}</td>
-                      <td style={{padding:'4px 7px'}}>
-                        <div style={{display:'flex',gap:'3px'}}>
-                          <button onClick={()=>setEditSLTP({id:t.id,sl:t.sl?String(t.sl):'',tp:t.tp?String(t.tp):''})} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#EEF3FF',border:'1px solid rgba(34,85,204,.2)',borderRadius:'4px',cursor:'pointer',color:'#2255CC'}}>Edit</button>
-                          <button onClick={()=>closeTrade(t)} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#FEF2F2',border:'1px solid rgba(220,38,38,.2)',borderRadius:'4px',cursor:'pointer',color:'#DC2626'}}>Close</button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}</tbody>
-              </table>
-          ):(
+              ? <div style={{padding:'16px',textAlign:'center',fontSize:'11px',color:'#8FA3BF'}}>No open positions</div>
+              : <table style={{width:'100%',borderCollapse:'collapse',fontSize:'10px'}}>
+                  <thead><tr>{['Symbol','Dir','Lots','Entry','Live','P&L','Pips','SL','TP','Margin','Actions'].map(h=>(
+                    <th key={h} style={{padding:'3px 7px',fontSize:'8px',textTransform:'uppercase',letterSpacing:'1px',color:'#8FA3BF',fontWeight:600,textAlign:'left',background:'#FAFBFF',borderBottom:'1px solid #F0F4FB',whiteSpace:'nowrap'}}>{h}</th>
+                  ))}</tr></thead>
+                  <tbody>{openTrades.map(t=>{
+                    const cur = refPrices.current[t.symbol] || SEED[t.symbol]
+                    const pnl = calcPnl(t, cur)
+                    const i   = ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
+                    const pipD= i?(t.direction==='buy'?cur-t.open_price:t.open_price-cur)/(i.pip??0.0001):0
+                    const tMgn= i?(i.lotUSD(cur)*t.lots/LEVERAGE):0
+                    const isEdit = editSLTP?.id===t.id
+                    return (
+                      <tr key={t.id} style={{borderBottom:'1px solid #F4F7FD'}}>
+                        <td style={{padding:'4px 7px',fontWeight:600}}><button onClick={()=>setSym(t.symbol)} style={{background:'none',border:'none',cursor:'pointer',fontWeight:600,color:'#2255CC',fontSize:'10px',padding:0}}>{t.symbol}</button></td>
+                        <td style={{padding:'4px 7px',fontWeight:700,color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction.toUpperCase()}</td>
+                        <td style={{padding:'4px 7px',...mono}}>{t.lots}</td>
+                        <td style={{padding:'4px 7px',...mono,color:'#5C7A9E'}}>{(Number(t.open_price)||0).toFixed(i?.dec??5)}</td>
+                        <td style={{padding:'4px 7px',...mono,color:cur>=t.open_price?'#16A34A':'#DC2626'}}>{cur.toFixed(i?.dec??5)}</td>
+                        <td style={{padding:'4px 7px',...mono,fontWeight:700,color:pnl>=0?'#16A34A':'#DC2626'}}>{pnl>=0?'+':''}${(pnl||0).toFixed(2)}</td>
+                        <td style={{padding:'4px 7px',...mono,color:pipD>=0?'#16A34A':'#DC2626'}}>{pipD>=0?'+':''}{(pipD||0).toFixed(1)}</td>
+                        <td style={{padding:'4px 7px'}}>
+                          {isEdit
+                            ? <input value={editSLTP.sl} onChange={e=>setEditSLTP((p:any)=>({...p,sl:e.target.value}))} type="number" style={{width:'65px',padding:'2px 4px',background:'#FEF2F2',border:'1px solid rgba(220,38,38,.3)',borderRadius:'4px',fontSize:'9px',...mono,color:'#1A3A6B',outline:'none'}}/>
+                            : <span style={{...mono,color:'#DC2626',fontSize:'9px',cursor:'pointer',textDecoration:'underline dotted'}} onClick={()=>setEditSLTP({id:t.id,sl:t.sl?String(t.sl):'',tp:t.tp?String(t.tp):''})}>{t.sl??'—'}</span>}
+                        </td>
+                        <td style={{padding:'4px 7px'}}>
+                          {isEdit
+                            ? <input value={editSLTP.tp} onChange={e=>setEditSLTP((p:any)=>({...p,tp:e.target.value}))} type="number" style={{width:'65px',padding:'2px 4px',background:'#F0FDF4',border:'1px solid rgba(22,163,74,.3)',borderRadius:'4px',fontSize:'9px',...mono,color:'#1A3A6B',outline:'none'}}/>
+                            : <span style={{...mono,color:'#16A34A',fontSize:'9px',cursor:'pointer',textDecoration:'underline dotted'}} onClick={()=>setEditSLTP({id:t.id,sl:t.sl?String(t.sl):'',tp:t.tp?String(t.tp):''})}>{t.tp??'—'}</span>}
+                        </td>
+                        <td style={{padding:'4px 7px',...mono,color:'#5C7A9E',fontSize:'9px'}}>${(tMgn||0).toFixed(2)}</td>
+                        <td style={{padding:'4px 7px'}}>
+                          <div style={{display:'flex',gap:'3px'}}>
+                            {isEdit
+                              ? <><button onClick={saveEditSLTP} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#EEF3FF',border:'1px solid rgba(34,85,204,.2)',borderRadius:'4px',cursor:'pointer',color:'#2255CC'}}>✓</button>
+                                  <button onClick={()=>setEditSLTP(null)} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#F4F7FD',border:'1px solid #E8EEF8',borderRadius:'4px',cursor:'pointer',color:'#5C7A9E'}}>✕</button></>
+                              : <><button onClick={()=>setEditSLTP({id:t.id,sl:t.sl?String(t.sl):'',tp:t.tp?String(t.tp):''})} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#EEF3FF',border:'1px solid rgba(34,85,204,.2)',borderRadius:'4px',cursor:'pointer',color:'#2255CC'}}>Edit</button>
+                                  <button onClick={()=>closeTrade(t)} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#FEF2F2',border:'1px solid rgba(220,38,38,.2)',borderRadius:'4px',cursor:'pointer',color:'#DC2626'}}>Close</button></>}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}</tbody>
+                </table>
+          ) : (
             closedTrades.length===0
-              ?<div style={{padding:'16px',textAlign:'center',fontSize:'11px',color:'#8FA3BF'}}>No closed trades</div>
-              :<table style={{width:'100%',borderCollapse:'collapse',fontSize:'10px'}}>
-                <thead><tr>{['Symbol','Dir','Lots','Open','Close','P&L','Pips','Closed'].map(h=>(
-                  <th key={h} style={{padding:'3px 7px',fontSize:'8px',textTransform:'uppercase',letterSpacing:'1px',color:'#8FA3BF',fontWeight:600,textAlign:'left',background:'#FAFBFF',borderBottom:'1px solid #F0F4FB'}}>{h}</th>
-                ))}</tr></thead>
-                <tbody>{closedTrades.map(t=>{
-                  const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-                  return(
-                    <tr key={t.id} style={{borderBottom:'1px solid #F4F7FD'}}>
-                      <td style={{padding:'4px 7px',fontWeight:600}}>{t.symbol}</td>
-                      <td style={{padding:'4px 7px',fontWeight:700,color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction.toUpperCase()}</td>
-                      <td style={{padding:'4px 7px',...mono}}>{t.lots}</td>
-                      <td style={{padding:'4px 7px',...mono,color:'#5C7A9E'}}>{(Number(t.open_price)||0).toFixed(i?.dec??5)}</td>
-                      <td style={{padding:'4px 7px',...mono,color:'#5C7A9E'}}>{(Number(t.close_price)||0).toFixed(i?.dec??5)}</td>
-                      <td style={{padding:'4px 7px',...mono,fontWeight:700,color:(t.net_pnl??0)>=0?'#16A34A':'#DC2626'}}>{(t.net_pnl??0)>=0?'+':''}${(Number(t.net_pnl)||0).toFixed(2)}</td>
-                      <td style={{padding:'4px 7px',...mono,color:(t.pips??0)>=0?'#16A34A':'#DC2626'}}>{(t.pips??0)>=0?'+':''}{(Number(t.pips)||0).toFixed(1)}</td>
-                      <td style={{padding:'4px 7px',color:'#8FA3BF',fontSize:'9px'}}>{t.closed_at?new Date(t.closed_at).toLocaleString():'—'}</td>
-                    </tr>
-                  )
-                })}</tbody>
-              </table>
+              ? <div style={{padding:'16px',textAlign:'center',fontSize:'11px',color:'#8FA3BF'}}>No closed trades</div>
+              : <table style={{width:'100%',borderCollapse:'collapse',fontSize:'10px'}}>
+                  <thead><tr>{['Symbol','Dir','Lots','Open','Close','P&L','Pips','Closed'].map(h=>(
+                    <th key={h} style={{padding:'3px 7px',fontSize:'8px',textTransform:'uppercase',letterSpacing:'1px',color:'#8FA3BF',fontWeight:600,textAlign:'left',background:'#FAFBFF',borderBottom:'1px solid #F0F4FB'}}>{h}</th>
+                  ))}</tr></thead>
+                  <tbody>{closedTrades.map(t=>{
+                    const i = ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
+                    return (
+                      <tr key={t.id} style={{borderBottom:'1px solid #F4F7FD'}}>
+                        <td style={{padding:'4px 7px',fontWeight:600}}>{t.symbol}</td>
+                        <td style={{padding:'4px 7px',fontWeight:700,color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction.toUpperCase()}</td>
+                        <td style={{padding:'4px 7px',...mono}}>{t.lots}</td>
+                        <td style={{padding:'4px 7px',...mono,color:'#5C7A9E'}}>{(Number(t.open_price)||0).toFixed(i?.dec??5)}</td>
+                        <td style={{padding:'4px 7px',...mono,color:'#5C7A9E'}}>{(Number(t.close_price)||0).toFixed(i?.dec??5)}</td>
+                        <td style={{padding:'4px 7px',...mono,fontWeight:700,color:(t.net_pnl??0)>=0?'#16A34A':'#DC2626'}}>{(t.net_pnl??0)>=0?'+':''}${(Number(t.net_pnl)||0).toFixed(2)}</td>
+                        <td style={{padding:'4px 7px',...mono,color:(t.pips??0)>=0?'#16A34A':'#DC2626'}}>{(t.pips??0)>=0?'+':''}{(Number(t.pips)||0).toFixed(1)}</td>
+                        <td style={{padding:'4px 7px',color:'#8FA3BF',fontSize:'9px'}}>{t.closed_at?new Date(t.closed_at).toLocaleString():'—'}</td>
+                      </tr>
+                    )
+                  })}</tbody>
+                </table>
           )}
         </div>
       </div>
 
-      {/* Edit SL/TP Modal */}
-      {editSLTP&&(
+      {/* Edit SL/TP modal */}
+      {editSLTP && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setEditSLTP(null)}>
           <div style={{background:'#fff',borderRadius:'12px',padding:'20px',width:'280px',boxShadow:'0 20px 60px rgba(0,0,0,.2)'}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:'13px',fontWeight:700,color:'#1A3A6B',marginBottom:'14px'}}>Edit SL / TP</div>
