@@ -8,6 +8,12 @@ import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/email'
 import { ADMIN_NAV } from '@/lib/nav'
 
+const FROM_OPTIONS = [
+  { alias: 'support',  label: 'support@thefundeddiaries.com',  desc: 'General support enquiries' },
+  { alias: 'accounts', label: 'accounts@thefundeddiaries.com', desc: 'Account management & billing' },
+  { alias: 'risk',     label: 'risk@thefundeddiaries.com',     desc: 'Risk management & breaches' },
+]
+
 const EMAIL_TEMPLATES = [
   {
     id: 'welcome',
@@ -145,6 +151,7 @@ export function AdminEmailPage() {
   const [customEmail, setCustomEmail] = useState('')
   const [sending, setSending] = useState(false)
   const [sentLog, setSentLog] = useState<any[]>([])
+  const [senderFrom, setSenderFrom] = useState('support')
 
   useEffect(() => {
     supabase.from('users').select('id, first_name, last_name, email, role')
@@ -183,7 +190,7 @@ export function AdminEmailPage() {
       const data: Record<string, any> = { first_name: recipient.first_name }
       selectedTemplate.fields.forEach((f: string) => { data[f] = fieldValues[f] ?? '' })
 
-      const result = await sendEmail(selectedTemplate.id, recipient.email, data)
+      const result = await sendEmail(selectedTemplate.id, recipient.email, data, senderFrom)
       if (result.ok) successCount++
       else { failCount++; lastError = result.error ?? 'Unknown error' }
 
@@ -300,7 +307,23 @@ export function AdminEmailPage() {
 
                 {/* Recipient */}
                 <div className="mb-5">
-                  <label className="text-[7px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold block mb-2">Recipient</label>
+                  {/* Sender selector */}
+                <div className="mb-5 pb-5 border-b border-[#E8EEF8]">
+                  <label className="text-[7px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold block mb-2">Send From</label>
+                  <div className="flex flex-col gap-2">
+                    {FROM_OPTIONS.map(opt => (
+                      <label key={opt.alias} className={`flex items-center gap-3 p-3 border cursor-pointer transition-all ${senderFrom === opt.alias ? 'border-[#2255CC] bg-[rgba(34,85,204,.05)]' : 'border-[#F0F4FB] hover:border-[#C5D5EA]'}`}>
+                        <input type="radio" name="sender" value={opt.alias} checked={senderFrom === opt.alias} onChange={() => setSenderFrom(opt.alias)} className="accent-[#2255CC]"/>
+                        <div>
+                          <div className={`text-[11px] font-semibold font-mono ${senderFrom === opt.alias ? 'text-[#2255CC]' : 'text-[#1A3A6B]'}`}>{opt.label}</div>
+                          <div className="text-[9px] text-[#8FA3BF]">{opt.desc}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="text-[7px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold block mb-2">Recipient</label>
                   <div className="flex gap-[3px] mb-3">
                     {[
                       { key: 'single', label: 'Single Trader' },

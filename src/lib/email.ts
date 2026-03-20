@@ -6,14 +6,15 @@ type EmailType =
 export async function sendEmail(
   type: EmailType,
   to: string,
-  data: Record<string, any>
+  data: Record<string, any>,
+  from_alias?: string
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     // Use Vercel API route — same domain, no CORS issues
     const res = await fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, to, data }),
+      body: JSON.stringify({ type, to, data, from_alias }),
     })
 
     if (!res.ok) {

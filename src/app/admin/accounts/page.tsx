@@ -135,7 +135,7 @@ export function AdminAccountsPage() {
   return (
     <>
       <DashboardLayout title="All Accounts" nav={ADMIN_NAV} accentColor="red">
-        <div className={`grid gap-[14px] ${selected ? 'grid-cols-[1fr_480px]' : 'grid-cols-1'}`}>
+        <div className="grid grid-cols-1 gap-[14px]">
 
           {/* ── Left: Accounts table ── */}
           <Card>
@@ -207,17 +207,25 @@ export function AdminAccountsPage() {
             )}
           </Card>
 
-          {/* ── Right: Account detail panel ── */}
+          {/* ── Account detail MODAL ── */}
           {selected && (
-            <Card>
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <div className="font-mono font-bold text-[#2255CC] text-[13px]">{selected.account_number}</div>
-                  <div className="text-[11px] text-[#5C7A9E]">{selected.users?.first_name} {selected.users?.last_name}</div>
-                  <div className="text-[10px] text-[#8FA3BF]">{selected.users?.email}</div>
+            <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+            <div className="bg-white border border-[#E8EEF8] w-full max-w-[1100px] max-h-[90vh] flex flex-col rounded-xl shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8EEF8] flex-shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-[rgba(220,38,38,.1)] border border-[rgba(220,38,38,.2)] flex items-center justify-center font-bold text-[#DC2626] text-[13px]">
+                    {selected.users?.first_name?.[0]}{selected.users?.last_name?.[0]}
+                  </div>
+                  <div>
+                    <div className="font-mono font-bold text-[#2255CC] text-[15px]">{selected.account_number}</div>
+                    <div className="text-[11px] text-[#5C7A9E]">{selected.users?.first_name} {selected.users?.last_name} · {selected.users?.email}</div>
+                  </div>
                 </div>
-                <button onClick={() => setSelected(null)} className="text-[#8FA3BF] hover:text-[#1A3A6B] cursor-pointer bg-transparent border-none text-[18px]">✕</button>
+                <button onClick={() => setSelected(null)} className="text-[#8FA3BF] hover:text-[#1A3A6B] cursor-pointer bg-transparent border-none text-[20px]">✕</button>
               </div>
+
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto p-6">
 
               {/* Quick stats */}
               <div className="grid grid-cols-3 gap-2 mb-4">
@@ -343,7 +351,8 @@ export function AdminAccountsPage() {
                   </button>
                 </div>
               )}
-            </Card>
+            </div>
+            </div>
           )}
         </div>
       </DashboardLayout>
