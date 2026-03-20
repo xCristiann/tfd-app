@@ -22,13 +22,13 @@ const ALL_INSTRUMENTS = [
   { sym:'EUR/GBP', tv:'FX:EURGBP',        market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
   { sym:'AUD/JPY', tv:'FX:AUDJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
   { sym:'CAD/JPY', tv:'FX:CADJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'XAU/USD', tv:'TVC:GOLD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', tv:'TVC:SILVER',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
-  { sym:'NAS100',  tv:'CAPITALCOM:US100', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   tv:'CAPITALCOM:US500', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    tv:'CAPITALCOM:US30',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   tv:'CAPITALCOM:DE40',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
-  { sym:'WTI',     tv:'TVC:USOIL',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
+  { sym:'XAU/USD', tv:'OANDA:XAUUSD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
+  { sym:'XAG/USD', tv:'OANDA:XAGUSD',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
+  { sym:'NAS100',  tv:'NASDAQ:NDX', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
+  { sym:'US500',   tv:'SP:SPX', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
+  { sym:'US30',    tv:'DJ:DJI',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   tv:'XETR:DAX',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
+  { sym:'WTI',     tv:'NYMEX:CL1!',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
 
 type Inst = typeof ALL_INSTRUMENTS[number]
@@ -86,14 +86,31 @@ function TVChart({tvSym, interval}: {tvSym:string; interval:string}) {
 /* ── Price feed — Twelve Data WebSocket + REST ───────────────────── */
 const TD_KEY = 'c6158908260647989323da44b23f5f97'
 
-// Twelve Data symbols map
-const TD_SYMS: Record<string,string> = {
-  'EUR/USD':'EUR/USD','GBP/USD':'GBP/USD','USD/JPY':'USD/JPY','USD/CHF':'USD/CHF',
-  'AUD/USD':'AUD/USD','USD/CAD':'USD/CAD','NZD/USD':'NZD/USD','GBP/JPY':'GBP/JPY',
-  'EUR/JPY':'EUR/JPY','EUR/GBP':'EUR/GBP','AUD/JPY':'AUD/JPY','CAD/JPY':'CAD/JPY',
-  'XAU/USD':'XAU/USD','XAG/USD':'XAG/USD',
-  'NAS100':'NDX','US500':'SPX','US30':'DJI','GER40':'DAX','WTI':'WTI/USD',
-}
+// Exact Twelve Data symbols for every instrument
+const TD_MAP: {our:string; td:string; type:string; dec:number}[] = [
+  {our:'EUR/USD', td:'EUR/USD',  type:'forex',     dec:5},
+  {our:'GBP/USD', td:'GBP/USD',  type:'forex',     dec:5},
+  {our:'USD/JPY', td:'USD/JPY',  type:'forex',     dec:3},
+  {our:'USD/CHF', td:'USD/CHF',  type:'forex',     dec:5},
+  {our:'AUD/USD', td:'AUD/USD',  type:'forex',     dec:5},
+  {our:'USD/CAD', td:'USD/CAD',  type:'forex',     dec:5},
+  {our:'NZD/USD', td:'NZD/USD',  type:'forex',     dec:5},
+  {our:'GBP/JPY', td:'GBP/JPY',  type:'forex',     dec:3},
+  {our:'EUR/JPY', td:'EUR/JPY',  type:'forex',     dec:3},
+  {our:'EUR/GBP', td:'EUR/GBP',  type:'forex',     dec:5},
+  {our:'AUD/JPY', td:'AUD/JPY',  type:'forex',     dec:3},
+  {our:'CAD/JPY', td:'CAD/JPY',  type:'forex',     dec:3},
+  {our:'XAU/USD', td:'XAU/USD',  type:'forex',     dec:2},
+  {our:'XAG/USD', td:'XAG/USD',  type:'forex',     dec:4},
+  {our:'NAS100',  td:'NDX',      type:'index',     dec:2},
+  {our:'US500',   td:'SPX',      type:'index',     dec:2},
+  {our:'US30',    td:'DJI',      type:'index',     dec:1},
+  {our:'GER40',   td:'DAX',      type:'index',     dec:1},
+  {our:'WTI',     td:'WTI/USD',  type:'commodity', dec:2},
+]
+
+const TD_TO_OUR: Record<string,string> = {}
+TD_MAP.forEach(m => { TD_TO_OUR[m.td] = m.our })
 
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEED})
@@ -110,51 +127,46 @@ function usePriceFeed() {
   useEffect(()=>{
     let dead=false, ws:WebSocket, wsTimer:any, pollTimer:any
 
-    // WebSocket — real-time price updates
+    // WebSocket — real-time for forex+metals (free plan: up to 8 symbols)
+    const wsSyms = TD_MAP.filter(m=>m.type==='forex').map(m=>m.td).slice(0,8)
     const connect = () => {
       if (dead) return
       try {
         ws = new WebSocket(`wss://ws.twelvedata.com/v1/quotes/price?apikey=${TD_KEY}`)
         ws.onopen = () => {
-          // Subscribe to forex pairs (free plan: 8 symbols)
-          const forexSyms = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','USD/CHF','AUD/USD','GBP/JPY','EUR/JPY']
-          ws.send(JSON.stringify({
-            action: 'subscribe',
-            params: { symbols: forexSyms.join(',') }
-          }))
+          ws.send(JSON.stringify({ action:'subscribe', params:{ symbols: wsSyms.join(',') } }))
         }
         ws.onmessage = ({data}) => {
           try {
             const d = JSON.parse(data)
-            // TD sends: {event:'price', symbol:'EUR/USD', price:'1.0821', ...}
             if (d.event==='price' && d.symbol && d.price) {
-              const price = parseFloat(d.price)
-              const inst  = ALL_INSTRUMENTS.find(i => i.sym===d.symbol) as any
-              if (inst && price > 0) push(d.symbol, +price.toFixed(inst.dec))
+              const m = TD_MAP.find(x=>x.td===d.symbol)
+              if (m) push(m.our, +parseFloat(d.price).toFixed(m.dec))
             }
           } catch {}
         }
-        ws.onclose = () => { if (!dead) wsTimer=setTimeout(connect, 2000) }
+        ws.onclose = () => { if (!dead) wsTimer=setTimeout(connect,2000) }
         ws.onerror = () => { try{ws.close()}catch{} }
-      } catch { if (!dead) wsTimer=setTimeout(connect, 3000) }
+      } catch { if (!dead) wsTimer=setTimeout(connect,3000) }
     }
 
-    // REST poll — all symbols every 5s (covers remaining pairs + indices)
+    // REST — ALL symbols every 5s
     const poll = async () => {
       if (dead) return
       try {
-        const allSyms = Object.values(TD_SYMS).join(',')
-        const r = await fetch(`https://api.twelvedata.com/price?symbol=${encodeURIComponent(allSyms)}&apikey=${TD_KEY}`)
+        const syms = TD_MAP.map(m=>m.td).join(',')
+        const r = await fetch(`https://api.twelvedata.com/price?symbol=${encodeURIComponent(syms)}&apikey=${TD_KEY}`)
         const d = await r.json()
-        // Response: { 'EUR/USD': {price:'1.0821'}, 'NDX': {price:'19800'}, ... }
-        for (const [tdSym, val] of Object.entries(d) as any[]) {
-          if (!val?.price) continue
-          const price = parseFloat(val.price)
-          if (price <= 0) continue
-          // Find our sym from TD sym
-          const ourSym = Object.entries(TD_SYMS).find(([,v])=>v===tdSym)?.[0]
-          const inst = ourSym ? ALL_INSTRUMENTS.find(i=>i.sym===ourSym) as any : null
-          if (inst && price > 0) push(inst.sym, +price.toFixed(inst.dec))
+        // Response is either {price:'1.085'} for single or {'EUR/USD':{price:'1.085'},...} for multiple
+        if (d.price) {
+          // Single symbol response — shouldn't happen but handle it
+        } else {
+          for (const [tdSym, val] of Object.entries(d) as [string,any][]) {
+            if (!val?.price) continue
+            const price = parseFloat(val.price)
+            const m = TD_MAP.find(x=>x.td===tdSym)
+            if (m && price>0) push(m.our, +price.toFixed(m.dec))
+          }
         }
       } catch {}
     }
@@ -167,7 +179,7 @@ function usePriceFeed() {
       clearTimeout(wsTimer); clearInterval(pollTimer)
       try{ws?.close()}catch{}
     }
-  }, [push])
+  },[push])
 
   return { prices, refPrev, refPrices, push }
 }
