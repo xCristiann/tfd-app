@@ -46,9 +46,43 @@ function lsGet(k:string,fb:string){try{return localStorage.getItem(k)||fb}catch{
 function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
 
 /* ── TradingView Widget ───────────────────────────────────────────── */
-function TVChart({tvSym, interval}: {tvSym:string; interval:string}) {
+// Global map of widgetId -> price update callback
+const _tvPriceCallbacks: Record<string, (price:number)=>void> = {}
+
+// Listen for TV widget messages ONCE globally
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', (e: MessageEvent) => {
+    try {
+      const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
+      if (!d) return
+      // TV Advanced Chart sends price via these known message formats:
+      // {name:'widgetReady'} then {name:'quoteUpdate', data:{lp:price}}
+      // OR {type:'QUOTES_UPDATE', quotes:[{n:'OANDA:XAUUSD', v:{lp:4700}}]}
+      if (d.type === 'QUOTES_UPDATE' && Array.isArray(d.quotes)) {
+        for (const q of d.quotes) {
+          const lp = q.v?.lp ?? q.v?.last_price
+          if (lp && lp > 0) {
+            Object.values(_tvPriceCallbacks).forEach(cb => cb(lp))
+          }
+        }
+      }
+      if (d.name === 'quoteUpdate' && d.data?.lp) {
+        Object.values(_tvPriceCallbacks).forEach(cb => cb(d.data.lp))
+      }
+    } catch {}
+  })
+}
+
+function TVChart({tvSym, interval, onPrice}: {tvSym:string; interval:string; onPrice:(p:number)=>void}) {
   const ref    = useRef<HTMLDivElement>(null)
   const keyRef = useRef('')
+  const idRef  = useRef(`tv_${Math.random().toString(36).slice(2)}`)
+
+  useEffect(()=>{
+    const id = idRef.current
+    _tvPriceCallbacks[id] = onPrice
+    return () => { delete _tvPriceCallbacks[id] }
+  }, [onPrice])
 
   useEffect(()=>{
     const el = ref.current; if(!el) return
@@ -61,12 +95,14 @@ function TVChart({tvSym, interval}: {tvSym:string; interval:string}) {
     wrap.className = 'tradingview-widget-container'
     wrap.style.cssText = 'width:100%;height:100%'
     const inner = document.createElement('div')
+    inner.id = idRef.current
     inner.className = 'tradingview-widget-container__widget'
     inner.style.cssText = 'width:100%;height:calc(100% - 32px)'
     const script = document.createElement('script')
     script.src   = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
     script.async = true
     script.innerHTML = JSON.stringify({
+      container_id: idRef.current,
       autosize:true, symbol:tvSym, interval,
       timezone:'Etc/UTC', theme:'light', style:'1', locale:'en',
       enable_publishing:false, hide_top_toolbar:false, save_image:false,
@@ -81,11 +117,16 @@ function TVChart({tvSym, interval}: {tvSym:string; interval:string}) {
   return <div ref={ref} style={{width:'100%',height:'100%'}}/>
 }
 
-/* ── Price feed — OANDA via Vercel proxy (real prices, no credits) ── */
+/* ── Price feed — directly from TV OANDA widget ─────────────────── */
+// TV Advanced Chart widget broadcasts real-time prices via postMessage
+// We capture them and sync our execution price with the chart price
+
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEED})
   const refPrev   = useRef<Record<string,number>>({...SEED})
   const refPrices = useRef<Record<string,number>>({...SEED})
+  // Track which TV symbol is currently active
+  const activeTvSym = useRef<string>('')
 
   const push = useCallback((sym:string, price:number)=>{
     if(!price||isNaN(price)||price<=0) return
@@ -94,41 +135,23 @@ function usePriceFeed() {
     setPrices(p => p[sym]===price ? p : {...p,[sym]:price})
   },[])
 
+  // Called when TV chart sends a price update for current symbol
+  const onTVPrice = useCallback((price: number) => {
+    const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
+    if (sym && price > 0) push(sym, price)
+  }, [push])
+
+  const setActiveSym = useCallback((tvSym: string) => {
+    activeTvSym.current = tvSym
+  }, [])
+
+  // Heartbeat — keep P&L updating every 500ms
   useEffect(()=>{
-    let dead = false
+    const iv = setInterval(()=> setPrices(p => ({...p})), 500)
+    return () => clearInterval(iv)
+  },[])
 
-    // OANDA TV symbols -> our symbols mapping
-    const TV_TO_SYM: Record<string,string> = {}
-    ALL_INSTRUMENTS.forEach(i => { TV_TO_SYM[(i as any).tv] = i.sym })
-
-    // Poll OANDA prices via our Vercel serverless proxy every 2 seconds
-    const poll = async () => {
-      if (dead) return
-      try {
-        const r = await fetch('/api/prices')
-        const d = await r.json()
-        console.log('[prices]', d.count, 'symbols, sample:', JSON.stringify(d.prices).slice(0,150))
-        if (d.ok && d.prices) {
-          for (const [sym, price] of Object.entries(d.prices) as [string,number][]) {
-            const inst = ALL_INSTRUMENTS.find(i=>i.sym===sym) as any
-            if (inst && price > 0) push(sym, +Number(price).toFixed(inst.dec))
-          }
-        }
-      } catch(e) { console.error('[prices error]', e) }
-    }
-
-    poll()
-    const iv = setInterval(poll, 2000)
-
-    // Heartbeat to keep P&L updating every 500ms
-    const hb = setInterval(()=>{
-      setPrices(p => ({...p}))
-    }, 500)
-
-    return () => { dead=true; clearInterval(iv); clearInterval(hb) }
-  },[push])
-
-  return { prices, refPrev, refPrices, push }
+  return { prices, refPrev, refPrices, push, onTVPrice, setActiveSym }
 }
 
 
@@ -190,7 +213,7 @@ export function PlatformPage() {
     try{return new Set(JSON.parse(localStorage.getItem('tfd_favs')||'[]'))}catch{return new Set(['EUR/USD','XAU/USD','NAS100'])}
   })
 
-  const {prices,refPrev,refPrices,push}=usePriceFeed()
+  const {prices,refPrev,refPrices,push,onTVPrice,setActiveSym}=usePriceFeed()
   const tradesRef =useRef(openTrades); tradesRef.current=openTrades
   const primaryRef=useRef(primary);    primaryRef.current=primary
   const closingRef=useRef<Set<string>>(new Set())
@@ -228,7 +251,11 @@ export function PlatformPage() {
   const reqMgn    = inst.lotUSD(execPrice)*lotsNum/LEVERAGE
   const maxLots   = freeMgn>0?Math.floor(freeMgn*LEVERAGE/inst.lotUSD(execPrice)*100)/100:0
 
-  useEffect(()=>lsSet('tfd_sym',sym),[sym])
+  useEffect(()=>{
+    lsSet('tfd_sym',sym)
+    const tvSym = (ALL_INSTRUMENTS.find(i=>i.sym===sym) as any)?.tv
+    if (tvSym) setActiveSym(tvSym)
+  },[sym])
   useEffect(()=>lsSet('tfd_tf',tf),[tf])
 
   useEffect(()=>{
@@ -431,7 +458,7 @@ export function PlatformPage() {
           </div>
           {/* Chart */}
           <div style={{flex:1}}>
-            <TVChart tvSym={inst.tv} interval={tf}/>
+            <TVChart tvSym={inst.tv} interval={tf} onPrice={onTVPrice}/>
           </div>
         </div>
 
