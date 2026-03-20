@@ -1,82 +1,66 @@
-// Vercel serverless — fetches OANDA practice API prices (free, real-time, no credits)
-// OANDA practice API is free with any free account
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-
-// OANDA instrument name -> our symbol
-const OANDA_MAP: Record<string,string> = {
-  'EUR_USD':'EUR/USD','GBP_USD':'GBP/USD','USD_JPY':'USD/JPY','USD_CHF':'USD/CHF',
-  'AUD_USD':'AUD/USD','USD_CAD':'USD/CAD','NZD_USD':'NZD/USD','GBP_JPY':'GBP/JPY',
-  'EUR_JPY':'EUR/JPY','EUR_GBP':'EUR/GBP','AUD_JPY':'AUD/JPY','CAD_JPY':'CAD/JPY',
-  'XAU_USD':'XAU/USD','XAG_USD':'XAG/USD',
-  'NAS100_USD':'NAS100','SPX500_USD':'US500','US30_USD':'US30',
-  'DE30_EUR':'GER40','BCO_USD':'WTI',
-}
-
-const INSTRUMENTS = Object.keys(OANDA_MAP).join('%2C')
-const OANDA_API_KEY = process.env.OANDA_API_KEY || ''
-const OANDA_ACCOUNT = process.env.OANDA_ACCOUNT_ID || ''
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Cache-Control', 'no-store')
+  res.setHeader('Cache-Control', 'no-store, max-age=0')
 
-  // If no OANDA key, use Yahoo Finance as fallback
-  if (!OANDA_API_KEY) {
-    return fallbackYahoo(res)
-  }
+  const result: Record<string, number> = {}
 
-  try {
-    const r = await fetch(
-      `https://api-fxpractice.oanda.com/v3/accounts/${OANDA_ACCOUNT}/pricing?instruments=${INSTRUMENTS}`,
-      { headers: { 'Authorization': `Bearer ${OANDA_API_KEY}`, 'Content-Type': 'application/json' } }
-    )
-    const d = await r.json()
-    const result: Record<string,number> = {}
-    for (const p of d.prices ?? []) {
-      const sym = OANDA_MAP[p.instrument]
-      if (!sym) continue
-      const bid = parseFloat(p.bids?.[0]?.price ?? '0')
-      const ask = parseFloat(p.asks?.[0]?.price ?? '0')
-      const mid = (bid + ask) / 2
-      if (mid > 0) result[sym] = mid
-    }
-    return res.json({ ok: true, prices: result })
-  } catch (e: any) {
-    return fallbackYahoo(res)
-  }
-}
+  // Fetch from multiple sources in parallel
+  await Promise.allSettled([
 
-async function fallbackYahoo(res: VercelResponse) {
-  // Yahoo Finance fallback — free, real-time
-  const tickers = [
-    'EURUSD=X','GBPUSD=X','USDJPY=X','USDCHF=X','AUDUSD=X','USDCAD=X','NZDUSD=X',
-    'GBPJPY=X','EURJPY=X','EURGBP=X','AUDJPY=X','CADJPY=X',
-    'XAUUSD=X','XAGUSD=X',
-    'NQ=F','ES=F','YM=F','DAX=F','CL=F',
-  ].join(',')
+    // 1. Forex + Metals via exchangerate.host (free, no key, real-time)
+    fetch('https://api.exchangerate.host/live?access_key=free&source=USD&currencies=EUR,GBP,JPY,CHF,AUD,CAD,NZD,XAU,XAG')
+      .then(r => r.json())
+      .then(d => {
+        if (!d?.quotes) return
+        const q = d.quotes
+        const safe = (v: number) => v && isFinite(v) && v > 0 ? v : 0
+        if (safe(q.USDEUR)) result['EUR/USD'] = +((1/q.USDEUR)).toFixed(5)
+        if (safe(q.USDGBP)) result['GBP/USD'] = +((1/q.USDGBP)).toFixed(5)
+        if (safe(q.USDJPY)) result['USD/JPY'] = +(q.USDJPY).toFixed(3)
+        if (safe(q.USDCHF)) result['USD/CHF'] = +(q.USDCHF).toFixed(5)
+        if (safe(q.USDAUD)) result['AUD/USD'] = +((1/q.USDAUD)).toFixed(5)
+        if (safe(q.USDCAD)) result['USD/CAD'] = +(q.USDCAD).toFixed(5)
+        if (safe(q.USDNZD)) result['NZD/USD'] = +((1/q.USDNZD)).toFixed(5)
+        if (safe(q.USDJPY) && safe(q.USDGBP)) result['GBP/JPY'] = +((q.USDJPY/q.USDGBP)).toFixed(3)
+        if (safe(q.USDJPY) && safe(q.USDEUR)) result['EUR/JPY'] = +((q.USDJPY/q.USDEUR)).toFixed(3)
+        if (safe(q.USDGBP) && safe(q.USDEUR)) result['EUR/GBP'] = +((q.USDGBP/q.USDEUR)).toFixed(5)
+        if (safe(q.USDJPY) && safe(q.USDAUD)) result['AUD/JPY'] = +((q.USDJPY/q.USDAUD)).toFixed(3)
+        if (safe(q.USDJPY) && safe(q.USDCAD)) result['CAD/JPY'] = +((q.USDJPY/q.USDCAD)).toFixed(3)
+        if (safe(q.USDXAU)) result['XAU/USD'] = +((1/q.USDXAU)).toFixed(2)
+        if (safe(q.USDXAG)) result['XAG/USD'] = +((1/q.USDXAG)).toFixed(4)
+      }).catch(() => {}),
 
-  const yahooMap: Record<string,string> = {
-    'EURUSD=X':'EUR/USD','GBPUSD=X':'GBP/USD','USDJPY=X':'USD/JPY','USDCHF=X':'USD/CHF',
-    'AUDUSD=X':'AUD/USD','USDCAD=X':'USD/CAD','NZDUSD=X':'NZD/USD','GBPJPY=X':'GBP/JPY',
-    'EURJPY=X':'EUR/JPY','EURGBP=X':'EUR/GBP','AUDJPY=X':'AUD/JPY','CADJPY=X':'CAD/JPY',
-    'XAUUSD=X':'XAU/USD','XAGUSD=X':'XAG/USD',
-    'NQ=F':'NAS100','ES=F':'US500','YM=F':'US30','DAX=F':'GER40','CL=F':'WTI',
-  }
+    // 2. Indices via Yahoo Finance (real-time, free)
+    fetch('https://query1.finance.yahoo.com/v7/finance/quote?symbols=NQ%3DF%2CES%3DF%2CYM%3DF%2CDAX%3DF%2CCL%3DF', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    })
+      .then(r => r.json())
+      .then(d => {
+        const map: Record<string, string> = {
+          'NQ=F': 'NAS100', 'ES=F': 'US500', 'YM=F': 'US30',
+          'DAX=F': 'GER40', 'CL=F': 'WTI'
+        }
+        for (const q of d?.quoteResponse?.result ?? []) {
+          const sym = map[q.symbol]
+          if (sym && q.regularMarketPrice > 0) result[sym] = q.regularMarketPrice
+        }
+      }).catch(() => {}),
 
-  try {
-    const r = await fetch(
-      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers}`,
-      { headers: { 'User-Agent': 'Mozilla/5.0' } }
-    )
-    const d = await r.json()
-    const result: Record<string,number> = {}
-    for (const q of d?.quoteResponse?.result ?? []) {
-      const sym = yahooMap[q.symbol]
-      const price = q.regularMarketPrice
-      if (sym && price > 0) result[sym] = price
-    }
-    return res.json({ ok: true, prices: result })
-  } catch (e: any) {
-    return res.status(500).json({ ok: false, error: e.message })
-  }
+    // 3. Gold/Silver via Yahoo as backup
+    fetch('https://query1.finance.yahoo.com/v7/finance/quote?symbols=GC%3DF%2CSI%3DF', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    })
+      .then(r => r.json())
+      .then(d => {
+        for (const q of d?.quoteResponse?.result ?? []) {
+          if (q.symbol === 'GC=F' && q.regularMarketPrice > 0) result['XAU/USD'] = q.regularMarketPrice
+          if (q.symbol === 'SI=F' && q.regularMarketPrice > 0) result['XAG/USD'] = q.regularMarketPrice
+        }
+      }).catch(() => {})
+
+  ])
+
+  res.json({ ok: true, prices: result, t: Date.now(), count: Object.keys(result).length })
 }

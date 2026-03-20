@@ -36,7 +36,7 @@ const SEED: Record<string,number> = {
   'AUD/USD':0.6280,'USD/CAD':1.4380,'NZD/USD':0.5720,'GBP/JPY':193.20,
   'EUR/JPY':161.50,'EUR/GBP':0.8350,'AUD/JPY':93.70,'CAD/JPY':103.80,
   'XAU/USD':4700.0,'XAG/USD':47.50,
-  'NAS100':19800,'US500':5580,'US30':41700,'GER40':22500,'WTI':68.50,
+  'NAS100':24300,'US500':5400,'US30':43800,'GER40':22500,'WTI':68.50,
 }
 
 const TF_LIST = ['1','5','15','30','60','240','D','W']
@@ -107,13 +107,14 @@ function usePriceFeed() {
       try {
         const r = await fetch('/api/prices')
         const d = await r.json()
+        console.log('[prices]', d.count, 'symbols, sample:', JSON.stringify(d.prices).slice(0,150))
         if (d.ok && d.prices) {
           for (const [sym, price] of Object.entries(d.prices) as [string,number][]) {
             const inst = ALL_INSTRUMENTS.find(i=>i.sym===sym) as any
             if (inst && price > 0) push(sym, +Number(price).toFixed(inst.dec))
           }
         }
-      } catch {}
+      } catch(e) { console.error('[prices error]', e) }
     }
 
     poll()
