@@ -34,26 +34,30 @@ export function MarketingPage() {
     <div style={S.page}>
 
       {/* ── NAV ── */}
-      <nav style={S.nav}>
-        <a href="/" style={S.logo}>The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span></a>
-        <div style={{display:'flex',flex:'0 0 auto'}}>
-          {[['How It Works','#how'],['Challenge Plans','#plans'],['Payouts','#payouts'],['Features','#features'],['FAQ','#faq']].map(([l,h])=>(
-            <a key={l} href={h} style={{fontSize:'12px',fontWeight:500,color:'#5C7A9E',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s'}}
-              onMouseEnter={e=>(e.currentTarget.style.color='#1A3A6B')} onMouseLeave={e=>(e.currentTarget.style.color='#5C7A9E')}>{l}</a>
-          ))}
-        </div>
-        <div style={{display:'flex',gap:'10px',marginLeft:'32px',flexShrink:0}}>
-          {isLoggedIn ? (
-            <button onClick={()=>navigate('/dashboard')} style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>Dashboard →</button>
-          ) : (
-            <>
-              <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:500,color:'#1A3A6B',padding:'8px 18px',border:'1.5px solid #C5D5EA',background:'#fff',borderRadius:'8px',cursor:'pointer'}}>Log in</button>
-              <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>Get started</button>
-            </>
+      <nav style={{...S.nav, padding: isMobile ? '0 16px' : undefined}}>
+        <div style={{maxWidth:'1400px',width:'100%',margin:'0 auto',height:'64px',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center'}}>
+          <a href="/" style={S.logo}>The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span></a>
+          {!isMobile && (
+            <div style={{display:'flex'}}>
+              {[['How It Works','#how'],['Challenge Plans','#plans'],['Payouts','#payouts'],['Features','#features'],['FAQ','#faq']].map(([l,h])=>(
+                <a key={l} href={h} style={{fontSize:'12px',fontWeight:500,color:'#5C7A9E',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s'}}
+                  onMouseEnter={e=>(e.currentTarget.style.color='#1A3A6B')} onMouseLeave={e=>(e.currentTarget.style.color='#5C7A9E')}>{l}</a>
+              ))}
+            </div>
           )}
+          {isMobile && <div/>}
+          <div style={{display:'flex',gap:'8px',justifyContent:'flex-end'}}>
+            {isLoggedIn ? (
+              <button onClick={()=>navigate('/dashboard')} style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>Dashboard →</button>
+            ) : (
+              <>
+                {!isMobile && <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:500,color:'#1A3A6B',padding:'8px 18px',border:'1.5px solid #C5D5EA',background:'#fff',borderRadius:'8px',cursor:'pointer'}}>Log in</button>}
+                <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>{isMobile ? 'Start' : 'Get started'}</button>
+              </>
+            )}
+          </div>
         </div>
       </nav>
-      )}
 
       {/* ── HERO ── */}
       <div style={{padding:isMobile?'40px 20px 48px':'96px 48px 80px', background:'#fff', borderBottom:'1px solid #E8EEF8', maxWidth:'960px', margin:'0 auto'}}>
