@@ -129,13 +129,63 @@ export function MarketingPage() {
                   <div style={{fontSize:'11px',fontWeight:600,color:'#8FA3BF',letterSpacing:'1.5px',textTransform:'uppercase',marginBottom:'20px'}}>{p.name}</div>
                   <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'32px',fontWeight:500,color:'#2255CC',marginBottom:'3px'}}>${p.price_usd}</div>
                   <div style={{fontSize:'12px',color:'#8FA3BF',marginBottom:'22px'}}>One-time · no subscriptions</div>
-                  <div style={{height:'1px',background:'#E8EEF8',marginBottom:'18px'}}/>
-                  {[['Phase 1 target',`${p.ph1_profit_target}%`],['Daily drawdown',`${p.ph1_daily_dd}%`],['Profit split',`${p.funded_profit_split}%`]].map(([l,v])=>(
-                    <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'10px',fontSize:'13px'}}>
+                  <div style={{height:'1px',background:'#E8EEF8',marginBottom:'14px'}}/>
+
+                  {/* Phase 1 */}
+                  <div style={{fontSize:'8px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>Phase 1</div>
+                  {[
+                    ['Profit target', `${p.ph1_profit_target}%`],
+                    ['Daily drawdown', `${p.ph1_daily_dd}%`],
+                    ['Max drawdown', `${p.ph1_max_dd ?? 10}%`],
+                    ['Min days', p.ph1_min_days ? `${p.ph1_min_days}` : 'None'],
+                  ].map(([l,v])=>(
+                    <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
                       <span style={{color:'#5C7A9E'}}>{l}</span>
-                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:500,color:'#1A3A6B'}}>{v}</span>
+                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:'#1A3A6B'}}>{v}</span>
                     </div>
                   ))}
+
+                  {/* Phase 2 — only for 2-step */}
+                  {p.challenge_type === '2step' && (
+                    <>
+                      <div style={{height:'1px',background:'#E8EEF8',margin:'10px 0 8px'}}/>
+                      <div style={{fontSize:'8px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>Phase 2</div>
+                      {[
+                        ['Profit target', `${p.ph2_profit_target ?? 5}%`],
+                        ['Daily drawdown', `${p.ph2_daily_dd ?? p.ph1_daily_dd}%`],
+                        ['Max drawdown', `${p.ph2_max_dd ?? p.ph1_max_dd ?? 10}%`],
+                      ].map(([l,v])=>(
+                        <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
+                          <span style={{color:'#5C7A9E'}}>{l}</span>
+                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:'#1A3A6B'}}>{v}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Funded */}
+                  <div style={{height:'1px',background:'#E8EEF8',margin:'10px 0 8px'}}/>
+                  <div style={{fontSize:'8px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>Funded</div>
+                  {[
+                    ['Profit split', `${p.funded_profit_split}%`],
+                    ['Daily drawdown', `${p.funded_daily_dd ?? p.ph1_daily_dd}%`],
+                    ['Max drawdown', `${p.funded_max_dd ?? p.ph1_max_dd ?? 10}%`],
+                  ].map(([l,v])=>(
+                    <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
+                      <span style={{color:'#5C7A9E'}}>{l}</span>
+                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:'#16A34A'}}>{v}</span>
+                    </div>
+                  ))}
+
+                  {/* Rules tags */}
+                  <div style={{display:'flex',gap:'6px',marginTop:'12px',flexWrap:'wrap'}}>
+                    <span style={{fontSize:'9px',fontWeight:600,padding:'2px 8px',borderRadius:'20px',background:p.news_trading?'rgba(22,163,74,.08)':'#F4F7FD',color:p.news_trading?'#16A34A':'#9CA3AF',border:`1px solid ${p.news_trading?'rgba(22,163,74,.2)':'#E8EEF8'}`}}>
+                      {p.news_trading ? '✓' : '✕'} News Trading
+                    </span>
+                    <span style={{fontSize:'9px',fontWeight:600,padding:'2px 8px',borderRadius:'20px',background:p.weekend_holding?'rgba(22,163,74,.08)':'#F4F7FD',color:p.weekend_holding?'#16A34A':'#9CA3AF',border:`1px solid ${p.weekend_holding?'rgba(22,163,74,.2)':'#E8EEF8'}`}}>
+                      {p.weekend_holding ? '✓' : '✕'} Weekend Hold
+                    </span>
+                  </div>
                   <button onClick={()=>navigate(`/checkout?product=${p.id}`)} style={{width:'100%',padding:'12px',fontSize:'12px',fontWeight:600,borderRadius:'8px',cursor:'pointer',border:'none',marginTop:'20px',background:featured?'#2255CC':'#F4F7FD',color:featured?'#fff':'#1A3A6B',transition:'all .2s'}}>
                     Get started
                   </button>
