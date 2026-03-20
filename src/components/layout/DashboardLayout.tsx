@@ -1,4 +1,3 @@
-import { useIsMobile } from '@/hooks/useIsMobile'
 import { useState, useEffect, useRef } from 'react'
 import { useMobile } from '@/hooks/useMobile'
 import { MobileNav } from './MobileNav'
@@ -92,7 +91,6 @@ function TraderNotifications({ userId }: { userId: string }) {
         </div>
       )}
     </div>
-    {isMobile && <MobileNav />}
   )
 }
 
@@ -161,7 +159,6 @@ function AdminNotifications() {
         </div>
       )}
     </div>
-    {isMobile && <MobileNav />}
   )
 }
 
@@ -219,6 +216,5 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
         </main>
       </div>
     </div>
-    {isMobile && <MobileNav />}
   )
 }
