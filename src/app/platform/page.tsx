@@ -83,34 +83,30 @@ function TVChart({tvSym, interval}: {tvSym:string; interval:string}) {
   return <div ref={ref} style={{width:'100%',height:'100%'}}/>
 }
 
-/* ── Price feed — Twelve Data WebSocket + REST ───────────────────── */
+/* ── Price feed — Twelve Data WebSocket ONLY (no REST = no credit usage) */
 const TD_KEY = 'c6158908260647989323da44b23f5f97'
 
-// Exact Twelve Data symbols for every instrument
-const TD_MAP: {our:string; td:string; type:string; dec:number}[] = [
-  {our:'EUR/USD', td:'EUR/USD',  type:'forex',     dec:5},
-  {our:'GBP/USD', td:'GBP/USD',  type:'forex',     dec:5},
-  {our:'USD/JPY', td:'USD/JPY',  type:'forex',     dec:3},
-  {our:'USD/CHF', td:'USD/CHF',  type:'forex',     dec:5},
-  {our:'AUD/USD', td:'AUD/USD',  type:'forex',     dec:5},
-  {our:'USD/CAD', td:'USD/CAD',  type:'forex',     dec:5},
-  {our:'NZD/USD', td:'NZD/USD',  type:'forex',     dec:5},
-  {our:'GBP/JPY', td:'GBP/JPY',  type:'forex',     dec:3},
-  {our:'EUR/JPY', td:'EUR/JPY',  type:'forex',     dec:3},
-  {our:'EUR/GBP', td:'EUR/GBP',  type:'forex',     dec:5},
-  {our:'AUD/JPY', td:'AUD/JPY',  type:'forex',     dec:3},
-  {our:'CAD/JPY', td:'CAD/JPY',  type:'forex',     dec:3},
-  {our:'XAU/USD', td:'XAU/USD',  type:'forex',     dec:2},
-  {our:'XAG/USD', td:'XAG/USD',  type:'forex',     dec:4},
-  {our:'NAS100',  td:'NDX',      type:'index',     dec:2},
-  {our:'US500',   td:'SPX',      type:'index',     dec:2},
-  {our:'US30',    td:'DJI',      type:'index',     dec:1},
-  {our:'GER40',   td:'DAX',      type:'index',     dec:1},
-  {our:'WTI',     td:'WTI/USD',  type:'commodity', dec:2},
+const TD_MAP: {our:string; td:string; dec:number}[] = [
+  {our:'EUR/USD', td:'EUR/USD',  dec:5},
+  {our:'GBP/USD', td:'GBP/USD',  dec:5},
+  {our:'USD/JPY', td:'USD/JPY',  dec:3},
+  {our:'USD/CHF', td:'USD/CHF',  dec:5},
+  {our:'AUD/USD', td:'AUD/USD',  dec:5},
+  {our:'USD/CAD', td:'USD/CAD',  dec:5},
+  {our:'NZD/USD', td:'NZD/USD',  dec:5},
+  {our:'GBP/JPY', td:'GBP/JPY',  dec:3},
+  {our:'EUR/JPY', td:'EUR/JPY',  dec:3},
+  {our:'EUR/GBP', td:'EUR/GBP',  dec:5},
+  {our:'AUD/JPY', td:'AUD/JPY',  dec:3},
+  {our:'CAD/JPY', td:'CAD/JPY',  dec:3},
+  {our:'XAU/USD', td:'XAU/USD',  dec:2},
+  {our:'XAG/USD', td:'XAG/USD',  dec:4},
+  {our:'NAS100',  td:'NDX',      dec:2},
+  {our:'US500',   td:'SPX',      dec:2},
+  {our:'US30',    td:'DJI',      dec:1},
+  {our:'GER40',   td:'DAX',      dec:1},
+  {our:'WTI',     td:'WTI/USD',  dec:2},
 ]
-
-const TD_TO_OUR: Record<string,string> = {}
-TD_MAP.forEach(m => { TD_TO_OUR[m.td] = m.our })
 
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEED})
@@ -125,21 +121,20 @@ function usePriceFeed() {
   },[])
 
   useEffect(()=>{
-    let dead=false, ws:WebSocket, wsTimer:any, pollTimer:any
+    let dead=false, ws:WebSocket, wsTimer:any
 
-    // WebSocket — real-time for forex+metals (free plan: up to 8 symbols)
-    const wsSyms = TD_MAP.filter(m=>m.type==='forex').map(m=>m.td).slice(0,8)
     const connect = () => {
       if (dead) return
       try {
         ws = new WebSocket(`wss://ws.twelvedata.com/v1/quotes/price?apikey=${TD_KEY}`)
         ws.onopen = () => {
-          ws.send(JSON.stringify({ action:'subscribe', params:{ symbols: wsSyms.join(',') } }))
+          // Subscribe ALL symbols at once — WS is unlimited on free plan
+          const allSyms = TD_MAP.map(m=>m.td).join(',')
+          ws.send(JSON.stringify({ action:'subscribe', params:{ symbols: allSyms } }))
         }
         ws.onmessage = ({data}) => {
           try {
             const d = JSON.parse(data)
-            console.log('[TD WS]', JSON.stringify(d).slice(0,100))
             if (d.event==='price' && d.symbol && d.price) {
               const m = TD_MAP.find(x=>x.td===d.symbol)
               if (m) push(m.our, +parseFloat(d.price).toFixed(m.dec))
@@ -151,34 +146,9 @@ function usePriceFeed() {
       } catch { if (!dead) wsTimer=setTimeout(connect,3000) }
     }
 
-    // REST — ALL symbols every 5s
-    const poll = async () => {
-      if (dead) return
-      try {
-        const syms = TD_MAP.map(m=>m.td).join(',')
-        const r = await fetch(`https://api.twelvedata.com/price?symbol=${encodeURIComponent(syms)}&apikey=${TD_KEY}`)
-        const d = await r.json()
-        console.log('[TD REST]', JSON.stringify(d).slice(0,300))
-        // Response is either {price:'1.085'} for single or {'EUR/USD':{price:'1.085'},...} for multiple
-        if (d.price) {
-          // Single symbol response — shouldn't happen but handle it
-        } else {
-          for (const [tdSym, val] of Object.entries(d) as [string,any][]) {
-            if (!val?.price) continue
-            const price = parseFloat(val.price)
-            const m = TD_MAP.find(x=>x.td===tdSym)
-            if (m && price>0) push(m.our, +price.toFixed(m.dec))
-          }
-        }
-      } catch {}
-    }
-
     connect()
-    poll()
-    pollTimer = setInterval(poll, 5000)
     return () => {
-      dead=true
-      clearTimeout(wsTimer); clearInterval(pollTimer)
+      dead=true; clearTimeout(wsTimer)
       try{ws?.close()}catch{}
     }
   },[push])
