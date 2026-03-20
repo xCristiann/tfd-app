@@ -32,7 +32,7 @@ const ALL_INSTRUMENTS = [
   { sym:'WTI',     tv:'OANDA:WTICOUSD',   market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
 
-// Seed prices — shown briefly before Polygon REST poll connects (~1-3 seconds)
+// Seed prices — shown briefly before APIs connect (~2-5 seconds)
 // Updated to approximate current market levels (Mar 2025)
 const SEED: Record<string,number> = {
   'EUR/USD':1.0850,'GBP/USD':1.2940,'USD/JPY':149.50,'USD/CHF':0.8840,
@@ -49,33 +49,61 @@ function lsGet(k:string,fb:string){try{return localStorage.getItem(k)||fb}catch{
 function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
 
 /* ── TradingView Widget ───────────────────────────────────────────── */
-/* ── Price Feed Strategy ───────────────────────────────────────────
-   Source: Polygon.io REST API (free tier, no auth issues, CORS ok)
-   - Forex/Metals: /v2/snapshot/locale/global/markets/forex/tickers
-   - Indices: /v2/aggs/ticker/{ticker}/prev (previous close as baseline)
-             + /v2/snapshot for real-time when market open
-   Poll interval: 3 seconds (well within free tier limits)
-   Polygon key: G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO
-   ──────────────────────────────────────────────────────────────── */
-const POLY_KEY = 'G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO'
+/* ── Price Feed: 100% free, zero API keys, zero 403s ────────────
+   Forex:   open.er-api.com/v6/latest/USD  (free, CORS, ~60s update)
+   Metals:  metals-api via allorigins proxy (Yahoo Finance GC=F, SI=F)
+   Indices: Yahoo Finance via allorigins proxy (^NDX, ^GSPC, ^DJI, ^GDAXI)
+   ─────────────────────────────────────────────────────────────── */
 
-// Forex/metals symbol map: our sym -> Polygon C: ticker
-const POLY_FOREX: Record<string,string> = {
-  'EUR/USD':'C:EURUSD','GBP/USD':'C:GBPUSD','USD/JPY':'C:USDJPY',
-  'USD/CHF':'C:USDCHF','AUD/USD':'C:AUDUSD','USD/CAD':'C:USDCAD',
-  'NZD/USD':'C:NZDUSD','GBP/JPY':'C:GBPJPY','EUR/JPY':'C:EURJPY',
-  'EUR/GBP':'C:EURGBP','AUD/JPY':'C:AUDJPY','CAD/JPY':'C:CADJPY',
-  'XAU/USD':'C:XAUUSD','XAG/USD':'C:XAGUSD',
-}
-// Index/energy ETF proxies (Polygon free supports stocks, not index futures)
-const POLY_STOCKS: Record<string,{ticker:string;mult:number}> = {
-  'NAS100': {ticker:'QQQ',  mult:40.5},
-  'US500':  {ticker:'SPY',  mult:10},
-  'US30':   {ticker:'DIA',  mult:100},
-  'GER40':  {ticker:'EWG',  mult:740},
-  'WTI':    {ticker:'USO',  mult:8},
+// open.er-api.com: USD base → all pairs.  sym → field in response
+const ER_API = 'https://open.er-api.com/v6/latest/USD'
+
+// Yahoo Finance symbols for metals + indices (via allorigins)
+const YAHOO_SYMS: Record<string,string> = {
+  'XAU/USD': 'GC=F',
+  'XAG/USD': 'SI=F',
+  'NAS100':  '%5ENDX',
+  'US500':   '%5EGSPC',
+  'US30':    '%5EDJI',
+  'GER40':   '%5EGDAXI',
+  'WTI':     'CL=F',
 }
 
+// Invert: for USD/XXX pairs the API gives us XXX per 1 USD
+// For EUR/USD we need USD per 1 EUR = 1/rates.EUR
+const deriveForex = (rates: Record<string,number>): Record<string,number> => {
+  const r = rates
+  const inv = (x: number) => x > 0 ? Math.round((1/x)*100000)/100000 : 0
+  return {
+    'EUR/USD': inv(r['EUR'] ?? 0),
+    'GBP/USD': inv(r['GBP'] ?? 0),
+    'AUD/USD': inv(r['AUD'] ?? 0),
+    'NZD/USD': inv(r['NZD'] ?? 0),
+    'USD/JPY': r['JPY'] ?? 0,
+    'USD/CHF': r['CHF'] ?? 0,
+    'USD/CAD': r['CAD'] ?? 0,
+    'GBP/JPY': inv(r['GBP'] ?? 0) * (r['JPY'] ?? 0),
+    'EUR/JPY': inv(r['EUR'] ?? 0) * (r['JPY'] ?? 0),
+    'EUR/GBP': r['GBP'] && r['EUR'] ? Math.round((r['GBP']/r['EUR'])*100000)/100000 : 0,
+    'AUD/JPY': inv(r['AUD'] ?? 0) * (r['JPY'] ?? 0),
+    'CAD/JPY': inv(r['CAD'] ?? 0) * (r['JPY'] ?? 0),
+  }
+}
+
+async function fetchYahooPrice(yahooSym: string): Promise<number> {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1m&range=1d`
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+  try {
+    const r = await fetch(proxy)
+    const d = await r.json()
+    const body = typeof d.contents === 'string' ? JSON.parse(d.contents) : d
+    const closes: (number|null)[] = body?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? []
+    for (let i = closes.length-1; i >= 0; i--) {
+      if (closes[i] != null && closes[i]! > 0) return closes[i]!
+    }
+  } catch {}
+  return 0
+}
 
 // TV widget global callbacks (kept as backup)
 const _tvPriceCallbacks: Record<string, (price:number)=>void> = {}
@@ -141,10 +169,11 @@ function TVChart({tvSym, interval, onPrice}: {tvSym:string; interval:string; onP
   return <div ref={ref} style={{width:'100%',height:'100%'}}/>
 }
 
-/* ── Price feed — Polygon.io REST polling (free, CORS-enabled, reliable)
-   Polls every 3 seconds. Prices match TradingView because Polygon sources
-   the same interbank data. No WebSocket needed — REST is stable.
-   ─────────────────────────────────────────────────────────────────────── */
+/* ── Price feed — free APIs, no key, no CORS errors ─────────────────
+   Forex:   open.er-api.com  (ECB/interbank rates, free, no key)
+   Metals + Indices: Yahoo Finance via allorigins.win proxy
+   Poll: every 5s forex, every 10s metals/indices (rate limits safe)
+   ─────────────────────────────────────────────────────────────── */
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEED})
   const refPrev   = useRef<Record<string,number>>({...SEED})
@@ -161,62 +190,43 @@ function usePriceFeed() {
   useEffect(()=>{
     let dead = false
 
+    // ── Forex rates from open.er-api.com (no key, CORS ok) ──────────
     const pollForex = async () => {
       if(dead) return
       try{
-        // Batch all forex/metals C: tickers in one request
-        const tickers = Object.values(POLY_FOREX).join(',')
-        const r = await fetch(
-          `https://api.polygon.io/v2/snapshot/locale/global/markets/forex/tickers?tickers=${tickers}&apiKey=${POLY_KEY}`
-        )
+        const r = await fetch(ER_API)
         const d = await r.json()
-        if(d.tickers){
-          for(const t of d.tickers){
-            const sym = Object.entries(POLY_FOREX).find(([,v])=>v===t.ticker)?.[0]
-            if(!sym) continue
-            // Use midpoint of bid/ask, or day close, or last quote
-            const price =
-              t.lastQuote?.midpoint ||
-              ((t.lastQuote?.ask||0) + (t.lastQuote?.bid||0)) / 2 ||
-              t.day?.c ||
-              t.lastTrade?.p || 0
-            if(price > 0) push(sym, price)
-          }
+        if(d.result !== 'success' || !d.rates) return
+        const derived = deriveForex(d.rates)
+        for(const [sym, price] of Object.entries(derived)){
+          if(price > 0) push(sym, price)
         }
       }catch{}
     }
 
-    const pollStocks = async () => {
+    // ── Metals + Indices from Yahoo Finance via allorigins ───────────
+    const pollYahoo = async () => {
       if(dead) return
-      try{
-        // ETF proxies for indices — batch snapshot
-        const tickers = Object.values(POLY_STOCKS).map(s=>s.ticker).join(',')
-        const r = await fetch(
-          `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${tickers}&apiKey=${POLY_KEY}`
-        )
-        const d = await r.json()
-        if(d.tickers){
-          for(const t of d.tickers){
-            const entry = Object.entries(POLY_STOCKS).find(([,v])=>v.ticker===t.ticker)
-            if(!entry) continue
-            const [sym, {mult}] = entry
-            const etfPrice = t.day?.c || t.lastTrade?.p || t.prevDay?.c || 0
-            if(etfPrice > 0) push(sym, Math.round(etfPrice * mult * 10) / 10)
-          }
-        }
-      }catch{}
+      await Promise.allSettled(
+        Object.entries(YAHOO_SYMS).map(async ([sym, ySym]) => {
+          const price = await fetchYahooPrice(ySym)
+          if(price > 0) push(sym, price)
+        })
+      )
     }
 
-    // Initial fetch immediately
+    // Fire immediately
     pollForex()
-    pollStocks()
+    pollYahoo()
 
-    // Poll every 3 seconds
-    const iv = setInterval(()=>{ pollForex(); pollStocks() }, 3000)
-    return ()=>{ dead=true; clearInterval(iv) }
+    // Forex every 5s, Yahoo every 15s (allorigins has rate limits)
+    const ivForex = setInterval(pollForex, 5000)
+    const ivYahoo = setInterval(pollYahoo, 15000)
+
+    return ()=>{ dead=true; clearInterval(ivForex); clearInterval(ivYahoo) }
   },[push])
 
-  // TV postMessage backup — use if Polygon hasn't updated price yet
+  // TV postMessage: use only if no price from APIs yet (cold start)
   const onTVPrice = useCallback((price: number) => {
     const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
     if(sym && price > 0 && refPrices.current[sym] === SEED[sym]) push(sym, price)
@@ -234,7 +244,6 @@ function usePriceFeed() {
 
   return { prices, refPrev, refPrices, push, onTVPrice, setActiveSym }
 }
-
 
 /* ── P&L ──────────────────────────────────────────────────────────── */
 function calcPnl(trade:any, price:number): number {
@@ -566,7 +575,7 @@ export function PlatformPage() {
                   background: livePrice!==SEED[sym] ? '#4ADE80' : '#8FA3BF',
                   boxShadow: livePrice!==SEED[sym] ? '0 0 5px #4ADE80' : 'none',
                   animation: livePrice!==SEED[sym] ? 'livePulse 2s infinite' : 'none',
-                }} title={livePrice!==SEED[sym]?'Live price from Polygon':'Connecting…'}/>
+                }} title={livePrice!==SEED[sym]?'Live price':'Connecting to price feed…'}/>
               </div>
               <div style={{...mono,fontSize:'22px',fontWeight:700,color:dir==='buy'?'#16A34A':'#DC2626'}}>
                 {execPrice.toFixed(inst.dec)}
