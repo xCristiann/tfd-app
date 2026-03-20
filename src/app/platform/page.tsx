@@ -13,11 +13,10 @@ const LOT_SIZE = 100_000
    DATA STRATEGY
    ─────────────────────────────────────────────────────────────────
    Live prices: Polygon.io WebSocket (forex real-time)
-                + Polygon REST snapshot (indices + metals)
+                + Polygon WebSocket real-time
    Candles:     Polygon.io REST /v2/aggs (real OHLC, up to date, free)
    API key:     G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO
    ═══════════════════════════════════════════════════════════════════ */
-const POLY = 'G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO'
 
 /* ── All instruments ─────────────────────────────────────────────── */
 const ALL_INSTRUMENTS = [
@@ -142,7 +141,7 @@ function loadLWC():Promise<void>{
 
 /* ── Polygon candles ─────────────────────────────────────────────── */
 async function fetchCandles(polyTicker:string, tf:string, idxMult=1):Promise<Candle[]>{
-  const {mult,span,daysBack}=TF_CONFIG[tf]??TF_CONFIG.H1
+  const {mult,span,daysBack}=TF_CONFIG[tf]??TF_CONFIG['H1']
   const to=new Date(), from=new Date(Date.now()-daysBack*86400*1000)
   const fmtDate=(d:Date)=>d.toISOString().split('T')[0]
   const url=`https://api.polygon.io/v2/aggs/ticker/${polyTicker}/range/${mult}/${span}/${fmtDate(from)}/${fmtDate(to)}?adjusted=true&sort=asc&limit=50000&apiKey=${POLY}`
@@ -227,7 +226,7 @@ function CandleChart({sym,tf,livePrice,onLastClose,openTrades,onUpdateSLTP}:Char
   // Update live candle
   useEffect(()=>{
     if(!serRef.current||livePrice<=0)return
-    const sec=TF_CONFIG[tf].sec
+    const sec=(TF_CONFIG[tf]??TF_CONFIG.H1).sec
     const now=Math.floor(Date.now()/1000)
     const cTime=Math.floor(now/sec)*sec
     const prev=lastRef.current
@@ -318,7 +317,9 @@ function calcPnl(trade:any,price:number):number{
   return diff*units*trade.lots
 }
 
-/* ── Price feed ──────────────────────────────────────────────────── */
+/* ── Price feed — Polygon WebSocket real-time ───────────────────── */
+const POLY='G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO'
+
 function usePriceFeed(){
   const [prices,setPrices]=useState<Record<string,number>>({...SEED})
   const refPrev  =useRef<Record<string,number>>({...SEED})
@@ -332,9 +333,8 @@ function usePriceFeed(){
   },[])
 
   useEffect(()=>{
-    let dead=false,ws:WebSocket,wsTimer:ReturnType<typeof setTimeout>,pollTimer:ReturnType<typeof setInterval>
+    let dead=false,ws:WebSocket,wsTimer:ReturnType<typeof setTimeout>
 
-    // Polygon Forex WebSocket
     const connectWS=()=>{
       if(dead)return
       try{
@@ -345,13 +345,16 @@ function usePriceFeed(){
             const msgs:any[]=JSON.parse(data)
             for(const msg of msgs){
               if(msg.ev==='status'&&msg.status==='auth_success'){
-                const subs=ALL_INSTRUMENTS.filter(i=>i.poly.startsWith('C:')).map(i=>`C.${i.sym}`).join(',')
+                // Subscribe to all forex + metals
+                const subs=ALL_INSTRUMENTS
+                  .filter(i=>i.poly.startsWith('C:'))
+                  .map(i=>`C.${i.sym}`).join(',')
                 ws.send(JSON.stringify({action:'subscribe',params:subs}))
               }
               if(msg.ev==='C'&&msg.p){
                 const mid=((msg.bp||0)+(msg.ap||0))/2||msg.l||0
                 const inst=ALL_INSTRUMENTS.find(i=>i.sym===msg.p)
-                if(inst&&mid>0)push(inst.sym,mid)
+                if(inst&&mid>0)push(inst.sym,+mid.toFixed(inst.dec))
               }
             }
           }catch{}
@@ -361,48 +364,8 @@ function usePriceFeed(){
       }catch{if(!dead)wsTimer=setTimeout(connectWS,3000)}
     }
 
-    // REST poll — indices (Polygon prev day) + all instruments as backup
-    const pollAll=async()=>{
-      if(dead)return
-
-      // 1. Forex + Metals snapshot (C: tickers)
-      const forexTickers=ALL_INSTRUMENTS.filter(i=>i.poly.startsWith('C:')).map(i=>i.poly).join(',')
-      try{
-        const r=await fetch(`https://api.polygon.io/v2/snapshot/locale/global/markets/forex/tickers?tickers=${forexTickers}&apiKey=${POLY}`)
-        const d=await r.json()
-        if(d.tickers){for(const t of d.tickers){
-          const inst=ALL_INSTRUMENTS.find(i=>i.poly===t.ticker)
-          if(!inst)continue
-          // Try multiple price fields in order of preference
-          const price=t.lastQuote?.mp // midpoint
-            ||((t.lastQuote?.ap||0)+(t.lastQuote?.bp||0))/2
-            ||t.day?.c||t.lastTrade?.p||0
-          if(price>0)push(inst.sym,price)
-        }}
-      }catch{}
-
-      // 2. ETF stocks snapshot for indices (Polygon free supports stocks)
-      const idxInsts=(ALL_INSTRUMENTS as any[]).filter(i=>i.idxMult)
-      const etfTickers=idxInsts.map((i:any)=>i.poly).join(',')
-      try{
-        const r=await fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${etfTickers}&apiKey=${POLY}`)
-        const d=await r.json()
-        if(d.tickers){for(const t of d.tickers){
-          const inst=idxInsts.find((i:any)=>i.poly===t.ticker)
-          if(!inst)continue
-          const etfPrice=t.day?.c||t.lastTrade?.p||t.prevDay?.c||0
-          if(etfPrice>0)push(inst.sym, Math.round(etfPrice*(inst as any).idxMult*10)/10)
-        }}
-      }catch{}
-    }
-
     connectWS()
-    pollAll()
-    pollTimer=setInterval(pollAll,2000)
-    return ()=>{
-      dead=true;clearTimeout(wsTimer);clearInterval(pollTimer)
-      try{ws?.close()}catch{}
-    }
+    return()=>{dead=true;clearTimeout(wsTimer);try{ws?.close()}catch{}}
   },[push])
 
   return {prices,refPrev,refPrices,push}
