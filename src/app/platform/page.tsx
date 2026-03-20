@@ -113,28 +113,35 @@ function CandleChart({ sym, tf, livePrice, openTrades, onUpdateSLTP }: ChartProp
       })
       ro.observe(el)
 
-      // Fetch candle history from our API
-      try {
-        const r = await fetch(`/api/candles?sym=${encodeURIComponent(sym)}&tf=${tf}`, {
-          signal: AbortSignal.timeout(10000)
-        })
-        if (r.ok) {
-          const d = await r.json()
-          if (d.candles?.length > 0) {
+      // Fetch candle history — retry once on failure
+      const fetchCandles = async () => {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const r = await fetch(`/api/candles?sym=${encodeURIComponent(sym)}&tf=${tf}`, {
+              signal: AbortSignal.timeout(12000)
+            })
+            if (!r.ok) { await new Promise(r=>setTimeout(r,1000)); continue }
+            const d = await r.json()
+            if (!d.candles?.length) { await new Promise(r=>setTimeout(r,1000)); continue }
+
             series.setData(d.candles)
             lastRef.current = d.candles[d.candles.length - 1]
             chart.timeScale().fitContent()
-            // CRITICAL: seed live price from latest candle close
-            // This ensures our price = chart price from the start
-            if (d.latestPrice > 0) {
-              // Use latestPrice from API meta (most accurate)
-              ;(window as any).__tfd_push?.(sym, d.latestPrice)
-            } else {
-              ;(window as any).__tfd_push?.(sym, lastRef.current.close)
-            }
-          }
+
+            // Seed live price from API meta (most accurate current price)
+            const seedPrice = d.latestPrice > 0 ? d.latestPrice : lastRef.current.close
+            if (seedPrice > 0) (window as any).__tfd_push?.(sym, seedPrice)
+            return // success
+          } catch { await new Promise(r=>setTimeout(r,1000)) }
         }
-      } catch {}
+        // Fallback: show a placeholder candle at SEED price
+        const seedP = (window as any).__tfd_seeds?.[sym] ?? 0
+        if (seedP > 0) {
+          const now = Math.floor(Date.now()/1000)
+          series.setData([{time:now-3600,open:seedP,high:seedP,low:seedP,close:seedP},{time:now,open:seedP,high:seedP,low:seedP,close:seedP}])
+        }
+      }
+      fetchCandles()
 
       return () => ro.disconnect()
     })
@@ -223,10 +230,14 @@ function usePriceFeed() {
     setPrices(p => ({...p, [sym]: price}))
   }, [])
 
-  // Expose push globally so CandleChart can seed price after candle load
+  // Expose push + seeds globally for CandleChart
   useEffect(() => {
-    (window as any).__tfd_push = push
-    return () => { delete (window as any).__tfd_push }
+    (window as any).__tfd_push  = push
+    ;(window as any).__tfd_seeds = SEED
+    return () => {
+      delete (window as any).__tfd_push
+      delete (window as any).__tfd_seeds
+    }
   }, [push])
 
   // Background poll: /api/prices every 4s (watchlist prices, metals, indices)
