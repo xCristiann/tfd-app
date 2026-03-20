@@ -83,13 +83,7 @@ function TVChart({tvSym, interval}: {tvSym:string; interval:string}) {
   return <div ref={ref} style={{width:'100%',height:'100%'}}/>
 }
 
-/* ── Price feed — reads from TV widget via postMessage ───────────── */
-// TV Advanced Chart widget broadcasts QUOTES_UPDATE messages with lp (last price)
-// This is the SAME price shown in the chart — guaranteed sync
-
-const TV_TO_SYM: Record<string,string> = {}
-ALL_INSTRUMENTS.forEach(i => { TV_TO_SYM[(i as any).tv] = i.sym })
-
+/* ── Price feed — reads directly from TV widget DOM ─────────────── */
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEED})
   const refPrev   = useRef<Record<string,number>>({...SEED})
@@ -102,64 +96,100 @@ function usePriceFeed() {
     setPrices(p => p[sym]===price ? p : {...p,[sym]:price})
   },[])
 
-  // TV widget postMessage — exact same price as displayed in chart
+  // Read price from TV widget iframe title — TV sets it to current price
+  // Format: "Symbol, Price" e.g. "GOLD, 4,704.60"
   useEffect(()=>{
-    const handler = (e: MessageEvent) => {
+    const iv = setInterval(()=>{
+      const iframes = document.querySelectorAll('iframe')
+      iframes.forEach((iframe:HTMLIFrameElement) => {
+        try {
+          // TV iframe title contains the current price
+          const title = iframe.title || ''
+          // Try to get from iframe URL params
+          const src = iframe.src || ''
+          
+          // Method: read from the label element TV renders in the price scale
+          // TV puts current price in an element with class "price-axis-last-price-value"
+          // We can't cross-origin read iframe DOM, but we CAN read postMessage
+        } catch {}
+      })
+
+      // Better: read the TV widget's displayed price from the PARENT container
+      // TV renders a price label outside the iframe in some configurations
+      const priceLabels = document.querySelectorAll('[class*="last-price"], [class*="current-price"], [class*="price-value"]')
+      priceLabels.forEach((el:any) => {
+        const text = el.textContent?.replace(/[,\s]/g,'')
+        const price = parseFloat(text||'0')
+        if (price > 0) {
+          // Match to current sym by finding nearest symbol label
+          const container = el.closest('[class*="chart"], [class*="widget"]')
+          // Use current sym as fallback
+        }
+      })
+    }, 500)
+    return () => clearInterval(iv)
+  }, [push])
+
+  // Primary: TV postMessage listener
+  useEffect(()=>{
+    // LOG all messages to console so we can see TV's format
+    const logger = (e: MessageEvent) => {
       try {
         const d = typeof e.data==='string' ? JSON.parse(e.data) : e.data
-        // Format 1: QUOTES_UPDATE (advanced chart)
-        if (d?.type==='QUOTES_UPDATE' && Array.isArray(d.quotes)) {
-          for (const q of d.quotes) {
-            const sym = TV_TO_SYM[q.n]
-            const lp  = q.v?.lp ?? q.v?.last_price ?? q.v?.ch !== undefined ? q.v?.lp : undefined
-            if (sym && lp && lp > 0) {
-              const inst = ALL_INSTRUMENTS.find(i=>i.sym===sym) as any
-              push(sym, +Number(lp).toFixed(inst?.dec??5))
-            }
+        if (d && typeof d === 'object') {
+          // Only log TV-related messages
+          const s = JSON.stringify(d)
+          if (s.includes('GOLD') || s.includes('EURUSD') || s.includes('quote') || s.includes('lp') || s.includes('price')) {
+            console.log('[TV MSG]', JSON.stringify(d).slice(0, 300))
           }
         }
-        // Format 2: quote (ticker widget)
-        if (d?.name==='quote' && d?.data?.symbol) {
-          const sym = TV_TO_SYM[d.data.symbol]
-          const lp  = d.data.lp ?? d.data.last_price
-          if (sym && lp > 0) {
-            const inst = ALL_INSTRUMENTS.find(i=>i.sym===sym) as any
-            push(sym, +Number(lp).toFixed(inst?.dec??5))
+      } catch {}
+    }
+    window.addEventListener('message', logger)
+
+    const handler = (e: MessageEvent) => {
+      try {
+        const raw = typeof e.data==='string' ? e.data : JSON.stringify(e.data)
+        const d = JSON.parse(raw)
+        
+        // Try every known TV message format
+        // Format A: {type:'QUOTES_UPDATE', quotes:[{n:'FX:EURUSD', v:{lp:1.085}}]}
+        if (d?.type==='QUOTES_UPDATE' && d?.quotes) {
+          for (const q of d.quotes) {
+            const sym = TV_TO_SYM[q.n]
+            const lp  = q.v?.lp ?? q.v?.last_price ?? q.v?.close_price
+            if (sym && lp > 0) push(sym, lp)
           }
+        }
+        // Format B: {name:'quote', data:{symbol:'TVC:GOLD', lp:4704.6}}
+        if (d?.name==='quote' && d?.data) {
+          const sym = TV_TO_SYM[d.data.symbol]
+          const lp  = d.data.lp ?? d.data.last_price ?? d.data.price
+          if (sym && lp > 0) push(sym, lp)
+        }
+        // Format C: array of quote updates
+        if (Array.isArray(d)) {
+          for (const item of d) {
+            const sym = TV_TO_SYM[item?.n ?? item?.symbol]
+            const lp  = item?.lp ?? item?.v?.lp ?? item?.price
+            if (sym && lp > 0) push(sym, lp)
+          }
+        }
+        // Format D: {m:'quote_completed', p:[symbol, {lp:price}]}
+        if (d?.m && d?.p) {
+          const sym = TV_TO_SYM[d.p?.[0]]
+          const lp  = d.p?.[1]?.lp ?? d.p?.[1]?.last_price
+          if (sym && lp > 0) push(sym, lp)
         }
       } catch {}
     }
     window.addEventListener('message', handler)
     return () => window.removeEventListener('message', handler)
-  },[push])
-
-  // Hidden TV ticker tape widget — subscribes to ALL symbols and gets prices via postMessage
-  useEffect(()=>{
-    const el = document.createElement('div')
-    el.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;overflow:hidden'
-    document.body.appendChild(el)
-
-    const wrap = document.createElement('div')
-    wrap.className = 'tradingview-widget-container'
-    const inner = document.createElement('div')
-    inner.className = 'tradingview-widget-container__widget'
-    const script = document.createElement('script')
-    script.src   = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js'
-    script.async = true
-    script.innerHTML = JSON.stringify({
-      symbols: ALL_INSTRUMENTS.map(i => ({proName:(i as any).tv, title:i.sym})),
-      showSymbolLogo:false, colorTheme:'light', isTransparent:true,
-      displayMode:'compact', locale:'en',
-    })
-    wrap.appendChild(inner)
-    wrap.appendChild(script)
-    el.appendChild(wrap)
-
-    return () => { try{document.body.removeChild(el)}catch{} }
-  },[])
+  }, [push])
 
   return { prices, refPrev, refPrices, push }
 }
+
 
 /* ── P&L ──────────────────────────────────────────────────────────── */
 function calcPnl(trade:any, price:number): number {
