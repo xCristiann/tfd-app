@@ -26,6 +26,8 @@ import { AdminChallengePage } from './app/admin/challenges/page'
 import { AdminAffiliatePage } from './app/admin/affiliates/page'
 import { AdminAccountsPage }  from './app/admin/accounts/page'
 import { AdminSettingsPage }  from './app/admin/settings/page'
+import { HelpPage }           from './app/help/page'
+import { AdminFaqPage }        from './app/admin/faq/page'
 import { AdminRevenuePage }   from './app/admin/revenue/page'
 import { AffiliatePage as AffiliatesPage } from './app/dashboard/affiliate/page'
 import { BillingPage }        from './app/dashboard/billing/page'
@@ -105,6 +107,8 @@ export default function App() {
       <Route path="/dashboard/billing"    element={<ProtectedRoute roles={['trader']}><BillingPage /></ProtectedRoute>} />
       <Route path="/dashboard/kyc"        element={<ProtectedRoute roles={['trader']}><KycPage /></ProtectedRoute>} />
       <Route path="/admin/settings"       element={<ProtectedRoute roles={['admin']}><AdminSettingsPage /></ProtectedRoute>} />
+      <Route path="/admin/faq"             element={<ProtectedRoute roles={['admin']}><AdminFaqPage /></ProtectedRoute>} />
+      <Route path="/help"                  element={<HelpPage />} />
 
       {/* Support CRM */}
       <Route path="/support-crm"            element={<ProtectedRoute roles={['support','admin']}><SupportCRMPage /></ProtectedRoute>} />
