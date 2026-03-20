@@ -129,40 +129,56 @@ function usePriceFeed() {
   useEffect(()=>{
     let dead = false
 
-    const poll = async () => {
+    // Fast poll: forex only via /api/forex (Frankfurter ~200ms) every 2s
+    const pollFast = async () => {
+      if(dead) return
+      try{
+        const r = await fetch('/api/forex', { signal: AbortSignal.timeout(3000) })
+        if(!r.ok) return
+        const d = await r.json()
+        for(const [sym, price] of Object.entries(d.prices ?? {})){
+          if(typeof price === 'number' && price > 0) push(sym, price)
+        }
+      }catch{}
+    }
+
+    // Slow poll: metals + indices via /api/prices every 4s
+    const pollSlow = async () => {
       if(dead) return
       try{
         const r = await fetch('/api/prices', { signal: AbortSignal.timeout(8000) })
         if(!r.ok) return
         const d = await r.json()
-        if(d.prices){
-          let updated = 0
-          for(const [sym, price] of Object.entries(d.prices)){
-            if(typeof price === 'number' && price > 0){ push(sym, price); updated++ }
-          }
+        for(const [sym, price] of Object.entries(d.prices ?? {})){
+          if(typeof price === 'number' && price > 0) push(sym, price)
         }
       }catch{}
     }
 
-    poll()
-    // Poll every 5s — Vercel serverless handles the actual rate limiting
-    const iv = setInterval(poll, 5000)
-    return ()=>{ dead=true; clearInterval(iv) }
+    // Start both immediately
+    pollFast()
+    pollSlow()
+
+    const ivFast = setInterval(pollFast, 2000)  // forex: 2s
+    const ivSlow = setInterval(pollSlow, 4000)  // metals+indices: 4s
+
+    return ()=>{ dead=true; clearInterval(ivFast); clearInterval(ivSlow) }
   },[push])
 
-  // TV postMessage: use only if API hasn't returned yet (cold start)
+  // TV postMessage: accept price for currently viewed symbol always
+  // This gives near-instant updates as TradingView ticks
   const onTVPrice = useCallback((price: number) => {
     const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
-    if(sym && price > 0 && refPrices.current[sym] === SEED[sym]) push(sym, price)
+    if(sym && price > 0) push(sym, price)
   }, [push])
 
   const setActiveSym = useCallback((tvSym: string) => {
     activeTvSym.current = tvSym
   }, [])
 
-  // Heartbeat — re-render every 500ms so P&L stays live
+  // Heartbeat — re-render every 200ms so P&L is snappy
   useEffect(()=>{
-    const iv = setInterval(()=> setPrices(p=>({...p})), 500)
+    const iv = setInterval(()=> setPrices(p=>({...p})), 200)
     return ()=>clearInterval(iv)
   },[])
 
@@ -233,17 +249,10 @@ export function PlatformPage() {
   const primaryRef=useRef(primary);    primaryRef.current=primary
   const closingRef=useRef<Set<string>>(new Set())
 
-  // Force P&L re-render every 500ms using latest prices from ref
+  // Force P&L re-render every 200ms — snappy P&L display
   const [tick,setTick]=useState(0)
   useEffect(()=>{
-    const iv=setInterval(()=>{
-      setTick(n=>n+1)
-      // Also force price state update from ref in case WS is slow
-      const updates: Record<string,number> = {}
-      Object.entries(refPrices.current).forEach(([sym,price])=>{
-        if (price > 0) updates[sym] = price
-      })
-    },500)
+    const iv=setInterval(()=>{ setTick(n=>n+1) }, 200)
     return()=>clearInterval(iv)
   },[])
 
@@ -254,7 +263,8 @@ export function PlatformPage() {
   const execPrice = +(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
   const lotsNum   = Math.max(0.01,parseFloat(lots)||0.01)
   const balance   = primary?.balance??0
-  const openPnl   = openTrades.reduce((s,t)=>{ const p=refPrices.current[t.symbol]||prices[t.symbol]||SEED[t.symbol]; return s+calcPnl(t,p) },0)
+  // Use refPrices.current directly — always latest value, not stale state
+  const openPnl   = openTrades.reduce((s,t)=>{ const p=refPrices.current[t.symbol]||SEED[t.symbol]; return s+calcPnl(t,p) },0)
   const equity    = balance+openPnl
   const usedMgn   = openTrades.reduce((s,t)=>{
     const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
