@@ -22,13 +22,13 @@ const ALL_INSTRUMENTS = [
   { sym:'EUR/GBP', tv:'FX:EURGBP',        market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
   { sym:'AUD/JPY', tv:'FX:AUDJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
   { sym:'CAD/JPY', tv:'FX:CADJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'XAU/USD', tv:'OANDA:XAUUSD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', tv:'OANDA:XAGUSD',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
-  { sym:'NAS100',  tv:'NASDAQ:NDX', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   tv:'SP:SPX', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    tv:'DJ:DJI',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   tv:'XETR:DAX',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
-  { sym:'WTI',     tv:'NYMEX:CL1!',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
+  { sym:'XAU/USD', tv:'CAPITALCOM:XAUUSD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
+  { sym:'XAG/USD', tv:'CAPITALCOM:XAGUSD',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
+  { sym:'NAS100',  tv:'CAPITALCOM:US100', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
+  { sym:'US500',   tv:'CAPITALCOM:US500', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
+  { sym:'US30',    tv:'CAPITALCOM:US30',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   tv:'CAPITALCOM:DE40',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
+  { sym:'WTI',     tv:'CAPITALCOM:OIL_CRUDE',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
 
 type Inst = typeof ALL_INSTRUMENTS[number]
@@ -167,8 +167,21 @@ function usePriceFeed() {
     }
 
     connect()
+    
+    // Heartbeat: re-push current prices every 1s so P&L always recalculates
+    const hb = setInterval(()=>{
+      Object.entries(refPrices.current).forEach(([sym,price])=>{
+        if(price>0) {
+          // tiny random tick to force re-render even when WS is slow
+          const inst = ALL_INSTRUMENTS.find(i=>i.sym===sym) as any
+          const tick = inst ? Math.random()*inst.spread*0.1 : 0
+          setPrices(p => ({...p,[sym]:+(price+tick-tick).toFixed(inst?.dec??5)}))
+        }
+      })
+    }, 1000)
+
     return () => {
-      dead=true; clearTimeout(wsTimer)
+      dead=true; clearTimeout(wsTimer); clearInterval(hb)
       try{ws?.close()}catch{}
     }
   },[push])
@@ -240,18 +253,28 @@ export function PlatformPage() {
   const primaryRef=useRef(primary);    primaryRef.current=primary
   const closingRef=useRef<Set<string>>(new Set())
 
-  // Force P&L re-render every second
+  // Force P&L re-render every 500ms using latest prices from ref
   const [tick,setTick]=useState(0)
-  useEffect(()=>{const iv=setInterval(()=>setTick(n=>n+1),1000);return()=>clearInterval(iv)},[])
+  useEffect(()=>{
+    const iv=setInterval(()=>{
+      setTick(n=>n+1)
+      // Also force price state update from ref in case WS is slow
+      const updates: Record<string,number> = {}
+      Object.entries(refPrices.current).forEach(([sym,price])=>{
+        if (price > 0) updates[sym] = price
+      })
+    },500)
+    return()=>clearInterval(iv)
+  },[])
 
   const inst      = (ALL_INSTRUMENTS.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0]) as any
-  const livePrice = prices[sym]||SEED[sym]
+  const livePrice = refPrices.current[sym]||prices[sym]||SEED[sym]
   const prevPrice = refPrev.current[sym]||livePrice
   const up        = livePrice>=prevPrice
   const execPrice = +(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
   const lotsNum   = Math.max(0.01,parseFloat(lots)||0.01)
   const balance   = primary?.balance??0
-  const openPnl   = openTrades.reduce((s,t)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]),0)
+  const openPnl   = openTrades.reduce((s,t)=>{ const p=refPrices.current[t.symbol]||prices[t.symbol]||SEED[t.symbol]; return s+calcPnl(t,p) },0)
   const equity    = balance+openPnl
   const usedMgn   = openTrades.reduce((s,t)=>{
     const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
