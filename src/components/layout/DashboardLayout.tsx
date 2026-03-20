@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useMobile } from '@/hooks/useMobile'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { MobileNav } from './MobileNav'
 import { Sidebar } from './Sidebar'
 import { useAuth } from '@/hooks/useAuth'
@@ -163,7 +163,7 @@ function AdminNotifications() {
 }
 
 export function DashboardLayout({ children, title, topbarRight, nav, accentColor = 'gold', accountBox, logoSubtitle }: Props) {
-  const isMobile = useMobile()
+  const isMobile = useIsMobile()
   const { profile } = useAuth()
   const navigate = useNavigate()
 
