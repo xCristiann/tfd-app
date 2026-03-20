@@ -9,25 +9,61 @@ const LEVERAGE = 50
 const LOT_SIZE = 100_000
 
 const ALL_INSTRUMENTS = [
-  { sym:'EUR/USD', tv:'OANDA:EURUSD',   market:'forex', spread:0.00010, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', tv:'OANDA:GBPUSD',   market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/JPY', tv:'OANDA:USDJPY',   market:'forex', spread:0.010,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'USD/CHF', tv:'OANDA:USDCHF',   market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'AUD/USD', tv:'OANDA:AUDUSD',   market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/CAD', tv:'OANDA:USDCAD',   market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>1/p*LOT_SIZE },
-  { sym:'NZD/USD', tv:'OANDA:NZDUSD',   market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/JPY', tv:'OANDA:GBPJPY',   market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'EUR/JPY', tv:'OANDA:EURJPY',   market:'forex', spread:0.025,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'EUR/GBP', tv:'OANDA:EURGBP',   market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
-  { sym:'AUD/JPY', tv:'OANDA:AUDJPY',   market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'CAD/JPY', tv:'OANDA:CADJPY',   market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'XAU/USD', tv:'OANDA:XAUUSD',   market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', tv:'OANDA:XAGUSD',   market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
-  { sym:'NAS100',  tv:'OANDA:NAS100USD', market:'us',   spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   tv:'OANDA:SPX500USD', market:'us',   spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    tv:'OANDA:US30USD',   market:'us',   spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   tv:'OANDA:DE30EUR',   market:'eu',   spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
-  { sym:'WTI',     tv:'OANDA:WTICOUSD',  market:'forex', spread:0.030,  dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
+  // lotUSD(price) = USD notional per 1 standard lot → margin = lotUSD(price)*lots/LEVERAGE
+  // pnlMult = profit multiplier per 1 lot per 1 unit price move in USD
+  // Forex pairs: 1 lot = 100,000 base currency units
+  //   EUR/USD: diff * 100,000 → already in USD
+  //   USD/JPY: diff in JPY → convert: diff * 100,000 / price
+  //   Cross JPY (GBP/JPY): 1 lot = 100,000 GBP, P&L in JPY → convert: diff * 100,000 / jpyRate
+  //   For simplicity use approximate: diff * 100,000 / price (price ≈ JPY per USD)
+  { sym:'EUR/USD', tv:'OANDA:EURUSD',   spread:0.00010, dec:5, pip:0.0001, cat:'forex',
+    // notional = price * 100k USD; P&L = diff * 100k
+    lotUSD:(p:number)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/USD', tv:'OANDA:GBPUSD',   spread:0.00015, dec:5, pip:0.0001, cat:'forex',
+    lotUSD:(p:number)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'USD/JPY', tv:'OANDA:USDJPY',   spread:0.010,   dec:3, pip:0.01,   cat:'forex',
+    // notional = 100k USD; P&L in JPY → /price to get USD
+    lotUSD:(_:number)=>LOT_SIZE, pnlMult:0 }, // pnlMult=0 → use JPY formula
+  { sym:'USD/CHF', tv:'OANDA:USDCHF',   spread:0.00015, dec:5, pip:0.0001, cat:'forex',
+    lotUSD:(_:number)=>LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'AUD/USD', tv:'OANDA:AUDUSD',   spread:0.00015, dec:5, pip:0.0001, cat:'forex',
+    lotUSD:(p:number)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'USD/CAD', tv:'OANDA:USDCAD',   spread:0.00020, dec:5, pip:0.0001, cat:'forex',
+    // USD base: notional = 100k USD; P&L in CAD → /price
+    lotUSD:(_:number)=>LOT_SIZE, pnlMult:0 }, // use CAD formula: diff*100k/price
+  { sym:'NZD/USD', tv:'OANDA:NZDUSD',   spread:0.00020, dec:5, pip:0.0001, cat:'forex',
+    lotUSD:(p:number)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/JPY', tv:'OANDA:GBPJPY',   spread:0.030,   dec:3, pip:0.01,   cat:'forex',
+    lotUSD:(p:number)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'EUR/JPY', tv:'OANDA:EURJPY',   spread:0.025,   dec:3, pip:0.01,   cat:'forex',
+    lotUSD:(p:number)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'EUR/GBP', tv:'OANDA:EURGBP',   spread:0.00015, dec:5, pip:0.0001, cat:'forex',
+    lotUSD:(p:number)=>Math.max(p*1.27,0.5)*LOT_SIZE, pnlMult:LOT_SIZE*1.27 },
+  { sym:'AUD/JPY', tv:'OANDA:AUDJPY',   spread:0.030,   dec:3, pip:0.01,   cat:'forex',
+    lotUSD:(p:number)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'CAD/JPY', tv:'OANDA:CADJPY',   spread:0.030,   dec:3, pip:0.01,   cat:'forex',
+    lotUSD:(p:number)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  // Metals: 1 lot = 100 oz (gold), 5000 oz (silver)
+  { sym:'XAU/USD', tv:'OANDA:XAUUSD',   spread:0.30,    dec:2, pip:0.10,   cat:'metals',
+    lotUSD:(p:number)=>Math.max(p,100)*100, pnlMult:100 },
+  { sym:'XAG/USD', tv:'OANDA:XAGUSD',   spread:0.030,   dec:4, pip:0.001,  cat:'metals',
+    lotUSD:(p:number)=>Math.max(p,1)*5000, pnlMult:5000 },
+  // Indices: contract values (approximate)
+  { sym:'NAS100',  tv:'OANDA:NAS100USD', spread:1.5,     dec:1, pip:1.0,    cat:'index',
+    // 1 lot NAS100 = $20 per point (industry standard mini contract)
+    lotUSD:(p:number)=>Math.max(p,100)*20, pnlMult:20 },
+  { sym:'US500',   tv:'OANDA:SPX500USD', spread:0.50,    dec:2, pip:0.10,   cat:'index',
+    // 1 lot US500 = $50 per point
+    lotUSD:(p:number)=>Math.max(p,100)*50, pnlMult:50 },
+  { sym:'US30',    tv:'OANDA:US30USD',   spread:2.0,     dec:1, pip:1.0,    cat:'index',
+    // 1 lot US30 = $5 per point
+    lotUSD:(p:number)=>Math.max(p,1000)*5, pnlMult:5 },
+  { sym:'GER40',   tv:'OANDA:DE30EUR',   spread:1.0,     dec:1, pip:1.0,    cat:'index',
+    // 1 lot GER40 = €25 per point ≈ $27
+    lotUSD:(p:number)=>Math.max(p,100)*25, pnlMult:25 },
+  { sym:'WTI',     tv:'OANDA:WTICOUSD',  spread:0.030,   dec:2, pip:0.01,   cat:'energy',
+    // 1 lot WTI = 1000 barrels
+    lotUSD:(p:number)=>Math.max(p,10)*1000, pnlMult:1000 },
 ] as const
 
 const SEED: Record<string,number> = {
@@ -84,9 +120,33 @@ function TVChart({ tvSym, interval }: { tvSym:string; interval:string }) {
 /* ── P&L ─────────────────────────────────────────────────────────── */
 function calcPnl(trade:any, price:number): number {
   const inst = ALL_INSTRUMENTS.find(i=>i.sym===trade.symbol) as any
-  if (!inst || !price) return 0
+  if (!inst || !price || price <= 0 || !trade.open_price || trade.open_price <= 0) return 0
   const diff = trade.direction==='buy' ? price-trade.open_price : trade.open_price-price
-  return diff * (trade.symbol.includes('JPY') ? LOT_SIZE/price : inst.lotUSD(1)) * trade.lots
+  const sym  = trade.symbol as string
+  const lots = Number(trade.lots) || 0
+  // Cap diff sanity: never more than 30% of open price (catches stale/bad prices)
+  if (Math.abs(diff) > trade.open_price * 0.30) return 0
+  let pnl = 0
+  // JPY pairs: P&L in JPY → convert to USD
+  if (sym.endsWith('/JPY')) {
+    pnl = diff * LOT_SIZE / price * lots
+  } else if (sym === 'USD/CHF') {
+    pnl = diff * LOT_SIZE / price * lots
+  } else if (sym === 'USD/CAD') {
+    pnl = diff * LOT_SIZE / price * lots
+  } else {
+    // All others use pnlMult directly
+    const mult = (inst as any).pnlMult ?? LOT_SIZE
+    pnl = diff * mult * lots
+  }
+  return +pnl.toFixed(2)
+}
+
+/* ── Margin calc helper ──────────────────────────────────────────── */
+function calcMargin(sym: string, price: number, lots: number): number {
+  const inst = ALL_INSTRUMENTS.find(i=>i.sym===sym) as any
+  if (!inst || !price || price <= 0) return 0
+  return (inst.lotUSD(price) * lots) / LEVERAGE
 }
 
 /* ── Price feed — Deriv WebSocket (free, no key, instant ticks) ────
@@ -239,12 +299,12 @@ export function PlatformPage() {
   const openPnl   = openTrades.reduce((s,t) => s+calcPnl(t, refPrices.current[t.symbol]||SEED[t.symbol]), 0)
   const equity    = balance + openPnl
   const usedMgn   = openTrades.reduce((s,t) => {
-    const i = ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-    return s + (i?.lotUSD(refPrices.current[t.symbol]||SEED[t.symbol]) * t.lots / LEVERAGE || 0)
+    const price = refPrices.current[t.symbol] || SEED[t.symbol]
+    return s + calcMargin(t.symbol, price, Number(t.lots)||0)
   }, 0)
-  const freeMgn   = equity - usedMgn
-  const reqMgn    = inst.lotUSD(execPrice) * lotsNum / LEVERAGE
-  const maxLots   = freeMgn>0 ? Math.floor(freeMgn*LEVERAGE/inst.lotUSD(execPrice)*100)/100 : 0
+  const freeMgn   = Math.max(0, equity - usedMgn)
+  const reqMgn    = calcMargin(sym, execPrice, lotsNum)
+  const maxLots   = reqMgn > 0 ? Math.floor((freeMgn / reqMgn) * lotsNum * 100) / 100 : 0
   const isLive    = refPrices.current[sym] > 0 && refPrices.current[sym] !== SEED[sym]
 
   useEffect(() => {
@@ -259,17 +319,16 @@ export function PlatformPage() {
     toast('error','🚨','Account Breached',reason)
     if (!primary?.id) return
     for (const t of trades) {
-      const cur=refPrices.current[t.symbol]||SEED[t.symbol]
-      const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-      const cp=+(t.direction==='buy'?cur:cur+(i?.spread??0)).toFixed(i?.dec??5)
-      const diff=t.direction==='buy'?cp-t.open_price:t.open_price-cp
-      const netPnl=+(diff*(t.symbol.includes('JPY')?LOT_SIZE/cp:i?.lotUSD(1))*t.lots).toFixed(2)
+      const cur = refPrices.current[t.symbol] || SEED[t.symbol]
+      const i   = ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
+      const cp  = +(t.direction==='buy' ? cur : cur+(i?.spread??0)).toFixed(i?.dec??5)
+      const netPnl = calcPnl({...t, open_price:t.open_price}, cp)
       await supabase.from('trades').update({status:'closed',close_price:cp,net_pnl:netPnl,closed_at:new Date().toISOString()}).eq('id',t.id)
     }
     const nb=+(balance+trades.reduce((s,t)=>{
       const cur=refPrices.current[t.symbol]||t.open_price
       const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
-      return s+(t.direction==='buy'?cur-t.open_price:t.open_price-cur)*(t.symbol.includes('JPY')?LOT_SIZE/cur:i?.lotUSD(1))*t.lots
+      return s + calcPnl(t, cur)
     },0)).toFixed(2)
     await supabase.from('accounts').update({status:'breached',phase:'breached',balance:nb,equity:nb}).eq('id',primary.id)
     setOpenTrades([])
@@ -291,10 +350,10 @@ export function PlatformPage() {
         if (!hit) continue
         closingRef.current.add(t.id)
         try {
-          const cp=+(t.direction==='buy'?cur:cur+i.spread).toFixed(i.dec)
-          const diff=t.direction==='buy'?cp-t.open_price:t.open_price-cp
-          const netPnl=+(diff*(t.symbol.includes('JPY')?LOT_SIZE/cp:i.lotUSD(1))*t.lots).toFixed(2)
-          const pips=+(diff/i.pip).toFixed(1)
+          const cp     = +(t.direction==='buy' ? cur : cur+i.spread).toFixed(i.dec)
+          const netPnl = calcPnl({...t, open_price:t.open_price}, cp)
+          const diff   = t.direction==='buy' ? cp-t.open_price : t.open_price-cp
+          const pips   = +(diff/i.pip).toFixed(1)
           const now=new Date().toISOString()
           await supabase.from('trades').update({status:'closed',close_price:cp,net_pnl:netPnl,pips,closed_at:now}).eq('id',t.id)
           await supabase.from('accounts').update({balance:+((pr.balance??0)+netPnl).toFixed(2)}).eq('id',pr.id)
@@ -335,7 +394,7 @@ export function PlatformPage() {
     const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
     const cp=+(t.direction==='buy'?cur:cur+(i?.spread??0)).toFixed(i?.dec??5)
     const diff=t.direction==='buy'?cp-t.open_price:t.open_price-cp
-    const netPnl=+(diff*(t.symbol.includes('JPY')?LOT_SIZE/cp:i?.lotUSD(1))*t.lots).toFixed(2)
+    const netPnl = calcPnl({...t, open_price:t.open_price}, cp)
     const pips=+(diff/(i?.pip??0.0001)).toFixed(1)
     const now=new Date().toISOString()
     await supabase.from('trades').update({status:'closed',close_price:cp,net_pnl:netPnl,pips,closed_at:now}).eq('id',t.id)
@@ -528,7 +587,7 @@ export function PlatformPage() {
                     const pnl=calcPnl(t,cur)
                     const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
                     const pipD=i?(t.direction==='buy'?cur-t.open_price:t.open_price-cur)/(i.pip??0.0001):0
-                    const tMgn=i?(i.lotUSD(cur)*t.lots/LEVERAGE):0
+                    const tMgn = calcMargin(t.symbol, cur, Number(t.lots)||0)
                     const isEdit=editSLTP?.id===t.id
                     return (
                       <tr key={t.id} style={{borderBottom:'1px solid #F4F7FD'}}>
