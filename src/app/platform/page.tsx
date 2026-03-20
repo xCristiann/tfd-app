@@ -4,10 +4,10 @@ import { useToast } from '@/hooks/useToast'
 import { useAccount } from '@/hooks/useAccount'
 import { ToastContainer } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
- 
+
 const LEVERAGE = 50
 const LOT_SIZE = 100_000
- 
+
 /* ── Instruments ─────────────────────────────────────────────────── */
 const ALL_INSTRUMENTS = [
   // tv = TradingView widget symbol (chart — same OANDA source as Polygon)
@@ -31,7 +31,7 @@ const ALL_INSTRUMENTS = [
   { sym:'GER40',   tv:'OANDA:DE30EUR',    market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
   { sym:'WTI',     tv:'OANDA:WTICOUSD',   market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
- 
+
 // Seed prices — shown briefly before APIs connect (~2-5 seconds)
 // Updated to approximate current market levels (Mar 2025)
 const SEED: Record<string,number> = {
@@ -41,20 +41,20 @@ const SEED: Record<string,number> = {
   'XAU/USD':3050.0,'XAG/USD':34.00,
   'NAS100':21800,'US500':5750,'US30':43500,'GER40':22800,'WTI':71.50,
 }
- 
+
 const TF_LIST = ['1','5','15','30','60','240','D','W']
 const TF_LABEL: Record<string,string> = {'1':'1m','5':'5m','15':'15m','30':'30m','60':'1h','240':'4h','D':'1D','W':'1W'}
- 
+
 function lsGet(k:string,fb:string){try{return localStorage.getItem(k)||fb}catch{return fb}}
 function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
- 
+
 /* ── TradingView Widget ───────────────────────────────────────────── */
 /* ── TradingView Widget ───────────────────────────────────────────── */
 function TVChart({tvSym, interval, onPrice}: {tvSym:string; interval:string; onPrice:(p:number)=>void}) {
   const ref    = useRef<HTMLDivElement>(null)
   const keyRef = useRef('')
   const idRef  = useRef(`tv_${Math.random().toString(36).slice(2)}`)
- 
+
   // TV postMessage listener — backup price source
   useEffect(()=>{
     const id = idRef.current
@@ -74,14 +74,14 @@ function TVChart({tvSym, interval, onPrice}: {tvSym:string; interval:string; onP
     window.addEventListener('message', handler)
     return () => window.removeEventListener('message', handler)
   }, [onPrice])
- 
+
   useEffect(()=>{
     const el = ref.current; if(!el) return
     const key = `${tvSym}:${interval}`
     if(keyRef.current === key) return
     keyRef.current = key
     el.innerHTML = ''
- 
+
     const wrap = document.createElement('div')
     wrap.className = 'tradingview-widget-container'
     wrap.style.cssText = 'width:100%;height:100%'
@@ -104,10 +104,10 @@ function TVChart({tvSym, interval, onPrice}: {tvSym:string; interval:string; onP
     wrap.appendChild(script)
     el.appendChild(wrap)
   },[tvSym, interval])
- 
+
   return <div ref={ref} style={{width:'100%',height:'100%'}}/>
 }
- 
+
 /* ── Price Feed: /api/prices — Vercel serverless, server-side fetch ─
    Our own API route fetches Yahoo Finance + Frankfurter from the server.
    No CORS, no API keys exposed, no browser restrictions.
@@ -118,56 +118,58 @@ function usePriceFeed() {
   const refPrev   = useRef<Record<string,number>>({...SEED})
   const refPrices = useRef<Record<string,number>>({...SEED})
   const activeTvSym = useRef<string>('')
- 
+
   const push = useCallback((sym:string, price:number)=>{
     if(!price||isNaN(price)||price<=0) return
     refPrev.current[sym]   = refPrices.current[sym] || price
     refPrices.current[sym] = price
     setPrices(p => p[sym]===price ? p : {...p,[sym]:price})
   },[])
- 
+
   useEffect(()=>{
     let dead = false
- 
+
     const poll = async () => {
       if(dead) return
       try{
-        const r = await fetch('/api/prices')
+        const r = await fetch('/api/prices', { signal: AbortSignal.timeout(8000) })
         if(!r.ok) return
         const d = await r.json()
         if(d.prices){
+          let updated = 0
           for(const [sym, price] of Object.entries(d.prices)){
-            if(typeof price === 'number' && price > 0) push(sym, price)
+            if(typeof price === 'number' && price > 0){ push(sym, price); updated++ }
           }
         }
       }catch{}
     }
- 
+
     poll()
+    // Poll every 5s — Vercel serverless handles the actual rate limiting
     const iv = setInterval(poll, 5000)
     return ()=>{ dead=true; clearInterval(iv) }
   },[push])
- 
+
   // TV postMessage: use only if API hasn't returned yet (cold start)
   const onTVPrice = useCallback((price: number) => {
     const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
     if(sym && price > 0 && refPrices.current[sym] === SEED[sym]) push(sym, price)
   }, [push])
- 
+
   const setActiveSym = useCallback((tvSym: string) => {
     activeTvSym.current = tvSym
   }, [])
- 
+
   // Heartbeat — re-render every 500ms so P&L stays live
   useEffect(()=>{
     const iv = setInterval(()=> setPrices(p=>({...p})), 500)
     return ()=>clearInterval(iv)
   },[])
- 
+
   return { prices, refPrev, refPrices, push, onTVPrice, setActiveSym }
 }
- 
- 
+
+
 /* ── P&L ──────────────────────────────────────────────────────────── */
 function calcPnl(trade:any, price:number): number {
   const inst = ALL_INSTRUMENTS.find(i=>i.sym===trade.symbol) as any
@@ -176,7 +178,7 @@ function calcPnl(trade:any, price:number): number {
   const isJpy = trade.symbol.includes('JPY')
   return diff * (isJpy ? LOT_SIZE/price : inst.lotUSD(1)) * trade.lots
 }
- 
+
 /* ── Risk monitor ────────────────────────────────────────────────── */
 function useRiskMonitor(tradesRef:any,refPrices:any,primaryRef:any,accountId:any,onBreach:any){
   const fired=useRef(false)
@@ -201,7 +203,7 @@ function useRiskMonitor(tradesRef:any,refPrices:any,primaryRef:any,accountId:any
   },[])
   useEffect(()=>{fired.current=false},[accountId])
 }
- 
+
 /* ── Platform Page ───────────────────────────────────────────────── */
 export function PlatformPage() {
   const navigate  = useNavigate()
@@ -209,7 +211,7 @@ export function PlatformPage() {
   const {accounts,primary:defPrimary} = useAccount()
   const [selAccId,setSelAccId] = useState<string|null>(null)
   const primary = accounts.find(a=>a.id===selAccId)??defPrimary
- 
+
   const [sym,    setSym]   = useState(()=>{ const s=lsGet('tfd_sym','EUR/USD'); return ALL_INSTRUMENTS.find(i=>i.sym===s)?s:'EUR/USD' })
   const [tf,     setTf]    = useState(()=>lsGet('tfd_tf','60'))
   const [dir,    setDir]   = useState<'buy'|'sell'>('buy')
@@ -225,12 +227,12 @@ export function PlatformPage() {
   const [favorites,setFavorites]=useState<Set<string>>(()=>{
     try{return new Set(JSON.parse(localStorage.getItem('tfd_favs')||'[]'))}catch{return new Set(['EUR/USD','XAU/USD','NAS100'])}
   })
- 
+
   const {prices,refPrev,refPrices,push,onTVPrice,setActiveSym}=usePriceFeed()
   const tradesRef =useRef(openTrades); tradesRef.current=openTrades
   const primaryRef=useRef(primary);    primaryRef.current=primary
   const closingRef=useRef<Set<string>>(new Set())
- 
+
   // Force P&L re-render every 500ms using latest prices from ref
   const [tick,setTick]=useState(0)
   useEffect(()=>{
@@ -244,7 +246,7 @@ export function PlatformPage() {
     },500)
     return()=>clearInterval(iv)
   },[])
- 
+
   const inst      = (ALL_INSTRUMENTS.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0]) as any
   const livePrice = refPrices.current[sym]||prices[sym]||SEED[sym]
   const prevPrice = refPrev.current[sym]||livePrice
@@ -263,14 +265,14 @@ export function PlatformPage() {
   const mgnLvl    = usedMgn>0?(equity/usedMgn)*100:Infinity
   const reqMgn    = inst.lotUSD(execPrice)*lotsNum/LEVERAGE
   const maxLots   = freeMgn>0?Math.floor(freeMgn*LEVERAGE/inst.lotUSD(execPrice)*100)/100:0
- 
+
   useEffect(()=>{
     lsSet('tfd_sym',sym)
     const tvSym = (ALL_INSTRUMENTS.find(i=>i.sym===sym) as any)?.tv
     if (tvSym) setActiveSym(tvSym)
   },[sym])
   useEffect(()=>lsSet('tfd_tf',tf),[tf])
- 
+
   useEffect(()=>{
     if(!primary?.id) return
     supabase.from('trades').select('*').eq('account_id',primary.id).eq('status','open')
@@ -278,7 +280,7 @@ export function PlatformPage() {
     supabase.from('trades').select('*').eq('account_id',primary.id).eq('status','closed')
       .order('closed_at',{ascending:false}).limit(50).then(({data})=>setClosedTrades(data??[]))
   },[primary?.id])
- 
+
   useRiskMonitor(tradesRef,refPrices,primaryRef,primary?.id,async(reason:string,trades:any[])=>{
     toast('error','🚨','Account Breached',reason)
     if(!primary?.id) return
@@ -300,7 +302,7 @@ export function PlatformPage() {
     await supabase.from('accounts').update({status:'breached',phase:'breached',balance:nb,equity:nb}).eq('id',primary.id)
     setOpenTrades([])
   })
- 
+
   // Auto-close SL/TP
   useEffect(()=>{
     if(!primary?.id) return
@@ -336,11 +338,11 @@ export function PlatformPage() {
     },1000)
     return()=>clearInterval(iv)
   },[primary?.id])
- 
+
   const toggleFav=(s:string)=>{
     setFavorites(prev=>{const n=new Set(prev);n.has(s)?n.delete(s):n.add(s);localStorage.setItem('tfd_favs',JSON.stringify([...n]));return n})
   }
- 
+
   async function placeOrder(){
     if(!primary?.id){toast('error','❌','No Account','Select an account');return}
     if(primary.status==='breached'){toast('error','❌','Breached','Account is breached');return}
@@ -359,7 +361,7 @@ export function PlatformPage() {
     toast('success','✅',`${dir.toUpperCase()} ${sym}`,`${lotsNum} lots @ ${execPrice}`)
     setSl('');setTp('')
   }
- 
+
   async function closeTrade(t:any){
     const cur=refPrices.current[t.symbol]||prices[t.symbol]||SEED[t.symbol]
     const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol) as any
@@ -375,7 +377,7 @@ export function PlatformPage() {
     setClosedTrades(p=>[{...t,status:'closed',close_price:cp,net_pnl:netPnl,pips,closed_at:now},...p])
     toast(netPnl>=0?'success':'error',netPnl>=0?'💰':'📉',`Closed ${t.symbol}`,`${netPnl>=0?'+':''}$${netPnl.toFixed(2)}`)
   }
- 
+
   async function saveEditSLTP(){
     if(!editSLTP) return
     const updates={sl:editSLTP.sl?parseFloat(editSLTP.sl):null,tp:editSLTP.tp?parseFloat(editSLTP.tp):null}
@@ -384,7 +386,7 @@ export function PlatformPage() {
     setEditSLTP(null)
     toast('success','✅','SL/TP Updated','')
   }
- 
+
   const watchlist = useMemo(()=>{
     const q=search.toLowerCase()
     const filtered=ALL_INSTRUMENTS.filter(i=>!q||i.sym.toLowerCase().includes(q))
@@ -393,13 +395,13 @@ export function PlatformPage() {
       return af-bf
     })
   },[search,favorites])
- 
+
   const mono={fontFamily:"'JetBrains Mono',monospace"} as const
   const prod=(primary as any)?.challenge_products
- 
+
   return(
     <div style={{fontFamily:"'Inter',system-ui,sans-serif",background:'#F0F4FB',color:'#1A3A6B',height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
- 
+
       {/* TOPBAR */}
       <div style={{height:'48px',background:'#1A3A6B',display:'flex',alignItems:'center',padding:'0 12px',gap:'8px',flexShrink:0}}>
         <button onClick={()=>navigate('/dashboard')} style={{background:'rgba(255,255,255,.1)',border:'none',color:'#fff',padding:'5px 10px',borderRadius:'6px',cursor:'pointer',fontSize:'11px',fontWeight:600}}>← Dashboard</button>
@@ -420,9 +422,9 @@ export function PlatformPage() {
           </div>
         ))}
       </div>
- 
+
       <div style={{flex:1,display:'flex',overflow:'hidden'}}>
- 
+
         {/* WATCHLIST */}
         <div style={{width:'180px',background:'#fff',borderRight:'1px solid #E8EEF8',display:'flex',flexDirection:'column',flexShrink:0}}>
           <div style={{padding:'7px',borderBottom:'1px solid #E8EEF8',flexShrink:0}}>
@@ -453,7 +455,7 @@ export function PlatformPage() {
             })}
           </div>
         </div>
- 
+
         {/* CHART AREA */}
         <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
           {/* Chart topbar */}
@@ -479,7 +481,7 @@ export function PlatformPage() {
             <TVChart tvSym={inst.tv} interval={tf} onPrice={onTVPrice}/>
           </div>
         </div>
- 
+
         {/* ORDER PANEL */}
         <div style={{width:'230px',background:'#fff',borderLeft:'1px solid #E8EEF8',display:'flex',flexDirection:'column',flexShrink:0}}>
           <div style={{padding:'10px',flex:1,overflowY:'auto'}}>
@@ -556,7 +558,7 @@ export function PlatformPage() {
           </div>
         </div>
       </div>
- 
+
       {/* BOTTOM */}
       <div style={{height:'175px',background:'#fff',borderTop:'1px solid #E8EEF8',flexShrink:0,display:'flex',flexDirection:'column'}}>
         <div style={{display:'flex',alignItems:'center',borderBottom:'1px solid #E8EEF8',height:'32px',padding:'0 12px',flexShrink:0}}>
@@ -633,7 +635,7 @@ export function PlatformPage() {
           )}
         </div>
       </div>
- 
+
       {/* Edit SL/TP Modal */}
       {editSLTP&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setEditSLTP(null)}>
@@ -658,7 +660,7 @@ export function PlatformPage() {
           </div>
         </div>
       )}
- 
+
       <ToastContainer toasts={toasts} dismiss={dismiss}/>
     </div>
   )
