@@ -126,31 +126,22 @@ function TVChart({ tvSym, tfTv, onPrice }: {
   return <div ref={wrapRef} style={{ width:'100%', height:'100%' }} />
 }
 
-/* ══ PRICE FEED — Polygon WebSocket (real-time forex) ════════════ */
+/* ══ PRICE FEED ═══════════════════════════════════════════════════ */
+// Polygon WebSocket (real-time forex) + TV postMessage listener
+
 const POLY = 'G6lKjTXfN4R1XHY6DoFAsIvDymYQ7fNO'
 
-// Polygon tickers for each instrument
-const POLY_MAP: Record<string,{poly:string;idxMult?:number}> = {
-  'EUR/USD': {poly:'C:EURUSD'},
-  'GBP/USD': {poly:'C:GBPUSD'},
-  'USD/JPY': {poly:'C:USDJPY'},
-  'USD/CHF': {poly:'C:USDCHF'},
-  'AUD/USD': {poly:'C:AUDUSD'},
-  'USD/CAD': {poly:'C:USDCAD'},
-  'NZD/USD': {poly:'C:NZDUSD'},
-  'EUR/JPY': {poly:'C:EURJPY'},
-  'GBP/JPY': {poly:'C:GBPJPY'},
-  'EUR/GBP': {poly:'C:EURGBP'},
-  'AUD/JPY': {poly:'C:AUDJPY'},
-  'CAD/JPY': {poly:'C:CADJPY'},
-  'XAU/USD': {poly:'C:XAUUSD'},
-  'XAG/USD': {poly:'C:XAGUSD'},
-  'NAS100':  {poly:'QQQ',   idxMult:40  },
-  'US500':   {poly:'SPY',   idxMult:10  },
-  'US30':    {poly:'DIA',   idxMult:100 },
-  'GER40':   {poly:'EWG',   idxMult:740 },
-  'WTI':     {poly:'USO',   idxMult:10  },
+// Map polygon forex ticker -> our symbol
+const POLY_FOREX: Record<string,string> = {
+  'EUR/USD':'EUR/USD','GBP/USD':'GBP/USD','USD/JPY':'USD/JPY','USD/CHF':'USD/CHF',
+  'AUD/USD':'AUD/USD','USD/CAD':'USD/CAD','NZD/USD':'NZD/USD','EUR/JPY':'EUR/JPY',
+  'GBP/JPY':'GBP/JPY','EUR/GBP':'EUR/GBP','AUD/JPY':'AUD/JPY','CAD/JPY':'CAD/JPY',
+  'XAU/USD':'XAU/USD','XAG/USD':'XAG/USD',
 }
+
+// Map TV symbol -> our symbol  
+const TV_TO_SYM: Record<string,string> = {}
+INSTRUMENTS.forEach(i => { TV_TO_SYM[(i as any).tv] = i.sym })
 
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEEDS})
@@ -167,7 +158,7 @@ function usePriceFeed() {
   useEffect(() => {
     let dead=false, ws:WebSocket, wsTimer:any, pollTimer:any
 
-    // Polygon Forex WebSocket — real-time forex prices
+    // 1. Polygon Forex WebSocket — real-time forex + metals
     const connectWS = () => {
       if (dead) return
       try {
@@ -177,17 +168,14 @@ function usePriceFeed() {
           try {
             const msgs: any[] = JSON.parse(data)
             for (const msg of msgs) {
-              if (msg.ev==='status' && msg.status==='auth_success') {
-                // Subscribe to all forex pairs
-                const forexSubs = Object.entries(POLY_MAP)
-                  .filter(([,v])=>v.poly.startsWith('C:'))
-                  .map(([sym])=>`C.${sym}`)
-                  .join(',')
-                ws.send(JSON.stringify({action:'subscribe',params:forexSubs}))
+              if (msg.ev==='status'&&msg.status==='auth_success') {
+                const subs = Object.keys(POLY_FOREX).map(s=>`C.${s}`).join(',')
+                ws.send(JSON.stringify({action:'subscribe',params:subs}))
               }
-              if (msg.ev==='C' && msg.p) {
-                const mid = ((msg.bp||0)+(msg.ap||0))/2 || msg.l || 0
-                if (mid>0) push(msg.p, mid)
+              if (msg.ev==='C'&&msg.p&&POLY_FOREX[msg.p]) {
+                const mid = ((msg.bp||0)+(msg.ap||0))/2||msg.l||0
+                const inst = INSTRUMENTS.find(i=>i.sym===msg.p) as any
+                if (mid>0) push(msg.p, +mid.toFixed(inst?.dec??5))
               }
             }
           } catch {}
@@ -197,47 +185,56 @@ function usePriceFeed() {
       } catch { if (!dead) wsTimer=setTimeout(connectWS,3000) }
     }
 
-    // REST snapshot poll — forex + indices every 5 seconds
-    const pollAll = async () => {
-      if (dead) return
-      // Forex + metals
-      const forexTickers = Object.values(POLY_MAP).filter(v=>v.poly.startsWith('C:')).map(v=>v.poly).join(',')
+    // 2. TV postMessage — capture price updates from TV iframe
+    const tvHandler = (e: MessageEvent) => {
       try {
-        const r = await fetch(`https://api.polygon.io/v2/snapshot/locale/global/markets/forex/tickers?tickers=${forexTickers}&apiKey=${POLY}`)
-        const d = await r.json()
-        if (d.tickers) for (const t of d.tickers) {
-          const sym = Object.entries(POLY_MAP).find(([,v])=>v.poly===t.ticker)?.[0]
-          if (!sym) continue
-          const price = t.lastQuote?.mp || ((t.lastQuote?.ap||0)+(t.lastQuote?.bp||0))/2 || t.day?.c || 0
-          if (price>0) push(sym, price)
+        const d = typeof e.data==='string' ? JSON.parse(e.data) : e.data
+        // TV QUOTES_UPDATE message
+        if (d?.type==='QUOTES_UPDATE' && Array.isArray(d.quotes)) {
+          for (const q of d.quotes) {
+            const sym = TV_TO_SYM[q.n]
+            const price = q.v?.lp ?? q.v?.last_price ?? q.v?.close_price
+            if (sym && price) {
+              const inst = INSTRUMENTS.find(i=>i.sym===sym) as any
+              push(sym, +Number(price).toFixed(inst?.dec??5))
+            }
+          }
         }
       } catch {}
-      // Indices via ETF stocks
-      const idxTickers = Object.values(POLY_MAP).filter(v=>v.idxMult).map(v=>v.poly).join(',')
+    }
+    window.addEventListener('message', tvHandler)
+
+    // 3. REST poll for indices every 10s
+    const poll = async () => {
+      if (dead) return
       try {
-        const r = await fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${idxTickers}&apiKey=${POLY}`)
+        const etfMap: Record<string,[string,number]> = {
+          'QQQ':['NAS100',40],'SPY':['US500',10],'DIA':['US30',100],'EWG':['GER40',740]
+        }
+        const r = await fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${Object.keys(etfMap).join(',')}&apiKey=${POLY}`)
         const d = await r.json()
         if (d.tickers) for (const t of d.tickers) {
-          const entry = Object.entries(POLY_MAP).find(([,v])=>v.poly===t.ticker)
-          if (!entry) continue
-          const [sym, {idxMult}] = entry
-          const etfPrice = t.day?.c || t.lastTrade?.p || t.prevDay?.c || 0
-          if (etfPrice>0 && idxMult) push(sym, Math.round(etfPrice*idxMult*10)/10)
+          const m = etfMap[t.ticker]; if (!m) continue
+          const price = t.day?.c||t.lastTrade?.p||0
+          if (price>0) push(m[0], Math.round(price*m[1]*10)/10)
         }
       } catch {}
     }
 
     connectWS()
-    pollAll()
-    pollTimer = setInterval(pollAll, 5000)
+    poll()
+    pollTimer = setInterval(poll, 10000)
     return () => {
-      dead=true; clearTimeout(wsTimer); clearInterval(pollTimer)
+      dead=true
+      window.removeEventListener('message', tvHandler)
+      clearTimeout(wsTimer); clearInterval(pollTimer)
       try{ws?.close()}catch{}
     }
   }, [push])
 
   return { prices, prevRef, priceRef, push }
 }
+
 
 /* ══ P&L ══════════════════════════════════════════════════════════ */
 function calcPnl(trade:any, price:number): number {
