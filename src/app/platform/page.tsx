@@ -49,44 +49,57 @@ function lsGet(k:string,fb:string){try{return localStorage.getItem(k)||fb}catch{
 function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
 
 /* ── TradingView Widget ───────────────────────────────────────────── */
+/* ── Global postMessage price bus ─────────────────────────────────
+   Set up ONCE before any iframe loads.
+   TV Advanced Chart fires {name:"quoteUpdate", data:{lp:price}} on every tick.
+   We catch all window messages and route the price to whoever needs it.
+   ─────────────────────────────────────────────────────────────── */
+type PriceCb = (price: number) => void
+const _priceBus = new Set<PriceCb>()
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', (e: MessageEvent) => {
+    try {
+      const raw = e.data
+      const d = typeof raw === 'string' ? JSON.parse(raw) : raw
+      if (!d) return
+
+      let price = 0
+
+      // TV Advanced Chart: quoteUpdate
+      if (d.name === 'quoteUpdate' && d.data?.lp > 0)
+        price = d.data.lp
+
+      // TV widget: QUOTES_UPDATE  
+      else if (d.type === 'QUOTES_UPDATE' && Array.isArray(d.quotes)) {
+        for (const q of d.quotes) {
+          const lp = q.v?.lp ?? q.v?.last_price ?? 0
+          if (lp > 0) { price = lp; break }
+        }
+      }
+
+      // TV internal du format
+      else if (d.name === 'du' && d.data?.sds_1?.s?.[0]?.v) {
+        const v = d.data.sds_1.s[0].v
+        price = v.close ?? v.lp ?? v.last_price ?? 0
+      }
+
+      if (price > 0) _priceBus.forEach(cb => cb(price))
+    } catch {}
+  }, { passive: true })
+}
+
 /* ── TradingView Widget ───────────────────────────────────────────── */
 function TVChart({tvSym, interval, onPrice}: {tvSym:string; interval:string; onPrice:(p:number)=>void}) {
   const ref    = useRef<HTMLDivElement>(null)
   const keyRef = useRef('')
   const idRef  = useRef(`tv_${Math.random().toString(36).slice(2)}`)
 
-  // ── Method 1: postMessage from TV iframe ─────────────────────────
+  // Subscribe to global price bus
   useEffect(()=>{
-    const handler = (e: MessageEvent) => {
-      try {
-        const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
-        if (!d) return
-        // Format 1: QUOTES_UPDATE
-        if (d.type === 'QUOTES_UPDATE' && Array.isArray(d.quotes)) {
-          for (const q of d.quotes) {
-            const lp = q.v?.lp ?? q.v?.last_price ?? q.v?.ch
-            if (lp && lp > 0) { onPrice(lp); return }
-          }
-        }
-        // Format 2: quoteUpdate
-        if (d.name === 'quoteUpdate' && d.data?.lp) { onPrice(d.data.lp); return }
-        // Format 3: du (data update) — TV internal format
-        if (d.name === 'du' && d.data?.sds_1?.s?.[0]?.v?.close) {
-          onPrice(d.data.sds_1.s[0].v.close); return
-        }
-        // Format 4: price from symbol info
-        if (d.m === 'du' && Array.isArray(d.p)) {
-          for (const p of d.p) {
-            if (p?.sds_1?.s?.[0]?.v?.close > 0) { onPrice(p.sds_1.s[0].v.close); return }
-          }
-        }
-      } catch {}
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
+    _priceBus.add(onPrice)
+    return () => { _priceBus.delete(onPrice) }
   }, [onPrice])
-
-  // DOM polling removed — using /api/quote hot poll instead
 
   useEffect(()=>{
     const el = ref.current; if(!el) return
@@ -139,29 +152,11 @@ function usePriceFeed() {
     setPrices(p => p[sym]===price ? p : {...p,[sym]:price})
   },[])
 
-  // Track active symbol for fast polling
-  const activeSymRef = useRef<string>('')
-
   useEffect(()=>{
     let dead = false
 
-    // ── HOT poll: active symbol via TradingView scanner API (~300ms) ──────
-    // Polls /api/quote every 500ms for whichever symbol is open in chart
-    const pollActive = async () => {
-      if(dead) return
-      const sym = activeSymRef.current
-      if(!sym) return
-      try{
-        const r = await fetch(`/api/quote?sym=${encodeURIComponent(sym)}`, {
-          signal: AbortSignal.timeout(2500)
-        })
-        if(!r.ok) return
-        const d = await r.json()
-        if(d.price > 0) push(sym, d.price)
-      }catch{}
-    }
-
-    // ── WARM poll: all symbols background refresh every 4s ──────────────
+    // Background poll: all symbols every 4s via /api/prices
+    // Real-time for active symbol comes from TV postMessage (global price bus)
     const pollAll = async () => {
       if(dead) return
       try{
@@ -174,16 +169,12 @@ function usePriceFeed() {
       }catch{}
     }
 
-    pollActive()
     pollAll()
-
-    const ivActive = setInterval(pollActive, 500)  // active symbol: 500ms
-    const ivAll    = setInterval(pollAll,    4000)  // all symbols: 4s
-
-    return ()=>{ dead=true; clearInterval(ivActive); clearInterval(ivAll) }
+    const iv = setInterval(pollAll, 4000)
+    return ()=>{ dead=true; clearInterval(iv) }
   },[push])
 
-  // TV postMessage — accept always, instant when TV ticks
+  // onTVPrice: called by TVChart via global price bus for active symbol
   const onTVPrice = useCallback((price: number) => {
     const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
     if(sym && price > 0) push(sym, price)
@@ -191,12 +182,29 @@ function usePriceFeed() {
 
   const setActiveSym = useCallback((tvSym: string) => {
     activeTvSym.current = tvSym
-    // Also update activeSymRef for hot polling
-    const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === tvSym)?.sym ?? ''
-    activeSymRef.current = sym
   }, [])
 
-  // Heartbeat — re-render every 200ms
+  // Fallback: read price from document.title which TV updates live
+  // Format: "3858.38 XAUUSD — Gold Spot / U.S. Dollar — TradingView"
+  useEffect(()=>{
+    let lastTitle = ''
+    const iv = setInterval(()=>{
+      const title = document.title
+      if(title === lastTitle) return
+      lastTitle = title
+      // Extract leading number from title
+      const m = title.match(/^([0-9,]+\.?[0-9]*)\s/)
+      if(!m) return
+      const price = parseFloat(m[1].replace(/,/g,''))
+      if(price > 0){
+        const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
+        if(sym) push(sym, price)
+      }
+    }, 200)
+    return ()=>clearInterval(iv)
+  },[push])
+
+  // Heartbeat — re-render every 200ms so P&L stays current
   useEffect(()=>{
     const iv = setInterval(()=> setPrices(p=>({...p})), 200)
     return ()=>clearInterval(iv)
