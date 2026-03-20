@@ -207,7 +207,7 @@ function CandleChart({sym,tf,livePrice,onLastClose,openTrades,onUpdateSLTP}:Char
       chartRef.current=chart;serRef.current=series
       const ro=new ResizeObserver(()=>{if(chartRef.current&&divRef.current)chartRef.current.resize(divRef.current.clientWidth,divRef.current.clientHeight)})
       ro.observe(el)
-      const inst=ALL_INSTRUMENTS.find(i=>i.sym===sym)! as any
+      const inst=ALL_INSTRUMENTS.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0] as any
       const candles=await fetchCandles(inst.poly, tf, inst.idxMult??1)
       if(dead){ro.disconnect();return}
       if(candles.length>0){
@@ -454,7 +454,14 @@ export function PlatformPage(){
   const [selAccId,setSelAccId]=useState<string|null>(null)
   const primary=accounts.find(a=>a.id===selAccId)??defPrimary
 
-  const [sym,    setSym]   =useState(()=>{try{return localStorage.getItem('tfd_sym')||'EUR/USD'}catch{return 'EUR/USD'}})
+  const [sym,    setSym]   =useState(()=>{
+    try{
+      const saved=localStorage.getItem('tfd_sym')||'EUR/USD'
+      // Validate saved sym exists in instruments
+      const valid=ALL_INSTRUMENTS.find(i=>i.sym===saved)
+      return valid ? saved : 'EUR/USD'
+    }catch{return 'EUR/USD'}
+  })
   const [tf,     setTf]    =useState(()=>{try{return localStorage.getItem('tfd_tf')||'H1'}catch{return 'H1'}})
   const [dir,    setDir]   =useState<'buy'|'sell'>('buy')
   const [lots,   setLots]  =useState('0.10')
@@ -488,7 +495,7 @@ export function PlatformPage(){
     return ()=>clearInterval(iv)
   },[])
 
-  const inst=ALL_INSTRUMENTS.find(i=>i.sym===sym)!
+  const inst=ALL_INSTRUMENTS.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0]
   const ms=getMarketStatus(inst.market)
   const livePrice=prices[sym]||SEED[sym]
   const prevPrice=refPrev.current[sym]||livePrice
