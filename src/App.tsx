@@ -15,6 +15,7 @@ import { AccountsPage }       from './app/dashboard/accounts/page'
 import { DashboardSupportPage } from './app/dashboard/support/page'
 import { SettingsPage }       from './app/dashboard/settings/page'
 import { PlatformPage }       from './app/platform/page'
+import { MobilePlatform }      from './app/platform/mobile'
 import { AdminDashboardPage } from './app/admin/page'
 import { AdminTradersPage }   from './app/admin/traders/page'
 import { AdminPayoutsPage }        from './app/admin/payouts/page'
@@ -35,6 +36,13 @@ import { AdminEmailPage }     from './app/admin/email/page'
 import { SupportCRMPage }     from './app/support-crm/page'
 import { SupportAnalyticsPage } from './app/support-crm/analytics/page'
 import { CannedResponsesPage }  from './app/support-crm/canned/page'
+
+import { useIsMobile } from './hooks/useIsMobile'
+
+function PlatformRoute() {
+  const isMobile = useIsMobile()
+  return isMobile ? <MobilePlatform /> : <PlatformPage />
+}
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { session, profile, loading } = useAuth()

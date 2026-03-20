@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { supabase } from '@/lib/supabase'
 
 export function MarketingPage() {
@@ -15,12 +16,13 @@ export function MarketingPage() {
   }, [])
 
   const isLoggedIn = !!session
+  const isMobile = useIsMobile()
 
   const S: Record<string, React.CSSProperties> = {
     page:    { fontFamily:"'Inter',system-ui,sans-serif", background:'#fff', color:'#1A3A6B', minHeight:'100vh' },
     nav:     { height:'64px', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 32px', borderBottom:'1px solid #E8EEF8', background:'#fff', position:'sticky' as const, top:0, zIndex:100 },
     logo:    { fontFamily:"'Playfair Display',serif", fontSize:'18px', fontWeight:700, color:'#1A3A6B', marginRight:'32px', letterSpacing:'-0.3px', textDecoration:'none', flexShrink:0 },
-    section: { padding:'72px 48px', borderBottom:'1px solid #E8EEF8' },
+    section: { padding:isMobile?'40px 20px':'72px 48px', borderBottom:'1px solid #E8EEF8' },
     eyebrow: { display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' },
     line:    { width:'28px', height:'2px', background:'#2255CC', borderRadius:'1px' },
     tag:     { fontSize:'10px', fontWeight:700, color:'#2255CC', letterSpacing:'2.5px', textTransform:'uppercase' as const },
@@ -51,14 +53,15 @@ export function MarketingPage() {
           )}
         </div>
       </nav>
+      )}
 
       {/* ── HERO ── */}
-      <div style={{padding:'96px 48px 80px', background:'#fff', borderBottom:'1px solid #E8EEF8', maxWidth:'960px', margin:'0 auto'}}>
+      <div style={{padding:isMobile?'40px 20px 48px':'96px 48px 80px', background:'#fff', borderBottom:'1px solid #E8EEF8', maxWidth:'960px', margin:'0 auto'}}>
         <div style={{display:'inline-flex',alignItems:'center',gap:'7px',background:'#EEF3FF',border:'1px solid #C5D5FA',borderRadius:'20px',padding:'5px 14px',marginBottom:'28px'}}>
           <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#22C55E'}}/>
           <span style={{fontSize:'10px',fontWeight:700,color:'#2255CC',letterSpacing:'0.5px',textTransform:'uppercase'}}>14,281 traders funded worldwide</span>
         </div>
-        <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:'60px',fontWeight:700,color:'#1A3A6B',lineHeight:1.02,letterSpacing:'-1px',marginBottom:'20px',maxWidth:'700px'}}>
+        <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:isMobile?'36px':'60px',fontWeight:700,color:'#1A3A6B',lineHeight:1.05,letterSpacing:'-0.5px',marginBottom:'20px',maxWidth:'700px'}}>
           Trade our capital.<br/>Keep your <span style={{color:'#2255CC',fontStyle:'italic'}}>profits.</span>
         </h1>
         <p style={{fontSize:'16px',fontWeight:300,color:'#5C7A9E',lineHeight:1.75,marginBottom:'36px',maxWidth:'480px'}}>
@@ -72,7 +75,7 @@ export function MarketingPage() {
             View plans
           </button>
         </div>
-        <div style={{display:'flex',gap:'0',paddingTop:'32px',borderTop:'1px solid #E8EEF8'}}>
+        <div style={{display:'flex',gap:'0',paddingTop:'32px',borderTop:'1px solid #E8EEF8',flexWrap:'wrap'}}>
           {[['$4.8M+','Paid out'],['90%','Max split'],['24h','Payout speed'],['$200K','Max account']].map(([v,l],i,arr)=>(
             <div key={l} style={{paddingRight:i<arr.length-1?'32px':'0',marginRight:i<arr.length-1?'32px':'0',borderRight:i<arr.length-1?'1px solid #E8EEF8':'none'}}>
               <div style={{fontFamily:"'Playfair Display',serif",fontSize:'28px',fontWeight:700,color:'#1A3A6B'}}>{v}</div>
@@ -88,7 +91,7 @@ export function MarketingPage() {
           <div style={S.eyebrow}><div style={S.line}/><span style={S.tag}>How it works</span></div>
           <h2 style={S.h2}>From challenge to <span style={{color:'#2255CC',fontStyle:'italic'}}>funded</span> in four steps.</h2>
           <div style={{height:'48px'}}/>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'16px'}}>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)',gap:'16px'}}>
             {[
               ['01','Choose your challenge','Select your account size and pay a one-time fee. No subscriptions, no recurring costs.'],
               ['02','Pass the evaluation','Hit the profit target while respecting drawdown rules. No time pressure.'],
@@ -111,7 +114,7 @@ export function MarketingPage() {
           <div style={S.eyebrow}><div style={S.line}/><span style={S.tag}>Challenge plans</span></div>
           <h2 style={S.h2}>Pick your <span style={{color:'#2255CC',fontStyle:'italic'}}>account size.</span></h2>
           <p style={{fontSize:'13px',color:'#8FA3BF',marginBottom:'40px'}}>All plans include CFT Trade platform, real-time risk monitoring, and same-day payouts.</p>
-          <div style={{display:'grid',gridTemplateColumns:`repeat(${Math.min((products.length||3),4)},1fr)`,gap:'16px'}}>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':`repeat(${Math.min((products.length||3),4)},1fr)`,gap:'16px'}}>
             {(products.length ? products : [
               {id:'1',name:'Starter',account_size:25000,price_usd:199,ph1_profit_target:8,ph1_daily_dd:5,funded_profit_split:80},
               {id:'2',name:'Professional',account_size:100000,price_usd:549,ph1_profit_target:10,ph1_daily_dd:5,funded_profit_split:85},
@@ -175,7 +178,7 @@ export function MarketingPage() {
           <div style={S.eyebrow}><div style={S.line}/><span style={S.tag}>Payouts</span></div>
           <h2 style={S.h2}>Real traders, real <span style={{color:'#2255CC',fontStyle:'italic'}}>profits.</span></h2>
           <p style={{...S.lead}}>Join thousands of funded traders who withdraw profits every week.</p>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'12px'}}>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:'12px'}}>
             {[['AJ','Alex J.','$2,400','TFD-100K'],['MR','Maria R.','$890','TFD-25K'],['DK','David K.','$5,200','TFD-200K'],['ST','Sara T.','$1,150','TFD-50K'],['PP','Pavel P.','$3,800','TFD-100K'],['LM','Laura M.','$740','TFD-25K']].map(([init,name,amt,acc])=>(
               <div key={name} style={{display:'flex',alignItems:'center',gap:'12px',padding:'16px 20px',background:'#F4F7FD',border:'1px solid #E8EEF8',borderRadius:'10px'}}>
                 <div style={{width:'36px',height:'36px',borderRadius:'50%',background:'#1A3A6B',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:700,color:'#fff',flexShrink:0}}>{init}</div>
@@ -196,7 +199,7 @@ export function MarketingPage() {
           <div style={S.eyebrow}><div style={S.line}/><span style={S.tag}>FAQ</span></div>
           <h2 style={S.h2}>Common <span style={{color:'#2255CC',fontStyle:'italic'}}>questions.</span></h2>
           <div style={{height:'40px'}}/>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:'16px'}}>
             {[
               ['Is there a time limit on challenges?','No. Take as long as you need to reach the profit target while respecting drawdown rules.'],
               ['How are payouts processed?','Payouts are made via cryptocurrency. Once approved, funds arrive within 24 hours.'],

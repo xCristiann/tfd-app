@@ -1,4 +1,7 @@
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useState, useEffect, useRef } from 'react'
+import { useMobile } from '@/hooks/useMobile'
+import { MobileNav } from './MobileNav'
 import { Sidebar } from './Sidebar'
 import { useAuth } from '@/hooks/useAuth'
 import { auth } from '@/lib/auth'
@@ -89,6 +92,7 @@ function TraderNotifications({ userId }: { userId: string }) {
         </div>
       )}
     </div>
+    {isMobile && <MobileNav />}
   )
 }
 
@@ -157,10 +161,12 @@ function AdminNotifications() {
         </div>
       )}
     </div>
+    {isMobile && <MobileNav />}
   )
 }
 
 export function DashboardLayout({ children, title, topbarRight, nav, accentColor = 'gold', accountBox, logoSubtitle }: Props) {
+  const isMobile = useMobile()
   const { profile } = useAuth()
   const navigate = useNavigate()
 
@@ -213,5 +219,6 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
         </main>
       </div>
     </div>
+    {isMobile && <MobileNav />}
   )
 }
