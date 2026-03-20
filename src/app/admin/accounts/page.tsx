@@ -353,6 +353,7 @@ export function AdminAccountsPage() {
               )}
             </div>
             </div>
+          </div>
           )}
         </div>
       </DashboardLayout>
