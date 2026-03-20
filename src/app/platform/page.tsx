@@ -10,28 +10,26 @@ const LOT_SIZE = 100_000
 
 /* ── Instruments ─────────────────────────────────────────────────── */
 const ALL_INSTRUMENTS = [
-  { sym:'EUR/USD', tv:'FX:EURUSD',        market:'forex', spread:0.00010, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', tv:'FX:GBPUSD',        market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/JPY', tv:'FX:USDJPY',        market:'forex', spread:0.010,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'USD/CHF', tv:'FX:USDCHF',        market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'AUD/USD', tv:'FX:AUDUSD',        market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/CAD', tv:'FX:USDCAD',        market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>1/p*LOT_SIZE },
-  { sym:'NZD/USD', tv:'FX:NZDUSD',        market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/JPY', tv:'FX:GBPJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'EUR/JPY', tv:'FX:EURJPY',        market:'forex', spread:0.025,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'EUR/GBP', tv:'FX:EURGBP',        market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
-  { sym:'AUD/JPY', tv:'FX:AUDJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'CAD/JPY', tv:'FX:CADJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'XAU/USD', tv:'CAPITALCOM:XAUUSD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', tv:'CAPITALCOM:XAGUSD',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
-  { sym:'NAS100',  tv:'CAPITALCOM:US100', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   tv:'CAPITALCOM:US500', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    tv:'CAPITALCOM:US30',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   tv:'CAPITALCOM:DE40',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
-  { sym:'WTI',     tv:'CAPITALCOM:OIL_CRUDE',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
+  { sym:'EUR/USD', tv:'OANDA:EURUSD',  market:'forex', spread:0.00010, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', tv:'OANDA:GBPUSD',  market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/JPY', tv:'OANDA:USDJPY',  market:'forex', spread:0.010,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(_:number)=>LOT_SIZE   },
+  { sym:'USD/CHF', tv:'OANDA:USDCHF',  market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'AUD/USD', tv:'OANDA:AUDUSD',  market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/CAD', tv:'OANDA:USDCAD',  market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>1/p*LOT_SIZE },
+  { sym:'NZD/USD', tv:'OANDA:NZDUSD',  market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/JPY', tv:'OANDA:GBPJPY',  market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'EUR/JPY', tv:'OANDA:EURJPY',  market:'forex', spread:0.025,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'EUR/GBP', tv:'OANDA:EURGBP',  market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
+  { sym:'AUD/JPY', tv:'OANDA:AUDJPY',  market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'CAD/JPY', tv:'OANDA:CADJPY',  market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'XAU/USD', tv:'OANDA:XAUUSD',  market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
+  { sym:'XAG/USD', tv:'OANDA:XAGUSD',  market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
+  { sym:'NAS100',  tv:'OANDA:NAS100USD', market:'us',  spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
+  { sym:'US500',   tv:'OANDA:SPX500USD', market:'us',  spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
+  { sym:'US30',    tv:'OANDA:US30USD',   market:'us',  spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   tv:'OANDA:DE30EUR',   market:'eu',  spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
+  { sym:'WTI',     tv:'OANDA:WTICOUSD',  market:'forex',spread:0.030,  dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
-
-type Inst = typeof ALL_INSTRUMENTS[number]
 
 const SEED: Record<string,number> = {
   'EUR/USD':1.0820,'GBP/USD':1.2960,'USD/JPY':149.20,'USD/CHF':0.8850,
@@ -83,40 +81,7 @@ function TVChart({tvSym, interval}: {tvSym:string; interval:string}) {
   return <div ref={ref} style={{width:'100%',height:'100%'}}/>
 }
 
-/* ── Price feed — Twelve Data WebSocket only (no REST, no credits) ── */
-const TD_KEY = 'c6158908260647989323da44b23f5f97'
-
-// TD free plan: 8 symbols via WebSocket, unlimited messages, zero credits
-// Priority: most traded instruments first
-const TD_WS_SYMS = [
-  {our:'EUR/USD', td:'EUR/USD', dec:5},
-  {our:'GBP/USD', td:'GBP/USD', dec:5},
-  {our:'USD/JPY', td:'USD/JPY', dec:3},
-  {our:'XAU/USD', td:'XAU/USD', dec:2},
-  {our:'USD/CHF', td:'USD/CHF', dec:5},
-  {our:'AUD/USD', td:'AUD/USD', dec:5},
-  {our:'GBP/JPY', td:'GBP/JPY', dec:3},
-  {our:'EUR/JPY', td:'EUR/JPY', dec:3},
-]
-
-// Remaining symbols use TD WS too — send as second subscription
-// TD actually allows more than 8 symbols on WS even on free plan
-const TD_WS_EXTRA = [
-  {our:'USD/CAD', td:'USD/CAD', dec:5},
-  {our:'NZD/USD', td:'NZD/USD', dec:5},
-  {our:'EUR/GBP', td:'EUR/GBP', dec:5},
-  {our:'AUD/JPY', td:'AUD/JPY', dec:3},
-  {our:'CAD/JPY', td:'CAD/JPY', dec:3},
-  {our:'XAG/USD', td:'XAG/USD', dec:4},
-  {our:'NAS100',  td:'NDX',     dec:2},
-  {our:'US500',   td:'SPX',     dec:2},
-  {our:'US30',    td:'DJI',     dec:1},
-  {our:'GER40',   td:'DAX',     dec:1},
-  {our:'WTI',     td:'WTI/USD', dec:2},
-]
-
-const ALL_TD = [...TD_WS_SYMS, ...TD_WS_EXTRA]
-
+/* ── Price feed — OANDA via Vercel proxy (real prices, no credits) ── */
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEED})
   const refPrev   = useRef<Record<string,number>>({...SEED})
@@ -130,60 +95,36 @@ function usePriceFeed() {
   },[])
 
   useEffect(()=>{
-    let dead=false, ws:WebSocket, wsTimer:any
+    let dead = false
 
-    const connect = () => {
+    // OANDA TV symbols -> our symbols mapping
+    const TV_TO_SYM: Record<string,string> = {}
+    ALL_INSTRUMENTS.forEach(i => { TV_TO_SYM[(i as any).tv] = i.sym })
+
+    // Poll OANDA prices via our Vercel serverless proxy every 2 seconds
+    const poll = async () => {
       if (dead) return
       try {
-        ws = new WebSocket(`wss://ws.twelvedata.com/v1/quotes/price?apikey=${TD_KEY}`)
-        ws.onopen = () => {
-          // Subscribe primary 8 symbols
-          ws.send(JSON.stringify({
-            action: 'subscribe',
-            params: { symbols: TD_WS_SYMS.map(m=>m.td).join(',') }
-          }))
-          // After 1s subscribe extras
-          setTimeout(()=>{
-            if (ws.readyState===WebSocket.OPEN) {
-              ws.send(JSON.stringify({
-                action: 'subscribe',
-                params: { symbols: TD_WS_EXTRA.map(m=>m.td).join(',') }
-              }))
-            }
-          }, 1000)
+        const r = await fetch('/api/prices')
+        const d = await r.json()
+        if (d.ok && d.prices) {
+          for (const [sym, price] of Object.entries(d.prices) as [string,number][]) {
+            const inst = ALL_INSTRUMENTS.find(i=>i.sym===sym) as any
+            if (inst && price > 0) push(sym, +Number(price).toFixed(inst.dec))
+          }
         }
-        ws.onmessage = ({data}) => {
-          try {
-            const d = JSON.parse(data)
-            if (d.event==='price' && d.symbol && d.price) {
-              const m = ALL_TD.find(x=>x.td===d.symbol)
-              if (m) push(m.our, +parseFloat(d.price).toFixed(m.dec))
-            }
-          } catch {}
-        }
-        ws.onclose = () => { if (!dead) wsTimer=setTimeout(connect,2000) }
-        ws.onerror = () => { try{ws.close()}catch{} }
-      } catch { if (!dead) wsTimer=setTimeout(connect,3000) }
+      } catch {}
     }
 
-    connect()
-    
-    // Heartbeat: re-push current prices every 1s so P&L always recalculates
+    poll()
+    const iv = setInterval(poll, 2000)
+
+    // Heartbeat to keep P&L updating every 500ms
     const hb = setInterval(()=>{
-      Object.entries(refPrices.current).forEach(([sym,price])=>{
-        if(price>0) {
-          // tiny random tick to force re-render even when WS is slow
-          const inst = ALL_INSTRUMENTS.find(i=>i.sym===sym) as any
-          const tick = inst ? Math.random()*inst.spread*0.1 : 0
-          setPrices(p => ({...p,[sym]:+(price+tick-tick).toFixed(inst?.dec??5)}))
-        }
-      })
-    }, 1000)
+      setPrices(p => ({...p}))
+    }, 500)
 
-    return () => {
-      dead=true; clearTimeout(wsTimer); clearInterval(hb)
-      try{ws?.close()}catch{}
-    }
+    return () => { dead=true; clearInterval(iv); clearInterval(hb) }
   },[push])
 
   return { prices, refPrev, refPrices, push }
