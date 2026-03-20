@@ -41,6 +41,26 @@ export function PayoutsPage() {
   const profit = selectedAccount ? selectedAccount.balance - selectedAccount.starting_balance : 0
   const withdrawable = profit > 0 ? profit * (splitPct / 100) : 0
 
+  // Biweekly payout cycle: trader can request payout only after 14 days from first trade
+  const [firstTradeAt, setFirstTradeAt] = useState<string | null>(null)
+  useEffect(() => {
+    if (!selectedAccount?.id) return
+    supabase.from('trades')
+      .select('opened_at')
+      .eq('account_id', selectedAccount.id)
+      .order('opened_at', { ascending: true })
+      .limit(1)
+      .then(({ data }) => setFirstTradeAt(data?.[0]?.opened_at ?? null))
+  }, [selectedAccount?.id])
+
+  const payoutEligibleDate = firstTradeAt
+    ? new Date(new Date(firstTradeAt).getTime() + 14 * 24 * 60 * 60 * 1000)
+    : null
+  const isPayoutEligible = payoutEligibleDate ? new Date() >= payoutEligibleDate : false
+  const daysUntilEligible = payoutEligibleDate
+    ? Math.max(0, Math.ceil((payoutEligibleDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : 14
+
   useEffect(() => {
     if (fundedAccounts.length > 0 && !selectedAccountId) {
       setSelectedAccountId(fundedAccounts[0].id)
@@ -54,6 +74,7 @@ export function PayoutsPage() {
 
   async function requestPayout() {
     if (!selectedAccount) { toast('warning','⚠️','No Funded Account','You need a funded account to request a payout.'); return }
+    if (!isPayoutEligible) { toast('warning','⏳','Not Eligible Yet',`Payout available in ${daysUntilEligible} day${daysUntilEligible!==1?'s':''}. Biweekly cycle from first trade.`); return }
     if (!amount || !wallet) { toast('warning','⚠️','Missing Info','Fill in amount and wallet.'); return }
     const amt = parseFloat(amount)
     if (amt < 100) { toast('warning','⚠️','Min $100','Minimum payout is $100.'); return }
@@ -145,6 +166,25 @@ export function PayoutsPage() {
                   </span>
                 }/>
 
+                {/* Biweekly payout cycle banner */}
+                <div className={`flex items-center gap-3 p-3 mb-4 border rounded-lg ${
+                  isPayoutEligible
+                    ? 'bg-[rgba(22,163,74,.05)] border-[rgba(22,163,74,.2)]'
+                    : 'bg-[rgba(217,119,6,.05)] border-[rgba(217,119,6,.2)]'
+                }`}>
+                  <span className="text-[18px]">{isPayoutEligible ? '✅' : '⏳'}</span>
+                  <div>
+                    <div className={`text-[11px] font-semibold ${isPayoutEligible ? 'text-[#16A34A]' : 'text-[#D97706]'}`}>
+                      {isPayoutEligible ? 'Eligible for Payout' : `Payout available in ${daysUntilEligible} day${daysUntilEligible!==1?'s':''}`}
+                    </div>
+                    <div className="text-[10px] text-[#8FA3BF]">
+                      {firstTradeAt
+                        ? `First trade: ${new Date(firstTradeAt).toLocaleDateString()} · Eligible: ${payoutEligibleDate?.toLocaleDateString()}`
+                        : 'No trades yet — place your first trade to start the cycle'}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Withdrawable info */}
                 <div className="flex gap-3 mb-5">
                   <div className="flex-1 p-3 bg-[rgba(34,85,204,.04)] border border-[rgba(34,85,204,.15)]">
@@ -170,8 +210,8 @@ export function PayoutsPage() {
                   <Input label="Wallet / Account" placeholder="Your wallet address or bank details" value={wallet} onChange={e=>setWallet(e.target.value)} />
                   <Input label={`Amount (USD) — max ${fmt(withdrawable)}`} type="number" placeholder="Min $100" value={amount} onChange={e=>setAmount(e.target.value)} />
                   <Input label="Notes (optional)" placeholder="Any notes for the finance team" value={notes} onChange={e=>setNotes(e.target.value)} />
-                  <Button loading={loading} onClick={requestPayout} className="w-full" disabled={withdrawable <= 0}>
-                    {withdrawable <= 0 ? 'No Profit to Withdraw' : 'Request Payout →'}
+                  <Button loading={loading} onClick={requestPayout} className="w-full" disabled={withdrawable <= 0 || !isPayoutEligible}>
+                    {withdrawable <= 0 ? 'No Profit to Withdraw' : !isPayoutEligible ? `Available in ${daysUntilEligible} day${daysUntilEligible!==1?'s':''}` : 'Request Payout →'}
                   </Button>
                 </div>
               </Card>

@@ -37,14 +37,63 @@ export const analyticsApi = {
   async getEquityCurve(accountId: string, days = 30): Promise<DailySnapshot[]> {
     const since = new Date()
     since.setDate(since.getDate() - days)
-    const { data, error } = await supabase
+
+    // First try daily_snapshots
+    const { data: snapshots } = await supabase
       .from('daily_snapshots')
       .select('snapshot_date,balance,equity,daily_pnl')
       .eq('account_id', accountId)
       .gte('snapshot_date', since.toISOString().split('T')[0])
       .order('snapshot_date', { ascending: true })
-    if (error) throw error
-    return data ?? []
+
+    if (snapshots && snapshots.length > 1) return snapshots
+
+    // Fallback: build curve from closed trades
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('starting_balance, balance, purchased_at')
+      .eq('id', accountId)
+      .single()
+
+    const { data: trades } = await supabase
+      .from('trades')
+      .select('closed_at, net_pnl')
+      .eq('account_id', accountId)
+      .eq('status', 'closed')
+      .order('closed_at', { ascending: true })
+
+    if (!trades || trades.length === 0) return []
+
+    const startBal = account?.starting_balance ?? 0
+    let running    = startBal
+
+    // Group P&L by day
+    const dayMap: Record<string, number> = {}
+    for (const t of trades) {
+      if (!t.closed_at) continue
+      const day = t.closed_at.split('T')[0]
+      dayMap[day] = (dayMap[day] ?? 0) + (t.net_pnl ?? 0)
+    }
+
+    // Build cumulative curve
+    const curve: DailySnapshot[] = []
+    for (const [day, pnl] of Object.entries(dayMap).sort()) {
+      running += pnl
+      curve.push({
+        id: day,
+        account_id: accountId,
+        snapshot_date: day,
+        balance: +running.toFixed(2),
+        equity:  +running.toFixed(2),
+        daily_pnl: +pnl.toFixed(2),
+        daily_dd: 0,
+        max_dd: 0,
+        trades_count: 0,
+        created_at: day,
+      })
+    }
+
+    return curve
   },
 
   async getSymbolBreakdown(accountId: string) {

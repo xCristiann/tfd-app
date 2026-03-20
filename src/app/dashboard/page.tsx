@@ -18,6 +18,90 @@ import { analyticsApi } from '@/lib/api/analytics'
 import { TRADER_NAV } from '@/lib/nav'
 import type { TraderStats, DailySnapshot, Account } from '@/types/database'
 
+
+/* ── Trade History Card ────────────────────────────────────────────── */
+function TradeHistoryCard({ accountId }: { accountId: string }) {
+  const [trades, setTrades] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!accountId) return
+    setLoading(true)
+    supabase.from('trades')
+      .select('*')
+      .eq('account_id', accountId)
+      .eq('status', 'closed')
+      .order('closed_at', { ascending: false })
+      .limit(50)
+      .then(({ data }) => { setTrades(data ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [accountId])
+
+  const totalPnl = trades.reduce((s, t) => s + (t.net_pnl ?? 0), 0)
+
+  return (
+    <div className="bg-white border border-[#E8EEF8] rounded-xl p-[18px]">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[11px] font-bold text-[#8FA3BF] uppercase tracking-wide">Trade History ({trades.length})</h3>
+        <span className={`font-mono text-[12px] font-bold ${totalPnl >= 0 ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+          Total P&L: {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
+        </span>
+      </div>
+      {loading ? (
+        <div className="flex justify-center py-6"><div className="w-5 h-5 border-2 border-[#2255CC] border-t-transparent rounded-full animate-spin"/></div>
+      ) : trades.length === 0 ? (
+        <div className="py-6 text-center text-[11px] text-[#8FA3BF]">No closed trades yet</div>
+      ) : (
+        <div className="overflow-auto">
+          <table className="w-full border-collapse text-[11px]">
+            <thead>
+              <tr className="border-b border-[#E8EEF8]">
+                {['Symbol','Dir','Lots','Open','Close','SL','TP','Open Time','Close Time','Duration','Pips','P&L'].map(h=>(
+                  <th key={h} className="px-[9px] py-[5px] text-[7px] tracking-[1.5px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(34,85,204,.02)] whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {trades.map(t => {
+                const dur = (() => {
+                  if (!t.closed_at || !t.opened_at) return '—'
+                  const ms = new Date(t.closed_at).getTime() - new Date(t.opened_at).getTime()
+                  const m = Math.floor(ms / 60000)
+                  const h = Math.floor(m / 60)
+                  const d = Math.floor(h / 24)
+                  if (d > 0) return `${d}d ${h % 24}h`
+                  if (h > 0) return `${h}h ${m % 60}m`
+                  return `${m}m`
+                })()
+                return (
+                  <tr key={t.id} className="border-b border-[#F4F7FD] hover:bg-[rgba(34,85,204,.02)]">
+                    <td className="px-[9px] py-[7px] font-semibold">{t.symbol}</td>
+                    <td className="px-[9px] py-[7px]">
+                      <span className={`text-[9px] font-bold ${t.direction==='buy'?'text-[#16A34A]':'text-[#DC2626]'}`}>{t.direction?.toUpperCase()}</span>
+                    </td>
+                    <td className="px-[9px] py-[7px] font-mono">{t.lots}</td>
+                    <td className="px-[9px] py-[7px] font-mono text-[#5C7A9E]">{(Number(t.open_price)||0).toFixed(5)}</td>
+                    <td className="px-[9px] py-[7px] font-mono text-[#5C7A9E]">{(Number(t.close_price)||0).toFixed(5)}</td>
+                    <td className="px-[9px] py-[7px] font-mono text-[#DC2626]">{t.sl ?? '—'}</td>
+                    <td className="px-[9px] py-[7px] font-mono text-[#16A34A]">{t.tp ?? '—'}</td>
+                    <td className="px-[9px] py-[7px] text-[#8FA3BF] text-[10px] whitespace-nowrap">{t.opened_at ? new Date(t.opened_at).toLocaleString() : '—'}</td>
+                    <td className="px-[9px] py-[7px] text-[#8FA3BF] text-[10px] whitespace-nowrap">{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
+                    <td className="px-[9px] py-[7px] font-mono text-[#5C7A9E]">{dur}</td>
+                    <td className="px-[9px] py-[7px] font-mono" style={{color:(t.pips??0)>=0?'#16A34A':'#DC2626'}}>{(t.pips??0)>=0?'+':''}{(Number(t.pips)||0).toFixed(1)}</td>
+                    <td className="px-[9px] py-[7px] font-mono font-bold" style={{color:(t.net_pnl??0)>=0?'#16A34A':'#DC2626'}}>
+                      {(t.net_pnl??0)>=0?'+':''}${(Number(t.net_pnl)||0).toFixed(2)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function DashboardPage() {
   const { accounts, loading } = useAccount()
   const { profile } = useAuth()
@@ -332,7 +416,7 @@ export function DashboardPage() {
                 <table className="w-full border-collapse text-[11px]">
                   <thead>
                     <tr className="border-b border-[#E8EEF8]">
-                      {['Symbol','Dir','Lots','Open Price','SL','TP','Opened'].map(h=>(
+                      {['Symbol','Dir','Lots','Open Price','SL','TP','Open Time','P&L'].map(h=>(
                         <th key={h} className="px-[11px] py-[6px] text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(34,85,204,.02)]">{h}</th>
                       ))}
                     </tr>
@@ -343,16 +427,20 @@ export function DashboardPage() {
                         <td className="px-[11px] py-[8px] font-semibold">{r.symbol}</td>
                         <td className="px-[11px] py-[8px]"><span className={`text-[9px] font-bold ${r.direction==='buy'?'text-[#16A34A]':'text-[#DC2626]'}`}>{r.direction?.toUpperCase()}</span></td>
                         <td className="px-[11px] py-[8px] font-mono">{r.lots}</td>
-                        <td className="px-[11px] py-[8px] font-mono">{r.open_price}</td>
+                        <td className="px-[11px] py-[8px] font-mono text-[#5C7A9E]">{(Number(r.open_price)||0).toFixed(5)}</td>
                         <td className="px-[11px] py-[8px] font-mono text-[#DC2626]">{r.sl??'—'}</td>
                         <td className="px-[11px] py-[8px] font-mono text-[#16A34A]">{r.tp??'—'}</td>
-                        <td className="px-[11px] py-[8px] font-mono text-[#8FA3BF] text-[10px]">{new Date(r.opened_at).toLocaleTimeString()}</td>
+                        <td className="px-[11px] py-[8px] font-mono text-[#8FA3BF] text-[10px]">{new Date(r.opened_at).toLocaleString()}</td>
+                        <td className="px-[11px] py-[8px] font-mono font-bold text-[#8FA3BF] text-[10px]">Open</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               )}
             </Card>
+
+            {/* Trade History */}
+            <TradeHistoryCard accountId={account!.id}/>
 
             <div className="flex items-center gap-2">
               <Badge variant={phaseVariant(account!.phase)}>{phaseLabel(account!.phase)}</Badge>
