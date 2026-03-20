@@ -10,33 +10,40 @@ const LOT_SIZE = 100_000
 
 /* ── Instruments ─────────────────────────────────────────────────── */
 const ALL_INSTRUMENTS = [
-  { sym:'EUR/USD', tv:'OANDA:EURUSD',  market:'forex', spread:0.00010, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/USD', tv:'OANDA:GBPUSD',  market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/JPY', tv:'OANDA:USDJPY',  market:'forex', spread:0.010,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(_:number)=>LOT_SIZE   },
-  { sym:'USD/CHF', tv:'OANDA:USDCHF',  market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'AUD/USD', tv:'OANDA:AUDUSD',  market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'USD/CAD', tv:'OANDA:USDCAD',  market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>1/p*LOT_SIZE },
-  { sym:'NZD/USD', tv:'OANDA:NZDUSD',  market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
-  { sym:'GBP/JPY', tv:'OANDA:GBPJPY',  market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'EUR/JPY', tv:'OANDA:EURJPY',  market:'forex', spread:0.025,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'EUR/GBP', tv:'OANDA:EURGBP',  market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
-  { sym:'AUD/JPY', tv:'OANDA:AUDJPY',  market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'CAD/JPY', tv:'OANDA:CADJPY',  market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
-  { sym:'XAU/USD', tv:'OANDA:XAUUSD',  market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', tv:'OANDA:XAGUSD',  market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
-  { sym:'NAS100',  tv:'OANDA:NAS100USD', market:'us',  spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   tv:'OANDA:SPX500USD', market:'us',  spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    tv:'OANDA:US30USD',   market:'us',  spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   tv:'OANDA:DE30EUR',   market:'eu',  spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
-  { sym:'WTI',     tv:'OANDA:WTICOUSD',  market:'forex',spread:0.030,  dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
+  // fh = Finnhub WebSocket symbol (real-time price feed)
+  // tv = TradingView widget symbol (chart display)
+  // Both must show same price — Finnhub drives execution price
+  { sym:'EUR/USD', fh:'OANDA:EUR_USD',    tv:'OANDA:EURUSD',    market:'forex', spread:0.00010, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/USD', fh:'OANDA:GBP_USD',    tv:'OANDA:GBPUSD',    market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/JPY', fh:'OANDA:USD_JPY',    tv:'OANDA:USDJPY',    market:'forex', spread:0.010,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(_:number)=>LOT_SIZE   },
+  { sym:'USD/CHF', fh:'OANDA:USD_CHF',    tv:'OANDA:USDCHF',    market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'AUD/USD', fh:'OANDA:AUD_USD',    tv:'OANDA:AUDUSD',    market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'USD/CAD', fh:'OANDA:USD_CAD',    tv:'OANDA:USDCAD',    market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>1/p*LOT_SIZE },
+  { sym:'NZD/USD', fh:'OANDA:NZD_USD',    tv:'OANDA:NZDUSD',    market:'forex', spread:0.00020, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*LOT_SIZE },
+  { sym:'GBP/JPY', fh:'OANDA:GBP_JPY',    tv:'OANDA:GBPJPY',    market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'EUR/JPY', fh:'OANDA:EUR_JPY',    tv:'OANDA:EURJPY',    market:'forex', spread:0.025,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'EUR/GBP', fh:'OANDA:EUR_GBP',    tv:'OANDA:EURGBP',    market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
+  { sym:'AUD/JPY', fh:'OANDA:AUD_JPY',    tv:'OANDA:AUDJPY',    market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  { sym:'CAD/JPY', fh:'OANDA:CAD_JPY',    tv:'OANDA:CADJPY',    market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/150*LOT_SIZE },
+  // Metals — Finnhub uses OANDA symbols
+  { sym:'XAU/USD', fh:'OANDA:XAU_USD',    tv:'OANDA:XAUUSD',    market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
+  { sym:'XAG/USD', fh:'OANDA:XAG_USD',    tv:'OANDA:XAGUSD',    market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
+  // Indices — Finnhub uses OANDA CFD symbols
+  { sym:'NAS100',  fh:'OANDA:NAS100_USD',  tv:'OANDA:NAS100USD', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
+  { sym:'US500',   fh:'OANDA:SPX500_USD',  tv:'OANDA:SPX500USD', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
+  { sym:'US30',    fh:'OANDA:US30_USD',    tv:'OANDA:US30USD',   market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   fh:'OANDA:DE30_EUR',    tv:'OANDA:DE30EUR',   market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
+  { sym:'WTI',     fh:'OANDA:BCO_USD',     tv:'OANDA:WTICOUSD',  market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
 
+// Seed prices — shown briefly before Finnhub WS connects (~1-2 seconds)
+// Updated to approximate current market levels (Mar 2025)
 const SEED: Record<string,number> = {
-  'EUR/USD':1.0820,'GBP/USD':1.2960,'USD/JPY':149.20,'USD/CHF':0.8850,
-  'AUD/USD':0.6280,'USD/CAD':1.4380,'NZD/USD':0.5720,'GBP/JPY':193.20,
-  'EUR/JPY':161.50,'EUR/GBP':0.8350,'AUD/JPY':93.70,'CAD/JPY':103.80,
-  'XAU/USD':4700.0,'XAG/USD':47.50,
-  'NAS100':24300,'US500':5400,'US30':43800,'GER40':22500,'WTI':68.50,
+  'EUR/USD':1.0850,'GBP/USD':1.2940,'USD/JPY':149.50,'USD/CHF':0.8840,
+  'AUD/USD':0.6290,'USD/CAD':1.4390,'NZD/USD':0.5720,'GBP/JPY':193.50,
+  'EUR/JPY':162.20,'EUR/GBP':0.8380,'AUD/JPY':94.00,'CAD/JPY':104.20,
+  'XAU/USD':3050.0,'XAG/USD':34.00,
+  'NAS100':21800,'US500':5750,'US30':43500,'GER40':22800,'WTI':71.50,
 }
 
 const TF_LIST = ['1','5','15','30','60','240','D','W']
@@ -46,24 +53,83 @@ function lsGet(k:string,fb:string){try{return localStorage.getItem(k)||fb}catch{
 function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
 
 /* ── TradingView Widget ───────────────────────────────────────────── */
-// Global map of widgetId -> price update callback
-const _tvPriceCallbacks: Record<string, (price:number)=>void> = {}
+/* ── Finnhub WebSocket price feed (free, real-time, no CORS)
+   Free tier: 60 API calls/min, WebSocket included
+   Finnhub symbols: OANDA:EUR_USD, OANDA:XAU_USD, OANDA:US30_USD etc.
+   ─────────────────────────────────────────────────────────────── */
+const FINNHUB_KEY = 'd0co2r9r01qhd8aqnnagd0co2r9r01qhd8aqnnb0'
 
-// Listen for TV widget messages ONCE globally
+// Global singleton WS — shared across all component instances
+let _fhWS: WebSocket | null = null
+const _fhSubs = new Set<string>()
+const _fhCallbacks = new Map<string, Set<(p:number)=>void>>()
+let _fhConnected = false
+let _fhReconnTimer: ReturnType<typeof setTimeout> | null = null
+
+function fhSubscribe(symbol: string, cb: (p:number)=>void) {
+  if (!_fhCallbacks.has(symbol)) _fhCallbacks.set(symbol, new Set())
+  _fhCallbacks.get(symbol)!.add(cb)
+  _fhSubs.add(symbol)
+  if (_fhConnected && _fhWS?.readyState === WebSocket.OPEN) {
+    _fhWS.send(JSON.stringify({ type:'subscribe', symbol }))
+  } else {
+    fhConnect()
+  }
+}
+
+function fhUnsubscribe(symbol: string, cb: (p:number)=>void) {
+  _fhCallbacks.get(symbol)?.delete(cb)
+}
+
+function fhConnect() {
+  if (_fhWS && (_fhWS.readyState === WebSocket.OPEN || _fhWS.readyState === WebSocket.CONNECTING)) return
+  try {
+    _fhWS = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_KEY}`)
+    _fhWS.onopen = () => {
+      _fhConnected = true
+      _fhSubs.forEach(sym => {
+        _fhWS!.send(JSON.stringify({ type:'subscribe', symbol: sym }))
+      })
+    }
+    _fhWS.onmessage = ({ data }) => {
+      try {
+        const msg = JSON.parse(data)
+        if (msg.type === 'trade' && Array.isArray(msg.data)) {
+          // Finnhub sends: { type:'trade', data:[{s:'OANDA:EUR_USD', p:1.0853, t:..., v:...}] }
+          // Take the LAST price for each symbol (most recent)
+          const latest: Record<string, number> = {}
+          for (const tick of msg.data) {
+            if (tick.s && tick.p > 0) latest[tick.s] = tick.p
+          }
+          for (const [sym, price] of Object.entries(latest)) {
+            _fhCallbacks.get(sym)?.forEach(cb => cb(price))
+          }
+        }
+      } catch {}
+    }
+    _fhWS.onclose = () => {
+      _fhConnected = false
+      if (_fhReconnTimer) clearTimeout(_fhReconnTimer)
+      _fhReconnTimer = setTimeout(fhConnect, 3000)
+    }
+    _fhWS.onerror = () => { try { _fhWS?.close() } catch {} }
+  } catch { 
+    if (_fhReconnTimer) clearTimeout(_fhReconnTimer)
+    _fhReconnTimer = setTimeout(fhConnect, 5000)
+  }
+}
+
+// TV widget global callbacks (kept as backup)
+const _tvPriceCallbacks: Record<string, (price:number)=>void> = {}
 if (typeof window !== 'undefined') {
   window.addEventListener('message', (e: MessageEvent) => {
     try {
       const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
       if (!d) return
-      // TV Advanced Chart sends price via these known message formats:
-      // {name:'widgetReady'} then {name:'quoteUpdate', data:{lp:price}}
-      // OR {type:'QUOTES_UPDATE', quotes:[{n:'OANDA:XAUUSD', v:{lp:4700}}]}
       if (d.type === 'QUOTES_UPDATE' && Array.isArray(d.quotes)) {
         for (const q of d.quotes) {
           const lp = q.v?.lp ?? q.v?.last_price
-          if (lp && lp > 0) {
-            Object.values(_tvPriceCallbacks).forEach(cb => cb(lp))
-          }
+          if (lp && lp > 0) Object.values(_tvPriceCallbacks).forEach(cb => cb(lp))
         }
       }
       if (d.name === 'quoteUpdate' && d.data?.lp) {
@@ -117,15 +183,14 @@ function TVChart({tvSym, interval, onPrice}: {tvSym:string; interval:string; onP
   return <div ref={ref} style={{width:'100%',height:'100%'}}/>
 }
 
-/* ── Price feed — directly from TV OANDA widget ─────────────────── */
-// TV Advanced Chart widget broadcasts real-time prices via postMessage
-// We capture them and sync our execution price with the chart price
-
+/* ── Price feed — Finnhub WebSocket (real-time, same source as TV OANDA charts)
+   Finnhub provides OANDA forex/indices feed free of charge.
+   Prices match what TradingView shows because both source from OANDA.
+   ─────────────────────────────────────────────────────────────────────────── */
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEED})
   const refPrev   = useRef<Record<string,number>>({...SEED})
   const refPrices = useRef<Record<string,number>>({...SEED})
-  // Track which TV symbol is currently active
   const activeTvSym = useRef<string>('')
 
   const push = useCallback((sym:string, price:number)=>{
@@ -135,17 +200,36 @@ function usePriceFeed() {
     setPrices(p => p[sym]===price ? p : {...p,[sym]:price})
   },[])
 
-  // Called when TV chart sends a price update for current symbol
+  // Subscribe to Finnhub WebSocket for all instruments
+  useEffect(()=>{
+    const cleanups: Array<()=>void> = []
+
+    for (const inst of ALL_INSTRUMENTS) {
+      const fhSym = (inst as any).fh as string
+      if (!fhSym) continue
+
+      const cb = (price: number) => push(inst.sym, price)
+      fhSubscribe(fhSym, cb)
+      cleanups.push(() => fhUnsubscribe(fhSym, cb))
+    }
+
+    return () => cleanups.forEach(fn => fn())
+  }, [push])
+
+  // Also accept TV postMessage as backup / cross-check
   const onTVPrice = useCallback((price: number) => {
     const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
-    if (sym && price > 0) push(sym, price)
+    // Only use TV price if Finnhub hasn't given us a price yet (cold start)
+    if (sym && price > 0 && refPrices.current[sym] === SEED[sym]) {
+      push(sym, price)
+    }
   }, [push])
 
   const setActiveSym = useCallback((tvSym: string) => {
     activeTvSym.current = tvSym
   }, [])
 
-  // Heartbeat — keep P&L updating every 500ms
+  // Heartbeat — keep P&L updating every 500ms from ref
   useEffect(()=>{
     const iv = setInterval(()=> setPrices(p => ({...p})), 500)
     return () => clearInterval(iv)
@@ -454,7 +538,12 @@ export function PlatformPage() {
                 <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 8px',fontSize:'9px',fontWeight:700,border:'none',borderRadius:'4px',cursor:'pointer',background:tf===t?'#2255CC':'#F4F7FD',color:tf===t?'#fff':'#5C7A9E'}}>{TF_LABEL[t]}</button>
               ))}
             </div>
-            <div style={{marginLeft:'auto',fontSize:'9px',color:'#16A34A',background:'rgba(22,163,74,.08)',padding:'2px 8px',borderRadius:'20px',fontWeight:600}}>● TradingView Live</div>
+            <div style={{marginLeft:'auto',fontSize:'9px',
+              color: livePrice!==SEED[sym]?'#16A34A':'#D97706',
+              background: livePrice!==SEED[sym]?'rgba(22,163,74,.08)':'rgba(217,119,6,.08)',
+              padding:'2px 8px',borderRadius:'20px',fontWeight:600}}>
+              {livePrice!==SEED[sym]?'● Live':'○ Connecting…'}
+            </div>
           </div>
           {/* Chart */}
           <div style={{flex:1}}>
@@ -471,9 +560,23 @@ export function PlatformPage() {
               <button onClick={()=>setDir('sell')} style={{padding:'9px',border:'none',borderRadius:'7px',cursor:'pointer',fontWeight:700,fontSize:'12px',background:dir==='sell'?'#DC2626':'#F4F7FD',color:dir==='sell'?'#fff':'#5C7A9E'}}>SELL</button>
             </div>
             <div style={{background:dir==='buy'?'rgba(22,163,74,.08)':'rgba(220,38,38,.08)',border:`1px solid ${dir==='buy'?'rgba(22,163,74,.2)':'rgba(220,38,38,.2)'}`,borderRadius:'8px',padding:'8px',marginBottom:'8px',textAlign:'center'}}>
-              <div style={{fontSize:'8px',color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'2px'}}>Execution Price · Live</div>
-              <div style={{...mono,fontSize:'20px',fontWeight:700,color:dir==='buy'?'#16A34A':'#DC2626'}}>{execPrice.toFixed(inst.dec)}</div>
-              <div style={{fontSize:'8px',color:'#8FA3BF'}}>spread {inst.spread.toFixed(inst.dec)}</div>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',marginBottom:'2px'}}>
+                <div style={{fontSize:'8px',color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1px'}}>
+                  {dir==='buy'?'Ask':'Bid'} · Execution
+                </div>
+                {/* Live dot — green when Finnhub WS connected & price != seed */}
+                <div style={{width:'5px',height:'5px',borderRadius:'50%',
+                  background: livePrice!==SEED[sym] ? '#4ADE80' : '#8FA3BF',
+                  boxShadow: livePrice!==SEED[sym] ? '0 0 5px #4ADE80' : 'none',
+                  animation: livePrice!==SEED[sym] ? 'livePulse 2s infinite' : 'none',
+                }} title={livePrice!==SEED[sym]?'Live price from Finnhub':'Connecting…'}/>
+              </div>
+              <div style={{...mono,fontSize:'22px',fontWeight:700,color:dir==='buy'?'#16A34A':'#DC2626'}}>
+                {execPrice.toFixed(inst.dec)}
+              </div>
+              <div style={{fontSize:'8px',color:'#8FA3BF'}}>
+                spread {inst.spread.toFixed(inst.dec)} · {livePrice!==SEED[sym]?'● live':'○ connecting…'}
+              </div>
             </div>
             <div style={{marginBottom:'7px'}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'3px'}}>
