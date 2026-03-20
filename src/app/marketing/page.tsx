@@ -39,7 +39,7 @@ export function MarketingPage() {
           <a href="/" style={S.logo}>The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span></a>
           {!isMobile && (
             <div style={{display:'flex'}}>
-              {[['How It Works','#how'],['Challenge Plans','#plans'],['Payouts','#payouts'],['Features','#features'],['FAQ','#faq']].map(([l,h])=>(
+              {[['How It Works','#how'],['Challenge Plans','#plans'],['Payouts','#payouts'],['Features','#features'],['FAQ','/help']].map(([l,h])=>(
                 <a key={l} href={h} style={{fontSize:'12px',fontWeight:500,color:'#5C7A9E',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s'}}
                   onMouseEnter={e=>(e.currentTarget.style.color='#1A3A6B')} onMouseLeave={e=>(e.currentTarget.style.color='#5C7A9E')}>{l}</a>
               ))}
@@ -201,7 +201,10 @@ export function MarketingPage() {
       <div id="faq" style={{...S.section, background:'#F4F7FD'}}>
         <div style={{maxWidth:'900px',margin:'0 auto'}}>
           <div style={S.eyebrow}><div style={S.line}/><span style={S.tag}>FAQ</span></div>
-          <h2 style={S.h2}>Common <span style={{color:'#2255CC',fontStyle:'italic'}}>questions.</span></h2>
+          <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:'8px'}}>
+            <h2 style={{...S.h2,margin:0}}>Common <span style={{color:'#2255CC',fontStyle:'italic'}}>questions.</span></h2>
+            <button onClick={()=>navigate('/help')} style={{fontSize:'12px',fontWeight:600,color:'#2255CC',background:'#EEF3FF',border:'none',padding:'8px 16px',borderRadius:'8px',cursor:'pointer'}}>View Help Centre →</button>
+          </div>
           <div style={{height:'40px'}}/>
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:'16px'}}>
             {[
