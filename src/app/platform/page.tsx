@@ -46,28 +46,22 @@ function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
 
 /* ── TradingView Chart ───────────────────────────────────────────── */
 function TVChart({ tvSym, interval }: { tvSym:string; interval:string }) {
-  const ref    = useRef<HTMLDivElement>(null)
-  const keyRef = useRef('')
+  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = ref.current; if (!el) return
-    const key = `${tvSym}:${interval}`
-    if (keyRef.current === key) return
-    keyRef.current = key
     el.innerHTML = ''
 
-    const containerId = `tv_${tvSym.replace(/[^a-z0-9]/gi,'_')}_${interval}`
-    const wrap = document.createElement('div')
-    wrap.className = 'tradingview-widget-container'
-    wrap.style.cssText = 'width:100%;height:100%'
-    const inner = document.createElement('div')
-    inner.id = containerId
-    inner.style.cssText = 'width:100%;height:100%'
+    // TV Advanced Chart requires a fresh script injection each time
+    // Use a stable container id so TV can attach
+    const id = 'tv_chart_main'
+    el.id = id
+
     const script = document.createElement('script')
+    script.type  = 'text/javascript'
     script.src   = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
     script.async = true
     script.innerHTML = JSON.stringify({
-      container_id:      containerId,
       autosize:          true,
       symbol:            tvSym,
       interval,
@@ -76,19 +70,15 @@ function TVChart({ tvSym, interval }: { tvSym:string; interval:string }) {
       style:             '1',
       locale:            'en',
       enable_publishing: false,
-      hide_top_toolbar:  false,
+      allow_symbol_change: true,
       save_image:        false,
-      backgroundColor:   'rgba(240,244,251,1)',
-      gridColor:         'rgba(34,85,204,0.04)',
       hide_volume:       false,
       support_host:      'https://www.tradingview.com',
     })
-    wrap.appendChild(inner)
-    wrap.appendChild(script)
-    el.appendChild(wrap)
+    el.appendChild(script)
   }, [tvSym, interval])
 
-  return <div ref={ref} style={{width:'100%',height:'100%'}}/>
+  return <div ref={ref} className="tradingview-widget-container" style={{width:'100%',height:'100%'}}/>
 }
 
 /* ── P&L ─────────────────────────────────────────────────────────── */
