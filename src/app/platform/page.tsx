@@ -22,13 +22,13 @@ const ALL_INSTRUMENTS = [
   { sym:'EUR/GBP', tv:'FX:EURGBP',        market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
   { sym:'AUD/JPY', tv:'FX:AUDJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
   { sym:'CAD/JPY', tv:'FX:CADJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'XAU/USD', tv:'OANDA:XAUUSD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', tv:'OANDA:XAGUSD',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
-  { sym:'NAS100',  tv:'NASDAQ:NDX', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   tv:'SP:SPX', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    tv:'DJ:DJI',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   tv:'XETR:DAX',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
-  { sym:'WTI',     tv:'NYMEX:CL1!',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
+  { sym:'XAU/USD', tv:'FOREXCOM:XAUUSD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
+  { sym:'XAG/USD', tv:'FOREXCOM:XAGUSD',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
+  { sym:'NAS100',  tv:'FOREXCOM:NAS100', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
+  { sym:'US500',   tv:'FOREXCOM:SPX500', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
+  { sym:'US30',    tv:'FOREXCOM:US30',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   tv:'FOREXCOM:DE40',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
+  { sym:'WTI',     tv:'FOREXCOM:USOIL',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
 
 type Inst = typeof ALL_INSTRUMENTS[number]
@@ -139,6 +139,7 @@ function usePriceFeed() {
         ws.onmessage = ({data}) => {
           try {
             const d = JSON.parse(data)
+            console.log('[TD WS]', JSON.stringify(d).slice(0,100))
             if (d.event==='price' && d.symbol && d.price) {
               const m = TD_MAP.find(x=>x.td===d.symbol)
               if (m) push(m.our, +parseFloat(d.price).toFixed(m.dec))
@@ -157,6 +158,7 @@ function usePriceFeed() {
         const syms = TD_MAP.map(m=>m.td).join(',')
         const r = await fetch(`https://api.twelvedata.com/price?symbol=${encodeURIComponent(syms)}&apikey=${TD_KEY}`)
         const d = await r.json()
+        console.log('[TD REST]', JSON.stringify(d).slice(0,300))
         // Response is either {price:'1.085'} for single or {'EUR/USD':{price:'1.085'},...} for multiple
         if (d.price) {
           // Single symbol response — shouldn't happen but handle it
