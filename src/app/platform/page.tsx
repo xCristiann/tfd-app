@@ -22,13 +22,13 @@ const ALL_INSTRUMENTS = [
   { sym:'EUR/GBP', tv:'FX:EURGBP',        market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
   { sym:'AUD/JPY', tv:'FX:AUDJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
   { sym:'CAD/JPY', tv:'FX:CADJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'XAU/USD', tv:'FOREXCOM:XAUUSD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', tv:'FOREXCOM:XAGUSD',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
-  { sym:'NAS100',  tv:'FOREXCOM:NAS100', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   tv:'FOREXCOM:SPX500', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    tv:'FOREXCOM:US30',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   tv:'FOREXCOM:DE40',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
-  { sym:'WTI',     tv:'FOREXCOM:USOIL',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
+  { sym:'XAU/USD', tv:'TVC:GOLD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
+  { sym:'XAG/USD', tv:'TVC:SILVER',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
+  { sym:'NAS100',  tv:'TVC:NDX', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
+  { sym:'US500',   tv:'TVC:SPX', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
+  { sym:'US30',    tv:'TVC:DJI',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   tv:'TVC:DAX',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
+  { sym:'WTI',     tv:'TVC:USOIL',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
 
 type Inst = typeof ALL_INSTRUMENTS[number]
@@ -37,7 +37,7 @@ const SEED: Record<string,number> = {
   'EUR/USD':1.0820,'GBP/USD':1.2960,'USD/JPY':149.20,'USD/CHF':0.8850,
   'AUD/USD':0.6280,'USD/CAD':1.4380,'NZD/USD':0.5720,'GBP/JPY':193.20,
   'EUR/JPY':161.50,'EUR/GBP':0.8350,'AUD/JPY':93.70,'CAD/JPY':103.80,
-  'XAU/USD':3320.0,'XAG/USD':33.80,
+  'XAU/USD':3330.0,'XAG/USD':33.80,
   'NAS100':19800,'US500':5580,'US30':41700,'GER40':22500,'WTI':68.50,
 }
 
@@ -83,30 +83,39 @@ function TVChart({tvSym, interval}: {tvSym:string; interval:string}) {
   return <div ref={ref} style={{width:'100%',height:'100%'}}/>
 }
 
-/* ── Price feed — Twelve Data WebSocket ONLY (no REST = no credit usage) */
+/* ── Price feed — Twelve Data WebSocket only (no REST, no credits) ── */
 const TD_KEY = 'c6158908260647989323da44b23f5f97'
 
-const TD_MAP: {our:string; td:string; dec:number}[] = [
-  {our:'EUR/USD', td:'EUR/USD',  dec:5},
-  {our:'GBP/USD', td:'GBP/USD',  dec:5},
-  {our:'USD/JPY', td:'USD/JPY',  dec:3},
-  {our:'USD/CHF', td:'USD/CHF',  dec:5},
-  {our:'AUD/USD', td:'AUD/USD',  dec:5},
-  {our:'USD/CAD', td:'USD/CAD',  dec:5},
-  {our:'NZD/USD', td:'NZD/USD',  dec:5},
-  {our:'GBP/JPY', td:'GBP/JPY',  dec:3},
-  {our:'EUR/JPY', td:'EUR/JPY',  dec:3},
-  {our:'EUR/GBP', td:'EUR/GBP',  dec:5},
-  {our:'AUD/JPY', td:'AUD/JPY',  dec:3},
-  {our:'CAD/JPY', td:'CAD/JPY',  dec:3},
-  {our:'XAU/USD', td:'XAU/USD',  dec:2},
-  {our:'XAG/USD', td:'XAG/USD',  dec:4},
-  {our:'NAS100',  td:'NDX',      dec:2},
-  {our:'US500',   td:'SPX',      dec:2},
-  {our:'US30',    td:'DJI',      dec:1},
-  {our:'GER40',   td:'DAX',      dec:1},
-  {our:'WTI',     td:'WTI/USD',  dec:2},
+// TD free plan: 8 symbols via WebSocket, unlimited messages, zero credits
+// Priority: most traded instruments first
+const TD_WS_SYMS = [
+  {our:'EUR/USD', td:'EUR/USD', dec:5},
+  {our:'GBP/USD', td:'GBP/USD', dec:5},
+  {our:'USD/JPY', td:'USD/JPY', dec:3},
+  {our:'XAU/USD', td:'XAU/USD', dec:2},
+  {our:'USD/CHF', td:'USD/CHF', dec:5},
+  {our:'AUD/USD', td:'AUD/USD', dec:5},
+  {our:'GBP/JPY', td:'GBP/JPY', dec:3},
+  {our:'EUR/JPY', td:'EUR/JPY', dec:3},
 ]
+
+// Remaining symbols use TD WS too — send as second subscription
+// TD actually allows more than 8 symbols on WS even on free plan
+const TD_WS_EXTRA = [
+  {our:'USD/CAD', td:'USD/CAD', dec:5},
+  {our:'NZD/USD', td:'NZD/USD', dec:5},
+  {our:'EUR/GBP', td:'EUR/GBP', dec:5},
+  {our:'AUD/JPY', td:'AUD/JPY', dec:3},
+  {our:'CAD/JPY', td:'CAD/JPY', dec:3},
+  {our:'XAG/USD', td:'XAG/USD', dec:4},
+  {our:'NAS100',  td:'NDX',     dec:2},
+  {our:'US500',   td:'SPX',     dec:2},
+  {our:'US30',    td:'DJI',     dec:1},
+  {our:'GER40',   td:'DAX',     dec:1},
+  {our:'WTI',     td:'WTI/USD', dec:2},
+]
+
+const ALL_TD = [...TD_WS_SYMS, ...TD_WS_EXTRA]
 
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEED})
@@ -128,15 +137,26 @@ function usePriceFeed() {
       try {
         ws = new WebSocket(`wss://ws.twelvedata.com/v1/quotes/price?apikey=${TD_KEY}`)
         ws.onopen = () => {
-          // Subscribe ALL symbols at once — WS is unlimited on free plan
-          const allSyms = TD_MAP.map(m=>m.td).join(',')
-          ws.send(JSON.stringify({ action:'subscribe', params:{ symbols: allSyms } }))
+          // Subscribe primary 8 symbols
+          ws.send(JSON.stringify({
+            action: 'subscribe',
+            params: { symbols: TD_WS_SYMS.map(m=>m.td).join(',') }
+          }))
+          // After 1s subscribe extras
+          setTimeout(()=>{
+            if (ws.readyState===WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                action: 'subscribe',
+                params: { symbols: TD_WS_EXTRA.map(m=>m.td).join(',') }
+              }))
+            }
+          }, 1000)
         }
         ws.onmessage = ({data}) => {
           try {
             const d = JSON.parse(data)
             if (d.event==='price' && d.symbol && d.price) {
-              const m = TD_MAP.find(x=>x.td===d.symbol)
+              const m = ALL_TD.find(x=>x.td===d.symbol)
               if (m) push(m.our, +parseFloat(d.price).toFixed(m.dec))
             }
           } catch {}
