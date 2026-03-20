@@ -62,13 +62,13 @@ const ALL_INSTRUMENTS = [
 ]
 
 const SEED: Record<string,number> = {
-  'EUR/USD':1.0853,'GBP/USD':1.2940,'USD/JPY':148.50,'USD/CHF':0.8820,
-  'AUD/USD':0.6350,'USD/CAD':1.3580,'NZD/USD':0.5780,'GBP/JPY':192.50,
-  'EUR/JPY':170.20,'EUR/GBP':0.8380,'AUD/JPY':94.30,'EUR/CHF':0.9560,
-  'EUR/AUD':1.7080,'EUR/CAD':1.5640,'GBP/CHF':1.1250,'GBP/AUD':2.0450,
-  'GBP/CAD':1.8720,'CAD/JPY':109.30,'CHF/JPY':168.50,'USD/MXN':20.050,
-  'XAU/USD':2980.0,'XAG/USD':33.50,
-  'NAS100':21700,'US500':5750,'US30':42800,'US2000':2080,'VIX':18.5,
+  'EUR/USD':1.0820,'GBP/USD':1.2960,'USD/JPY':149.20,'USD/CHF':0.8850,
+  'AUD/USD':0.6280,'USD/CAD':1.4380,'NZD/USD':0.5720,'GBP/JPY':193.20,
+  'EUR/JPY':161.50,'EUR/GBP':0.8350,'AUD/JPY':93.70,'EUR/CHF':0.9540,
+  'EUR/AUD':1.7200,'EUR/CAD':1.5580,'GBP/CHF':1.1280,'GBP/AUD':2.0620,
+  'GBP/CAD':1.8840,'CAD/JPY':103.80,'CHF/JPY':168.20,'USD/MXN':20.150,
+  'XAU/USD':3320.0,'XAG/USD':33.80,
+  'NAS100':19800,'US500':5580,'US30':41700,'US2000':2060,'VIX':19.2,
   'GER40':22500,'UK100':8700,'FRA40':8200,
 }
 
@@ -193,16 +193,16 @@ function CandleChart({sym,tf,livePrice,onLastClose,openTrades,onUpdateSLTP}:Char
       const LWC=(window as any).LightweightCharts
       const chart=LWC.createChart(el,{
         width:el.clientWidth,height:el.clientHeight,
-        layout:{background:{type:'solid',color:'#0A0A0F'},textColor:'rgba(200,190,240,0.5)'},
-        grid:{vertLines:{color:'rgba(212,168,67,0.05)'},horzLines:{color:'rgba(212,168,67,0.05)'}},
+        layout:{background:{type:'solid',color:'#FAFBFF'},textColor:'#5C7A9E'},
+        grid:{vertLines:{color:'rgba(34,85,204,0.05)'},horzLines:{color:'rgba(34,85,204,0.05)'}},
         crosshair:{mode:1},
-        rightPriceScale:{borderColor:'rgba(212,168,67,0.15)'},
-        timeScale:{borderColor:'rgba(212,168,67,0.15)',timeVisible:true,secondsVisible:false},
+        rightPriceScale:{borderColor:'#E8EEF8'},
+        timeScale:{borderColor:'#E8EEF8',timeVisible:true,secondsVisible:false},
       })
       const series=chart.addCandlestickSeries({
-        upColor:'#00D97E',downColor:'#FF3352',
-        borderUpColor:'#00D97E',borderDownColor:'#FF3352',
-        wickUpColor:'#00D97E',wickDownColor:'#FF3352',
+        upColor:'#16A34A',downColor:'#DC2626',
+        borderUpColor:'#16A34A',borderDownColor:'#DC2626',
+        wickUpColor:'#16A34A',wickDownColor:'#DC2626',
       })
       chartRef.current=chart;serRef.current=series
       const ro=new ResizeObserver(()=>{if(chartRef.current&&divRef.current)chartRef.current.resize(divRef.current.clientWidth,divRef.current.clientHeight)})
@@ -268,18 +268,18 @@ function CandleChart({sym,tf,livePrice,onLastClose,openTrades,onUpdateSLTP}:Char
         // Create entry line
         const entryLine=series.createPriceLine({
           price:t.open_price,
-          color:t.direction==='buy'?'rgba(0,217,126,0.8)':'rgba(255,51,82,0.8)',
+          color:t.direction==='buy'?'rgba(34,85,204,0.9)':'rgba(220,38,38,0.9)',
           lineWidth:1,lineStyle:2,axisLabelVisible:true,
           title:`${t.direction.toUpperCase()} ${t.lots}`,
         })
         // Create SL line
         const slLine=t.sl?series.createPriceLine({
-          price:t.sl,color:'rgba(255,51,82,0.9)',lineWidth:1,lineStyle:1,
+          price:t.sl,color:'rgba(220,38,38,0.9)',lineWidth:1,lineStyle:1,
           axisLabelVisible:true,title:'SL',draggable:true,
         }):null
         // Create TP line
         const tpLine=t.tp?series.createPriceLine({
-          price:t.tp,color:'rgba(0,217,126,0.9)',lineWidth:1,lineStyle:1,
+          price:t.tp,color:'rgba(22,163,74,0.9)',lineWidth:1,lineStyle:1,
           axisLabelVisible:true,title:'TP',draggable:true,
         }):null
         linesRef.current.set(t.id,{entry:entryLine,sl:slLine,tp:tpLine})
