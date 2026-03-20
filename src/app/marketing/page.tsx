@@ -61,15 +61,12 @@ export function MarketingPage() {
 
       {/* ── HERO ── */}
       <div style={{padding:isMobile?'40px 20px 48px':'96px 48px 80px', background:'#fff', borderBottom:'1px solid #E8EEF8', maxWidth:'960px', margin:'0 auto'}}>
-        <div style={{display:'inline-flex',alignItems:'center',gap:'7px',background:'#EEF3FF',border:'1px solid #C5D5FA',borderRadius:'20px',padding:'5px 14px',marginBottom:'28px'}}>
-          <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#22C55E'}}/>
-          <span style={{fontSize:'10px',fontWeight:700,color:'#2255CC',letterSpacing:'0.5px',textTransform:'uppercase'}}>14,281 traders funded worldwide</span>
-        </div>
+
         <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:isMobile?'36px':'60px',fontWeight:700,color:'#1A3A6B',lineHeight:1.05,letterSpacing:'-0.5px',marginBottom:'20px',maxWidth:'700px'}}>
           Trade our capital.<br/>Keep your <span style={{color:'#2255CC',fontStyle:'italic'}}>profits.</span>
         </h1>
         <p style={{fontSize:'16px',fontWeight:300,color:'#5C7A9E',lineHeight:1.75,marginBottom:'36px',maxWidth:'480px'}}>
-          Get funded up to $200,000. Keep up to 90% of what you earn. One payment — no subscriptions, no recurring fees.
+          Get funded up to $200,000. Keep up to 90% of your profits. One-time payment — no subscriptions, no recurring fees.
         </p>
         <div style={{display:'flex',gap:'12px',alignItems:'center',marginBottom:'56px'}}>
           <button onClick={()=>navigate('/login')} style={{fontSize:'13px',fontWeight:600,color:'#fff',background:'#2255CC',border:'none',padding:'14px 32px',borderRadius:'8px',cursor:'pointer',boxShadow:'0 4px 16px rgba(34,85,204,.25)'}}>
@@ -80,7 +77,7 @@ export function MarketingPage() {
           </button>
         </div>
         <div style={{display:'flex',gap:'0',paddingTop:'32px',borderTop:'1px solid #E8EEF8',flexWrap:'wrap'}}>
-          {[['$4.8M+','Paid out'],['90%','Max split'],['24h','Payout speed'],['$200K','Max account']].map(([v,l],i,arr)=>(
+          {[['90%','Max split'],['24h','Payout speed'],['$200K','Max account'],['0','Subscriptions']].map(([v,l],i,arr)=>(
             <div key={l} style={{paddingRight:i<arr.length-1?'32px':'0',marginRight:i<arr.length-1?'32px':'0',borderRight:i<arr.length-1?'1px solid #E8EEF8':'none'}}>
               <div style={{fontFamily:"'Playfair Display',serif",fontSize:'28px',fontWeight:700,color:'#1A3A6B'}}>{v}</div>
               <div style={{fontSize:'12px',color:'#8FA3BF',marginTop:'3px',fontWeight:400}}>{l}</div>
@@ -117,7 +114,7 @@ export function MarketingPage() {
         <div style={{maxWidth:'1200px',margin:'0 auto'}}>
           <div style={S.eyebrow}><div style={S.line}/><span style={S.tag}>Challenge plans</span></div>
           <h2 style={S.h2}>Pick your <span style={{color:'#2255CC',fontStyle:'italic'}}>account size.</span></h2>
-          <p style={{fontSize:'13px',color:'#8FA3BF',marginBottom:'40px'}}>All plans include CFT Trade platform, real-time risk monitoring, and same-day payouts.</p>
+          <p style={{fontSize:'13px',color:'#8FA3BF',marginBottom:'40px'}}>All plans include TFD platform, real-time risk monitoring, and same-day payouts.</p>
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':`repeat(${Math.min((products.length||3),4)},1fr)`,gap:'16px'}}>
             {(products.length ? products : [
               {id:'1',name:'Starter',account_size:25000,price_usd:199,ph1_profit_target:8,ph1_daily_dd:5,funded_profit_split:80},
@@ -158,7 +155,7 @@ export function MarketingPage() {
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'16px'}}>
             {[
               ['Real-time Risk Monitor','Live drawdown tracking, breach alerts, and daily P&L updated automatically every 5 seconds.'],
-              ['CFT Trade Platform','Professional-grade trading terminal with full MT4/MT5 compatibility across all instruments.'],
+              ['TFD Platform','Professional-grade trading terminal with full MT4/MT5 compatibility across all instruments.'],
               ['Same-day Payouts','Request your profits anytime. Cryptocurrency payouts processed and delivered within 24 hours.'],
               ['Trade Journal','Log and analyze every trade. Build discipline with structured performance reviews and insights.'],
               ['Affiliate Program','Share your referral link and earn 10% commission on every successful challenge purchase.'],
@@ -183,7 +180,7 @@ export function MarketingPage() {
           <h2 style={S.h2}>Real traders, real <span style={{color:'#2255CC',fontStyle:'italic'}}>profits.</span></h2>
           <p style={{...S.lead}}>Join thousands of funded traders who withdraw profits every week.</p>
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:'12px'}}>
-            {[['AJ','Alex J.','$2,400','TFD-100K'],['MR','Maria R.','$890','TFD-25K'],['DK','David K.','$5,200','TFD-200K'],['ST','Sara T.','$1,150','TFD-50K'],['PP','Pavel P.','$3,800','TFD-100K'],['LM','Laura M.','$740','TFD-25K']].map(([init,name,amt,acc])=>(
+            {[['AJ','Alex J.','$1,200','TFD-25K'],['MR','Maria R.','$890','TFD-25K'],['DK','David K.','$2,100','TFD-50K'],['ST','Sara T.','$750','TFD-25K']].map(([init,name,amt,acc])=>(
               <div key={name} style={{display:'flex',alignItems:'center',gap:'12px',padding:'16px 20px',background:'#F4F7FD',border:'1px solid #E8EEF8',borderRadius:'10px'}}>
                 <div style={{width:'36px',height:'36px',borderRadius:'50%',background:'#1A3A6B',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:700,color:'#fff',flexShrink:0}}>{init}</div>
                 <div style={{flex:1}}>
@@ -210,7 +207,7 @@ export function MarketingPage() {
             {[
               ['Is there a time limit on challenges?','No. Take as long as you need to reach the profit target while respecting drawdown rules.'],
               ['How are payouts processed?','Payouts are made via cryptocurrency. Once approved, funds arrive within 24 hours.'],
-              ['Can I trade any instrument?','Yes — forex, indices, gold, and more. All instruments available on CFT Trade.'],
+              ['Can I trade any instrument?','Yes — forex, indices, gold, and more. All instruments available on TFD Platform.'],
               ['What happens if I breach?','Your account is locked. You can purchase a new challenge at any time to try again.'],
               ['Is there a free trial?','We do not offer free trials, but our one-time fee is the only cost — no subscriptions ever.'],
               ['How does the affiliate program work?','Share your referral link and earn 10% commission on every successful challenge purchase.'],
@@ -229,7 +226,7 @@ export function MarketingPage() {
         <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'44px',fontWeight:700,color:'#fff',letterSpacing:'-0.5px',marginBottom:'16px'}}>
           Ready to write your <span style={{color:'#60A5FA',fontStyle:'italic'}}>story?</span>
         </h2>
-        <p style={{fontSize:'15px',fontWeight:300,color:'rgba(255,255,255,.5)',marginBottom:'36px'}}>Join 14,000+ funded traders worldwide.</p>
+        <p style={{fontSize:'15px',fontWeight:300,color:'rgba(255,255,255,.5)',marginBottom:'36px'}}>Start your funded trading journey today.</p>
         <button onClick={()=>navigate('/login')} style={{fontSize:'14px',fontWeight:600,color:'#1A3A6B',background:'#fff',border:'none',padding:'16px 40px',borderRadius:'8px',cursor:'pointer',boxShadow:'0 4px 20px rgba(0,0,0,.2)'}}>
           Start your challenge today
         </button>

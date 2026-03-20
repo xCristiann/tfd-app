@@ -123,7 +123,7 @@ export function AdminTradersPage() {
       max_dd_used: 0,
       trading_days: 0,
       platform_login: login,
-      server: 'CFT-Live-01',
+      server: 'TFD-Live-01',
       status: 'active',
     })
     if (error) { toast('error', '❌', 'Error', error.message); return }
@@ -140,7 +140,7 @@ export function AdminTradersPage() {
           from_phase:     account.phase,
           to_phase:       nextPhase,
           login,
-          server:         'CFT-Live-01',
+          server:         'TFD-Live-01',
         })
       }
     } catch (e) { console.error('[email]', e) }
@@ -187,7 +187,7 @@ export function AdminTradersPage() {
         // Email trader
         try {
           const { data: trader } = await supabase.from('users').select('email,first_name').eq('id', account.user_id).single()
-          if (trader?.email) sendEmail('phase_advanced', trader.email, { first_name: trader.first_name ?? 'Trader', account_number: account.account_number, from_phase: account.phase, to_phase: 'review', login: account.platform_login ?? '', server: account.server ?? 'CFT-Live-01' })
+          if (trader?.email) sendEmail('phase_advanced', trader.email, { first_name: trader.first_name ?? 'Trader', account_number: account.account_number, from_phase: account.phase, to_phase: 'review', login: account.platform_login ?? '', server: account.server ?? 'TFD-Live-01' })
         } catch(e) {}
       }
     }
@@ -218,7 +218,7 @@ export function AdminTradersPage() {
       max_dd_used: 0,
       trading_days: 0,
       platform_login: login,
-      server: 'CFT-Live-01',
+      server: 'TFD-Live-01',
       status: 'active',
     })
     setAddAccLoading(false)
@@ -236,7 +236,7 @@ export function AdminTradersPage() {
           account_number: accountNumber,
           login,
           password,
-          server:         'CFT-Live-01',
+          server:         'TFD-Live-01',
           amount:         '0.00',
           phase:          addAccPhase,
         })

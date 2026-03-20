@@ -111,17 +111,74 @@ export function ChallengesPage() {
                     </div>
                     <div className="font-sans text-[22px] font-bold">${p.price_usd}</div>
                   </div>
-                  {[
-                    ['Type', p.challenge_type === '2step' ? '2-Step Challenge' : '1-Step Challenge'],
-                    ['Ph1 Target', `${p.ph1_profit_target}%`],
-                    ['Ph1 Max DD', `${p.ph1_max_dd}%`],
-                    ['Profit Split', `${p.funded_profit_split}%`],
-                  ].map(([l,v])=>(
-                    <div key={l} className="flex justify-between py-[5px] border-b border-[#F0F4FB] last:border-0">
-                      <span className="text-[9px] text-[#8FA3BF]">{l}</span>
-                      <span className=" text-[10px] text-[#2255CC]">{v}</span>
+                  {/* Type badge */}
+                  <div className="mb-3">
+                    <span className="text-[8px] uppercase tracking-[1.5px] font-bold px-2 py-1 border text-[#2255CC] bg-[rgba(34,85,204,.06)] border-[rgba(34,85,204,.2)]">
+                      {p.challenge_type === '2step' ? '2-Step Challenge' : '1-Step Challenge'}
+                    </span>
+                  </div>
+
+                  {/* Phase 1 */}
+                  <div className="mb-2">
+                    <div className="text-[8px] uppercase tracking-[1.5px] font-bold text-[#8FA3BF] mb-1">Phase 1</div>
+                    {[
+                      ['Profit Target', `${p.ph1_profit_target}%`],
+                      ['Daily Drawdown', `${p.ph1_daily_dd}%`],
+                      ['Max Drawdown', `${p.ph1_max_dd}%`],
+                      ['Min Days', p.ph1_min_days ? `${p.ph1_min_days} days` : 'None'],
+                    ].map(([l,v])=>(
+                      <div key={l} className="flex justify-between py-[4px] border-b border-[#F0F4FB]">
+                        <span className="text-[9px] text-[#8FA3BF]">{l}</span>
+                        <span className="font-mono text-[10px] text-[#1A3A6B] font-semibold">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Phase 2 (only for 2-step) */}
+                  {p.challenge_type === '2step' && (
+                    <div className="mb-2">
+                      <div className="text-[8px] uppercase tracking-[1.5px] font-bold text-[#8FA3BF] mb-1">Phase 2</div>
+                      {[
+                        ['Profit Target', `${p.ph2_profit_target}%`],
+                        ['Daily Drawdown', `${p.ph2_daily_dd}%`],
+                        ['Max Drawdown', `${p.ph2_max_dd}%`],
+                        ['Min Days', p.ph2_min_days ? `${p.ph2_min_days} days` : 'None'],
+                      ].map(([l,v])=>(
+                        <div key={l} className="flex justify-between py-[4px] border-b border-[#F0F4FB]">
+                          <span className="text-[9px] text-[#8FA3BF]">{l}</span>
+                          <span className="font-mono text-[10px] text-[#1A3A6B] font-semibold">{v}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+
+                  {/* Funded */}
+                  <div className="mb-2">
+                    <div className="text-[8px] uppercase tracking-[1.5px] font-bold text-[#8FA3BF] mb-1">Funded Account</div>
+                    {[
+                      ['Profit Split', `${p.funded_profit_split}%`],
+                      ['Daily Drawdown', `${p.funded_daily_dd}%`],
+                      ['Max Drawdown', `${p.funded_max_dd}%`],
+                    ].map(([l,v])=>(
+                      <div key={l} className="flex justify-between py-[4px] border-b border-[#F0F4FB]">
+                        <span className="text-[9px] text-[#8FA3BF]">{l}</span>
+                        <span className="font-mono text-[10px] text-[#16A34A] font-semibold">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Rules */}
+                  <div className="flex gap-2 mt-2">
+                    <span className={`text-[8px] px-2 py-1 border font-semibold ${p.news_trading ? 'text-[#16A34A] bg-[rgba(22,163,74,.06)] border-[rgba(22,163,74,.2)]' : 'text-[#8FA3BF] bg-[#F4F7FD] border-[#E8EEF8] line-through'}`}>
+                      News Trading
+                    </span>
+                    <span className={`text-[8px] px-2 py-1 border font-semibold ${p.weekend_holding ? 'text-[#16A34A] bg-[rgba(22,163,74,.06)] border-[rgba(22,163,74,.2)]' : 'text-[#8FA3BF] bg-[#F4F7FD] border-[#E8EEF8] line-through'}`}>
+                      Weekend Hold
+                    </span>
+                    <span className="text-[8px] px-2 py-1 border font-semibold text-[#2255CC] bg-[rgba(34,85,204,.06)] border-[rgba(34,85,204,.2)] ml-auto">
+                      TFD Platform
+                    </span>
+                  </div>
                   <Button className="w-full mt-3"
                     onClick={()=>navigate('/checkout?product='+p.id)}>
                     Buy for ${p.price_usd} →

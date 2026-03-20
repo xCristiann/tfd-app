@@ -189,7 +189,7 @@ function buildEmail(type: string, to: string, d: Record<string, any>, fn: string
           ['Account Number', d.account_number ?? '—'],
           ['Login ID', d.login ?? '—'],
           ['Password', d.password ?? '—'],
-          ['Server', d.server ?? 'CFT-Live-01'],
+          ['Server', d.server ?? 'TFD-Live-01'],
         ])}
         ${p(`Log in to the platform using these credentials and begin trading. Hit your profit target while respecting the drawdown rules to advance to the funded phase.`)}
         ${cta('Open Trading Platform', `${SITE}/platform`)}

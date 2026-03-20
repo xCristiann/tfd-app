@@ -41,7 +41,7 @@ export function CheckoutPage() {
   const [email, setEmail] = useState('')
   const [country, setCountry] = useState('')
   const [agree, setAgree] = useState(false)
-  const [selectedPlatform] = useState('cft')
+  const [selectedPlatform] = useState('tfd')
 
   // Address fields
   const [address, setAddress] = useState('')
@@ -118,7 +118,7 @@ export function CheckoutPage() {
       max_dd_used: 0,
       trading_days: 0,
       platform_login: login,
-      server: 'CFT-Live-01',
+      server: 'TFD-Live-01',
       status: 'active',
     })
 
@@ -166,7 +166,7 @@ export function CheckoutPage() {
       localStorage.removeItem('tfd_ref_code')
     }
 
-    const creds = { accountNumber, login, password, server: 'CFT-Live-01', balance: product.account_size }
+    const creds = { accountNumber, login, password, server: 'TFD-Live-01', balance: product.account_size }
     setCreatedAccount(creds)
 
     // Send order confirmation email
@@ -178,7 +178,7 @@ export function CheckoutPage() {
       account_number: accountNumber,
       login,
       password,
-      server:         'CFT-Live-01',
+      server:         'TFD-Live-01',
       amount:         (Number(_finalPrice) || 0).toFixed(2),
       phase:          'Phase 1',
     })
@@ -376,16 +376,16 @@ export function CheckoutPage() {
                   <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Trading Platform</label>
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { id:'cft', label:'CFT Trade', sub:'Available now', available: true },
+                      { id:'tfd', label:'TFD Platform', sub:'Available now', available: true },
                       { id:'mt4', label:'MT4',       sub:'Coming soon',   available: false },
                       { id:'mt5', label:'MT5',       sub:'Coming soon',   available: false },
                     ].map(p => (
                       <div key={p.id} className={`p-3 border text-center transition-all ${
-                        p.id === 'cft'
+                        p.id === 'tfd'
                           ? 'border-[#2255CC] bg-[rgba(34,85,204,.05)]'
                           : 'border-[#F0F4FB] opacity-40'
                       }`}>
-                        <div className={` font-bold text-[13px] mb-1 ${p.id === 'cft' ? 'text-[#2255CC]' : 'text-[#8FA3BF]'}`}>{p.label}</div>
+                        <div className={` font-bold text-[13px] mb-1 ${p.id === 'tfd' ? 'text-[#2255CC]' : 'text-[#8FA3BF]'}`}>{p.label}</div>
                         <div className="text-[9px] text-[#8FA3BF]">{p.sub}</div>
                       </div>
                     ))}
@@ -462,7 +462,7 @@ export function CheckoutPage() {
                 <p className="text-[11px] text-[#5C7A9E] mb-6">Save these credentials — your password cannot be recovered.</p>
 
                 <div className="p-5 border border-[#2255CC] bg-[rgba(34,85,204,.03)] mb-6">
-                  <div className="text-[8px] uppercase tracking-[2px] text-[#2255CC] font-semibold mb-4">CFT Trade Login Details</div>
+                  <div className="text-[8px] uppercase tracking-[2px] text-[#2255CC] font-semibold mb-4">TFD Platform Login Details</div>
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       ['Login ID', createdAccount.login],
@@ -523,7 +523,7 @@ export function CheckoutPage() {
                   ['Daily Drawdown', `${product.ph1_daily_dd}%`],
                   ['Max Drawdown', `${product.ph1_max_dd}%`],
                   ['Profit Split', `${product.funded_profit_split}%`],
-                  ['Platform', 'CFT Trade'],
+                  ['Platform', 'TFD Platform'],
                 ].map(([l,v]) => (
                   <div key={l} className="flex justify-between text-[10px]">
                     <span className="text-[#8FA3BF]">{l}</span>
