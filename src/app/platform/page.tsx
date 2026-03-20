@@ -49,130 +49,10 @@ function lsGet(k:string,fb:string){try{return localStorage.getItem(k)||fb}catch{
 function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
 
 /* ── TradingView Widget ───────────────────────────────────────────── */
-/* ── Price Feed: 100% free, zero API keys, zero 403s ────────────
-   Forex:   open.er-api.com/v6/latest/USD  (free, CORS, ~60s update)
-   Metals:  metals-api via allorigins proxy (Yahoo Finance GC=F, SI=F)
-   Indices: Yahoo Finance via allorigins proxy (^NDX, ^GSPC, ^DJI, ^GDAXI)
-   ─────────────────────────────────────────────────────────────── */
-
-// open.er-api.com: USD base → all pairs.  sym → field in response
-const ER_API = 'https://open.er-api.com/v6/latest/USD'
-
-// Yahoo Finance symbols for metals + indices (via allorigins)
-const YAHOO_SYMS: Record<string,string> = {
-  'XAU/USD': 'GC=F',
-  'XAG/USD': 'SI=F',
-  'NAS100':  '%5ENDX',
-  'US500':   '%5EGSPC',
-  'US30':    '%5EDJI',
-  'GER40':   '%5EGDAXI',
-  'WTI':     'CL=F',
-}
-
-// Invert: for USD/XXX pairs the API gives us XXX per 1 USD
-// For EUR/USD we need USD per 1 EUR = 1/rates.EUR
-const deriveForex = (rates: Record<string,number>): Record<string,number> => {
-  const r = rates
-  const inv = (x: number) => x > 0 ? Math.round((1/x)*100000)/100000 : 0
-  return {
-    'EUR/USD': inv(r['EUR'] ?? 0),
-    'GBP/USD': inv(r['GBP'] ?? 0),
-    'AUD/USD': inv(r['AUD'] ?? 0),
-    'NZD/USD': inv(r['NZD'] ?? 0),
-    'USD/JPY': r['JPY'] ?? 0,
-    'USD/CHF': r['CHF'] ?? 0,
-    'USD/CAD': r['CAD'] ?? 0,
-    'GBP/JPY': inv(r['GBP'] ?? 0) * (r['JPY'] ?? 0),
-    'EUR/JPY': inv(r['EUR'] ?? 0) * (r['JPY'] ?? 0),
-    'EUR/GBP': r['GBP'] && r['EUR'] ? Math.round((r['GBP']/r['EUR'])*100000)/100000 : 0,
-    'AUD/JPY': inv(r['AUD'] ?? 0) * (r['JPY'] ?? 0),
-    'CAD/JPY': inv(r['CAD'] ?? 0) * (r['JPY'] ?? 0),
-  }
-}
-
-async function fetchYahooPrice(yahooSym: string): Promise<number> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1m&range=1d`
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
-  try {
-    const r = await fetch(proxy)
-    const d = await r.json()
-    const body = typeof d.contents === 'string' ? JSON.parse(d.contents) : d
-    const closes: (number|null)[] = body?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? []
-    for (let i = closes.length-1; i >= 0; i--) {
-      if (closes[i] != null && closes[i]! > 0) return closes[i]!
-    }
-  } catch {}
-  return 0
-}
-
-// TV widget global callbacks (kept as backup)
-const _tvPriceCallbacks: Record<string, (price:number)=>void> = {}
-if (typeof window !== 'undefined') {
-  window.addEventListener('message', (e: MessageEvent) => {
-    try {
-      const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
-      if (!d) return
-      if (d.type === 'QUOTES_UPDATE' && Array.isArray(d.quotes)) {
-        for (const q of d.quotes) {
-          const lp = q.v?.lp ?? q.v?.last_price
-          if (lp && lp > 0) Object.values(_tvPriceCallbacks).forEach(cb => cb(lp))
-        }
-      }
-      if (d.name === 'quoteUpdate' && d.data?.lp) {
-        Object.values(_tvPriceCallbacks).forEach(cb => cb(d.data.lp))
-      }
-    } catch {}
-  })
-}
-
-function TVChart({tvSym, interval, onPrice}: {tvSym:string; interval:string; onPrice:(p:number)=>void}) {
-  const ref    = useRef<HTMLDivElement>(null)
-  const keyRef = useRef('')
-  const idRef  = useRef(`tv_${Math.random().toString(36).slice(2)}`)
-
-  useEffect(()=>{
-    const id = idRef.current
-    _tvPriceCallbacks[id] = onPrice
-    return () => { delete _tvPriceCallbacks[id] }
-  }, [onPrice])
-
-  useEffect(()=>{
-    const el = ref.current; if(!el) return
-    const key = `${tvSym}:${interval}`
-    if(keyRef.current === key) return
-    keyRef.current = key
-    el.innerHTML = ''
-
-    const wrap = document.createElement('div')
-    wrap.className = 'tradingview-widget-container'
-    wrap.style.cssText = 'width:100%;height:100%'
-    const inner = document.createElement('div')
-    inner.id = idRef.current
-    inner.className = 'tradingview-widget-container__widget'
-    inner.style.cssText = 'width:100%;height:calc(100% - 32px)'
-    const script = document.createElement('script')
-    script.src   = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
-    script.async = true
-    script.innerHTML = JSON.stringify({
-      container_id: idRef.current,
-      autosize:true, symbol:tvSym, interval,
-      timezone:'Etc/UTC', theme:'light', style:'1', locale:'en',
-      enable_publishing:false, hide_top_toolbar:false, save_image:false,
-      backgroundColor:'rgba(250,251,255,1)', gridColor:'rgba(34,85,204,0.05)',
-      hide_volume:false, support_host:'https://www.tradingview.com',
-    })
-    wrap.appendChild(inner)
-    wrap.appendChild(script)
-    el.appendChild(wrap)
-  },[tvSym, interval])
-
-  return <div ref={ref} style={{width:'100%',height:'100%'}}/>
-}
-
-/* ── Price feed — free APIs, no key, no CORS errors ─────────────────
-   Forex:   open.er-api.com  (ECB/interbank rates, free, no key)
-   Metals + Indices: Yahoo Finance via allorigins.win proxy
-   Poll: every 5s forex, every 10s metals/indices (rate limits safe)
+/* ── Price Feed: /api/prices — Vercel serverless, server-side fetch ─
+   Our own API route fetches Yahoo Finance + Frankfurter from the server.
+   No CORS, no API keys exposed, no browser restrictions.
+   Updates every 5 seconds.
    ─────────────────────────────────────────────────────────────── */
 function usePriceFeed() {
   const [prices, setPrices] = useState<Record<string,number>>({...SEED})
@@ -190,43 +70,26 @@ function usePriceFeed() {
   useEffect(()=>{
     let dead = false
 
-    // ── Forex rates from open.er-api.com (no key, CORS ok) ──────────
-    const pollForex = async () => {
+    const poll = async () => {
       if(dead) return
       try{
-        const r = await fetch(ER_API)
+        const r = await fetch('/api/prices')
+        if(!r.ok) return
         const d = await r.json()
-        if(d.result !== 'success' || !d.rates) return
-        const derived = deriveForex(d.rates)
-        for(const [sym, price] of Object.entries(derived)){
-          if(price > 0) push(sym, price)
+        if(d.prices){
+          for(const [sym, price] of Object.entries(d.prices)){
+            if(typeof price === 'number' && price > 0) push(sym, price)
+          }
         }
       }catch{}
     }
 
-    // ── Metals + Indices from Yahoo Finance via allorigins ───────────
-    const pollYahoo = async () => {
-      if(dead) return
-      await Promise.allSettled(
-        Object.entries(YAHOO_SYMS).map(async ([sym, ySym]) => {
-          const price = await fetchYahooPrice(ySym)
-          if(price > 0) push(sym, price)
-        })
-      )
-    }
-
-    // Fire immediately
-    pollForex()
-    pollYahoo()
-
-    // Forex every 5s, Yahoo every 15s (allorigins has rate limits)
-    const ivForex = setInterval(pollForex, 5000)
-    const ivYahoo = setInterval(pollYahoo, 15000)
-
-    return ()=>{ dead=true; clearInterval(ivForex); clearInterval(ivYahoo) }
+    poll()
+    const iv = setInterval(poll, 5000)
+    return ()=>{ dead=true; clearInterval(iv) }
   },[push])
 
-  // TV postMessage: use only if no price from APIs yet (cold start)
+  // TV postMessage: use only if API hasn't returned yet (cold start)
   const onTVPrice = useCallback((price: number) => {
     const sym = ALL_INSTRUMENTS.find(i => (i as any).tv === activeTvSym.current)?.sym
     if(sym && price > 0 && refPrices.current[sym] === SEED[sym]) push(sym, price)
@@ -244,6 +107,7 @@ function usePriceFeed() {
 
   return { prices, refPrev, refPrices, push, onTVPrice, setActiveSym }
 }
+
 
 /* ── P&L ──────────────────────────────────────────────────────────── */
 function calcPnl(trade:any, price:number): number {
