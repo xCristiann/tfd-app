@@ -22,13 +22,13 @@ const ALL_INSTRUMENTS = [
   { sym:'EUR/GBP', tv:'FX:EURGBP',        market:'forex', spread:0.00015, dec:5, pip:0.0001, cat:'forex',  lotUSD:(p:number)=>p*1.29*LOT_SIZE },
   { sym:'AUD/JPY', tv:'FX:AUDJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
   { sym:'CAD/JPY', tv:'FX:CADJPY',        market:'forex', spread:0.030,   dec:3, pip:0.01,   cat:'forex',  lotUSD:(p:number)=>p/148*LOT_SIZE },
-  { sym:'XAU/USD', tv:'TVC:GOLD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
-  { sym:'XAG/USD', tv:'TVC:SILVER',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
-  { sym:'NAS100',  tv:'TVC:NDX', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
-  { sym:'US500',   tv:'TVC:SPX', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
-  { sym:'US30',    tv:'TVC:DJI',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
-  { sym:'GER40',   tv:'TVC:DAX',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
-  { sym:'WTI',     tv:'TVC:USOIL',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
+  { sym:'XAU/USD', tv:'OANDA:XAUUSD',         market:'forex', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p:number)=>p*100   },
+  { sym:'XAG/USD', tv:'OANDA:XAGUSD',       market:'forex', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p:number)=>p*5000  },
+  { sym:'NAS100',  tv:'NASDAQ:NDX', market:'us',    spread:1.5,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*400  },
+  { sym:'US500',   tv:'SP:SPX', market:'us',    spread:0.50,    dec:2, pip:0.10,   cat:'index',  lotUSD:(p:number)=>p*500  },
+  { sym:'US30',    tv:'DJ:DJI',  market:'us',    spread:2.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*5000 },
+  { sym:'GER40',   tv:'XETR:DAX',  market:'eu',    spread:1.0,     dec:1, pip:1.0,    cat:'index',  lotUSD:(p:number)=>p*25   },
+  { sym:'WTI',     tv:'NYMEX:CL1!',        market:'forex', spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p:number)=>p*1000 },
 ] as const
 
 type Inst = typeof ALL_INSTRUMENTS[number]
@@ -37,7 +37,7 @@ const SEED: Record<string,number> = {
   'EUR/USD':1.0820,'GBP/USD':1.2960,'USD/JPY':149.20,'USD/CHF':0.8850,
   'AUD/USD':0.6280,'USD/CAD':1.4380,'NZD/USD':0.5720,'GBP/JPY':193.20,
   'EUR/JPY':161.50,'EUR/GBP':0.8350,'AUD/JPY':93.70,'CAD/JPY':103.80,
-  'XAU/USD':3330.0,'XAG/USD':33.80,
+  'XAU/USD':4700.0,'XAG/USD':47.50,
   'NAS100':19800,'US500':5580,'US30':41700,'GER40':22500,'WTI':68.50,
 }
 
