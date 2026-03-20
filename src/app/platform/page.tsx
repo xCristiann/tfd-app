@@ -89,59 +89,79 @@ function calcPnl(trade:any, price:number): number {
   return diff * (trade.symbol.includes('JPY') ? LOT_SIZE/price : inst.lotUSD(1)) * trade.lots
 }
 
-/* ── Price feed ──────────────────────────────────────────────────── */
-function usePriceFeed(activeSym: string) {
-  const [prices, setPrices]   = useState<Record<string,number>>({...SEED})
+/* ── Price feed — Deriv WebSocket (free, no key, instant ticks) ────
+   wss://ws.binaryws.com/websockets/v3?app_id=1089
+   Subscribes to all symbols on mount. Reconnects automatically.
+   ─────────────────────────────────────────────────────────────── */
+const DERIV_SYM: Record<string,string> = {
+  'EUR/USD':'frxEURUSD','GBP/USD':'frxGBPUSD','USD/JPY':'frxUSDJPY',
+  'USD/CHF':'frxUSDCHF','AUD/USD':'frxAUDUSD','USD/CAD':'frxUSDCAD',
+  'NZD/USD':'frxNZDUSD','GBP/JPY':'frxGBPJPY','EUR/JPY':'frxEURJPY',
+  'EUR/GBP':'frxEURGBP','AUD/JPY':'frxAUDJPY','CAD/JPY':'frxCADJPY',
+  'XAU/USD':'frxXAUUSD','XAG/USD':'frxXAGUSD',
+  'NAS100':'OTC_NDX','US500':'OTC_SPX','US30':'OTC_DJI',
+  'GER40':'OTC_GDAX','WTI':'frxUSOIL',
+}
+// Reverse map: deriv symbol → our symbol
+const DERIV_REV: Record<string,string> = Object.fromEntries(
+  Object.entries(DERIV_SYM).map(([k,v])=>[v,k])
+)
+
+function usePriceFeed() {
+  const [prices, setPrices] = useState<Record<string,number>>({...SEED})
   const refPrev   = useRef<Record<string,number>>({...SEED})
   const refPrices = useRef<Record<string,number>>({...SEED})
+  const wsRef     = useRef<WebSocket|null>(null)
+  const deadRef   = useRef(false)
 
   const push = useCallback((sym:string, price:number) => {
     if (!price || isNaN(price) || price <= 0) return
     refPrev.current[sym]   = refPrices.current[sym] || price
     refPrices.current[sym] = price
-    // Only trigger re-render if price actually changed
     setPrices(p => p[sym] === price ? p : {...p, [sym]: price})
   }, [])
 
-  // ── Source 1: document.title — reads EXACT price shown in TV chart ──
-  // TV Advanced Chart updates document.title every tick:
-  // "4,671.93 XAUUSD — Gold Spot / U.S. Dollar — TradingView"
-  // Poll at 100ms for near-instant P&L updates
   useEffect(() => {
-    let lastTitle = ''
-    const iv = setInterval(() => {
-      const title = document.title
-      if (title === lastTitle) return
-      lastTitle = title
-      // Match leading number with optional commas e.g. "4,671.93" or "1.08500"
-      const m = title.match(/^([\d,]+\.?\d*)/)
-      if (!m) return
-      const price = parseFloat(m[1].replace(/,/g, ''))
-      if (price > 0) push(activeSym, price)
-    }, 100)
-    return () => clearInterval(iv)
-  }, [activeSym, push])
+    deadRef.current = false
 
-  // ── Source 2: /api/prices — background refresh all watchlist symbols ──
-  useEffect(() => {
-    let dead = false
-    const poll = async () => {
-      if (dead) return
-      try {
-        const r = await fetch('/api/prices', { signal: AbortSignal.timeout(8000) })
-        if (!r.ok) return
-        const d = await r.json()
-        for (const [s, p] of Object.entries(d.prices ?? {})) {
-          if (typeof p === 'number' && p > 0) push(s, p)
-        }
-      } catch {}
+    const connect = () => {
+      if (deadRef.current) return
+      const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089')
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        // Subscribe to all symbols
+        Object.values(DERIV_SYM).forEach(dsym => {
+          ws.send(JSON.stringify({ ticks: dsym, subscribe: 1 }))
+        })
+      }
+
+      ws.onmessage = (e) => {
+        try {
+          const d = JSON.parse(e.data)
+          if (d.msg_type === 'tick' && d.tick) {
+            const sym = DERIV_REV[d.tick.symbol]
+            if (sym && d.tick.quote > 0) push(sym, d.tick.quote)
+          }
+        } catch {}
+      }
+
+      ws.onclose = () => {
+        if (!deadRef.current) setTimeout(connect, 2000)
+      }
+
+      ws.onerror = () => { try { ws.close() } catch {} }
     }
-    poll()
-    const iv = setInterval(poll, 4000)
-    return () => { dead = true; clearInterval(iv) }
+
+    connect()
+
+    return () => {
+      deadRef.current = true
+      try { wsRef.current?.close() } catch {}
+    }
   }, [push])
 
-  // ── Heartbeat: force re-render every 100ms for live P&L ──────────
+  // Heartbeat 100ms — P&L re-renders from refPrices
   useEffect(() => {
     const iv = setInterval(() => setPrices(p => ({...p})), 100)
     return () => clearInterval(iv)
@@ -149,6 +169,7 @@ function usePriceFeed(activeSym: string) {
 
   return { prices, refPrev, refPrices, push }
 }
+
 
 /* ── Risk monitor ────────────────────────────────────────────────── */
 function useRiskMonitor(tradesRef:any, refPrices:any, primaryRef:any, accountId:any, onBreach:any) {
@@ -203,7 +224,7 @@ export function PlatformPage() {
   useEffect(() => { lsSet('tfd_sym',sym) }, [sym])
   useEffect(() => { lsSet('tfd_tf',tf)   }, [tf])
 
-  const { prices, refPrev, refPrices, push } = usePriceFeed(sym)
+  const { prices, refPrev, refPrices, push } = usePriceFeed()
   const tradesRef  = useRef(openTrades);  tradesRef.current  = openTrades
   const primaryRef = useRef(primary);     primaryRef.current = primary
   const closingRef = useRef<Set<string>>(new Set())
@@ -224,8 +245,6 @@ export function PlatformPage() {
   const freeMgn   = equity - usedMgn
   const reqMgn    = inst.lotUSD(execPrice) * lotsNum / LEVERAGE
   const maxLots   = freeMgn>0 ? Math.floor(freeMgn*LEVERAGE/inst.lotUSD(execPrice)*100)/100 : 0
-  // isLive = true once document.title gave us a real price (differs from SEED)
-  // Use a generous check: any non-zero price that was pushed counts as live
   const isLive    = refPrices.current[sym] > 0 && refPrices.current[sym] !== SEED[sym]
 
   useEffect(() => {
