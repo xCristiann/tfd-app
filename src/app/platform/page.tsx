@@ -97,35 +97,32 @@ function usePriceFeed(activeSym: string) {
 
   const push = useCallback((sym:string, price:number) => {
     if (!price || isNaN(price) || price <= 0) return
-    // Sanity check: price must be within 30% of SEED to avoid garbage
-    const seed = SEED[sym]
-    if (seed && (price < seed * 0.7 || price > seed * 1.3)) return
     refPrev.current[sym]   = refPrices.current[sym] || price
     refPrices.current[sym] = price
-    setPrices(p => ({...p, [sym]: price}))
+    // Only trigger re-render if price actually changed
+    setPrices(p => p[sym] === price ? p : {...p, [sym]: price})
   }, [])
 
-  // ── Source 1: document.title polling ─────────────────────────────
-  // TradingView Advanced Chart sets the parent page title to:
-  // "4661.40 XAUUSD — Gold Spot / U.S. Dollar — TradingView"
-  // This is the EXACT price shown in the chart. Poll every 200ms.
+  // ── Source 1: document.title — reads EXACT price shown in TV chart ──
+  // TV Advanced Chart updates document.title every tick:
+  // "4,671.93 XAUUSD — Gold Spot / U.S. Dollar — TradingView"
+  // Poll at 100ms for near-instant P&L updates
   useEffect(() => {
     let lastTitle = ''
     const iv = setInterval(() => {
       const title = document.title
       if (title === lastTitle) return
       lastTitle = title
-      // Extract leading number (may have commas: "21,800.5")
-      const m = title.match(/^([\d,]+\.?\d*)\s/)
+      // Match leading number with optional commas e.g. "4,671.93" or "1.08500"
+      const m = title.match(/^([\d,]+\.?\d*)/)
       if (!m) return
       const price = parseFloat(m[1].replace(/,/g, ''))
       if (price > 0) push(activeSym, price)
-    }, 200)
+    }, 100)
     return () => clearInterval(iv)
   }, [activeSym, push])
 
-  // ── Source 2: /api/prices background poll ─────────────────────────
-  // Keeps watchlist prices updated for all symbols (every 4s)
+  // ── Source 2: /api/prices — background refresh all watchlist symbols ──
   useEffect(() => {
     let dead = false
     const poll = async () => {
@@ -144,9 +141,9 @@ function usePriceFeed(activeSym: string) {
     return () => { dead = true; clearInterval(iv) }
   }, [push])
 
-  // ── Heartbeat: re-render every 200ms so P&L is live ──────────────
+  // ── Heartbeat: force re-render every 100ms for live P&L ──────────
   useEffect(() => {
-    const iv = setInterval(() => setPrices(p => ({...p})), 200)
+    const iv = setInterval(() => setPrices(p => ({...p})), 100)
     return () => clearInterval(iv)
   }, [])
 
@@ -227,7 +224,9 @@ export function PlatformPage() {
   const freeMgn   = equity - usedMgn
   const reqMgn    = inst.lotUSD(execPrice) * lotsNum / LEVERAGE
   const maxLots   = freeMgn>0 ? Math.floor(freeMgn*LEVERAGE/inst.lotUSD(execPrice)*100)/100 : 0
-  const isLive    = livePrice !== SEED[sym]
+  // isLive = true once document.title gave us a real price (differs from SEED)
+  // Use a generous check: any non-zero price that was pushed counts as live
+  const isLive    = refPrices.current[sym] > 0 && refPrices.current[sym] !== SEED[sym]
 
   useEffect(() => {
     if (!primary?.id) return
