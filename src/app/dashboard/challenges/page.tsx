@@ -112,41 +112,75 @@ export function ChallengesPage() {
                     <div className="font-sans text-[22px] font-bold">${p.price_usd}</div>
                   </div>
                   {/* Type badge */}
-                  <div className="mb-3">
-                    <span className="text-[8px] uppercase tracking-[1.5px] font-bold px-2 py-1 border text-[#2255CC] bg-[rgba(34,85,204,.06)] border-[rgba(34,85,204,.2)]">
-                      {p.challenge_type === '2step' ? '2-Step Challenge' : '1-Step Challenge'}
+                  <div className="mb-3 flex gap-2 flex-wrap">
+                    <span className={`text-[8px] uppercase tracking-[1.5px] font-bold px-2 py-1 border ${
+                      p.challenge_type==='instant' ? 'text-[#D97706] bg-[rgba(217,119,6,.08)] border-[rgba(217,119,6,.2)]' :
+                      p.challenge_type==='payafter' ? 'text-[#7C3AED] bg-[rgba(124,58,237,.08)] border-[rgba(124,58,237,.2)]' :
+                      p.challenge_type==='1step' ? 'text-[#16A34A] bg-[rgba(22,163,74,.08)] border-[rgba(22,163,74,.2)]' :
+                      'text-[#2255CC] bg-[rgba(34,85,204,.08)] border-[rgba(34,85,204,.2)]'
+                    }`}>
+                      {p.challenge_type==='2step'?'2-Step':p.challenge_type==='1step'?'1-Step':p.challenge_type==='instant'?'⚡ Instant':p.challenge_type==='payafter'?'💜 Pay After Pass':p.challenge_type}
                     </span>
+                    {(p.drawdown_type==='trailing') && (
+                      <span className="text-[8px] uppercase tracking-[1.5px] font-bold px-2 py-1 border text-[#D97706] bg-[rgba(217,119,6,.08)] border-[rgba(217,119,6,.2)]">
+                        ⟳ Trailing DD
+                      </span>
+                    )}
                   </div>
+
+                  {/* Trailing DD explanation */}
+                  {p.drawdown_type==='trailing' && (
+                    <div className="mb-3 p-2 bg-[rgba(217,119,6,.05)] border border-[rgba(217,119,6,.2)] text-[9px] text-[#D97706] rounded">
+                      ⟳ Trailing Drawdown — your floor rises as your balance grows. Max loss: {p.trailing_drawdown}% from peak balance.
+                    </div>
+                  )}
+
+                  {/* Instant/PayAfter notice */}
+                  {p.challenge_type==='instant' && (
+                    <div className="mb-3 p-2 bg-[rgba(217,119,6,.05)] border border-[rgba(217,119,6,.2)] text-[9px] text-[#D97706] rounded">
+                      ⚡ Get funded immediately — no evaluation required.
+                    </div>
+                  )}
+                  {p.challenge_type==='payafter' && (
+                    <div className="mb-3 p-2 bg-[rgba(124,58,237,.05)] border border-[rgba(124,58,237,.2)] text-[9px] text-[#7C3AED] rounded">
+                      💜 Trade the evaluation for free — only pay if you pass.
+                    </div>
+                  )}
 
                   {/* Phase 1 */}
-                  <div className="mb-2">
-                    <div className="text-[8px] uppercase tracking-[1.5px] font-bold text-[#8FA3BF] mb-1">Phase 1</div>
-                    {[
-                      ['Profit Target', `${p.ph1_profit_target}%`],
-                      ['Daily Drawdown', `${p.ph1_daily_dd}%`],
-                      ['Max Drawdown', `${p.ph1_max_dd}%`],
-                      ['Min Days', p.ph1_min_days ? `${p.ph1_min_days} days` : 'None'],
-                    ].map(([l,v])=>(
-                      <div key={l} className="flex justify-between py-[4px] border-b border-[#F0F4FB]">
-                        <span className="text-[9px] text-[#8FA3BF]">{l}</span>
-                        <span className="font-mono text-[10px] text-[#1A3A6B] font-semibold">{v}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {p.challenge_type !== 'instant' && (
+                    <div className="mb-2">
+                      <div className="text-[8px] uppercase tracking-[1.5px] font-bold text-[#8FA3BF] mb-1">Phase 1</div>
+                      {[
+                        ['Profit Target', `${p.ph1_profit_target}%`],
+                        ['Daily Drawdown', `${p.ph1_daily_dd}%`],
+                        ...(p.drawdown_type==='trailing'
+                          ? [['Trailing Drawdown', `${p.trailing_drawdown}% from peak`]]
+                          : [['Max Drawdown', `${p.ph1_max_dd}%`]]),
+                        ['Min Days', p.ph1_min_days ? `${p.ph1_min_days} days` : 'None'],
+                      ].map(([l,v])=>(
+                        <div key={l} className="flex justify-between py-[4px] border-b border-[#F0F4FB]">
+                          <span className="text-[9px] text-[#8FA3BF]">{l}</span>
+                          <span className={`font-mono text-[10px] font-semibold ${String(l).includes('Trailing')?'text-[#D97706]':'text-[#1A3A6B]'}`}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                  {/* Phase 2 (only for 2-step) */}
+                  {/* Phase 2 */}
                   {p.challenge_type === '2step' && (
                     <div className="mb-2">
                       <div className="text-[8px] uppercase tracking-[1.5px] font-bold text-[#8FA3BF] mb-1">Phase 2</div>
                       {[
                         ['Profit Target', `${p.ph2_profit_target}%`],
                         ['Daily Drawdown', `${p.ph2_daily_dd}%`],
-                        ['Max Drawdown', `${p.ph2_max_dd}%`],
-                        ['Min Days', p.ph2_min_days ? `${p.ph2_min_days} days` : 'None'],
+                        ...(p.drawdown_type==='trailing'
+                          ? [['Trailing Drawdown', `${p.trailing_drawdown}% from peak`]]
+                          : [['Max Drawdown', `${p.ph2_max_dd}%`]]),
                       ].map(([l,v])=>(
                         <div key={l} className="flex justify-between py-[4px] border-b border-[#F0F4FB]">
                           <span className="text-[9px] text-[#8FA3BF]">{l}</span>
-                          <span className="font-mono text-[10px] text-[#1A3A6B] font-semibold">{v}</span>
+                          <span className={`font-mono text-[10px] font-semibold ${String(l).includes('Trailing')?'text-[#D97706]':'text-[#1A3A6B]'}`}>{v}</span>
                         </div>
                       ))}
                     </div>
@@ -158,30 +192,30 @@ export function ChallengesPage() {
                     {[
                       ['Profit Split', `${p.funded_profit_split}%`],
                       ['Daily Drawdown', `${p.funded_daily_dd}%`],
-                      ['Max Drawdown', `${p.funded_max_dd}%`],
+                      ...(p.drawdown_type==='trailing'
+                        ? [['Trailing Drawdown', `${p.trailing_drawdown}% from peak`]]
+                        : [['Max Drawdown', `${p.funded_max_dd}%`]]),
                     ].map(([l,v])=>(
                       <div key={l} className="flex justify-between py-[4px] border-b border-[#F0F4FB]">
                         <span className="text-[9px] text-[#8FA3BF]">{l}</span>
-                        <span className="font-mono text-[10px] text-[#16A34A] font-semibold">{v}</span>
+                        <span className={`font-mono text-[10px] font-semibold ${String(l).includes('Trailing')?'text-[#D97706]':String(l).includes('Split')?'text-[#16A34A]':'text-[#1A3A6B]'}`}>{v}</span>
                       </div>
                     ))}
                   </div>
 
                   {/* Rules */}
-                  <div className="flex gap-2 mt-2">
-                    <span className={`text-[8px] px-2 py-1 border font-semibold ${p.news_trading ? 'text-[#16A34A] bg-[rgba(22,163,74,.06)] border-[rgba(22,163,74,.2)]' : 'text-[#8FA3BF] bg-[#F4F7FD] border-[#E8EEF8] line-through'}`}>
-                      News Trading
+                  <div className="flex gap-2 mt-3 flex-wrap">
+                    <span className={`text-[8px] px-2 py-1 border font-semibold ${p.news_trading ? 'text-[#16A34A] bg-[rgba(22,163,74,.06)] border-[rgba(22,163,74,.2)]' : 'text-[#9CA3AF] bg-[#F4F7FD] border-[#E8EEF8]'}`}>
+                      {p.news_trading ? '✓' : '✕'} News Trading
                     </span>
-                    <span className={`text-[8px] px-2 py-1 border font-semibold ${p.weekend_holding ? 'text-[#16A34A] bg-[rgba(22,163,74,.06)] border-[rgba(22,163,74,.2)]' : 'text-[#8FA3BF] bg-[#F4F7FD] border-[#E8EEF8] line-through'}`}>
-                      Weekend Hold
-                    </span>
-                    <span className="text-[8px] px-2 py-1 border font-semibold text-[#2255CC] bg-[rgba(34,85,204,.06)] border-[rgba(34,85,204,.2)] ml-auto">
-                      TFD Platform
+                    <span className={`text-[8px] px-2 py-1 border font-semibold ${p.weekend_holding ? 'text-[#16A34A] bg-[rgba(22,163,74,.06)] border-[rgba(22,163,74,.2)]' : 'text-[#9CA3AF] bg-[#F4F7FD] border-[#E8EEF8]'}`}>
+                      {p.weekend_holding ? '✓' : '✕'} Weekend Hold
                     </span>
                   </div>
+
                   <Button className="w-full mt-3"
                     onClick={()=>navigate('/checkout?product='+p.id)}>
-                    Buy for ${p.price_usd} →
+                    {p.challenge_type==='payafter' ? 'Start Free →' : p.challenge_type==='instant' ? '⚡ Get Funded →' : `Buy for $${p.price_usd} →`}
                   </Button>
                 </Card>
               ))}

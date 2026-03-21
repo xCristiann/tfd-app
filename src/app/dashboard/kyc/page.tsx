@@ -313,20 +313,7 @@ export function KycPage() {
             )}
           </Card>
 
-          {/* Privacy */}
-          <Card className="mt-4">
-            <CardHeader title="Privacy & Security"/>
-            {[
-              ['🔒', 'AES-256 encryption at rest and in transit'],
-              ['🇪🇺', 'GDPR compliant — data processed per EU regulations'],
-              ['🗑️', 'Documents deleted automatically after verification'],
-              ['👁️', 'Powered by Didit — trusted KYC provider, 500 free verifications/month'],
-            ].map(([ico, t]) => (
-              <div key={t} className="flex items-center gap-3 py-2 border-b border-[#F4F7FD] last:border-0 text-[12px] text-[#5C7A9E]">
-                <span className="text-sm">{ico}</span>{t}
-              </div>
-            ))}
-          </Card>
+
 
         </div>
       </DashboardLayout>
