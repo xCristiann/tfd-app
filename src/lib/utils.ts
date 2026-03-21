@@ -38,6 +38,43 @@ export function phaseLabel(phase: string): string {
   return map[phase] ?? phase
 }
 
+/** Returns a full label combining challenge type + phase.
+ *  e.g. "⚡ Instant Funded", "1-Step · Phase 1", "💜 Pay After · Phase 1" */
+export function accountTypeLabel(phase: string, challengeType?: string): string {
+  const type = challengeType ?? '2step'
+  const phaseMap: Record<string, string> = {
+    phase1: 'Phase 1', phase2: 'Phase 2', funded: 'Funded',
+    breached: 'Breached', passed: 'Passed', suspended: 'Suspended',
+  }
+  const ph = phaseMap[phase] ?? phase
+
+  if (type === 'instant') {
+    return phase === 'funded' ? '⚡ Instant Funded' : `⚡ Instant · ${ph}`
+  }
+  if (type === 'payafter') {
+    return phase === 'funded' ? '💜 Pay After · Funded' : `💜 Pay After · ${ph}`
+  }
+  if (type === '1step') {
+    return phase === 'funded' ? '1-Step · Funded' : `1-Step · ${ph}`
+  }
+  // 2step default
+  return phase === 'funded' ? '2-Step · Funded' : `2-Step · ${ph}`
+}
+
+/** Short badge label for account selector */
+export function accountBadgeLabel(phase: string, challengeType?: string): string {
+  const type = challengeType ?? '2step'
+  const phaseMap: Record<string,string> = {
+    phase1:'Phase 1', phase2:'Phase 2', funded:'Funded',
+    breached:'Breached', passed:'Passed', suspended:'Suspended',
+  }
+  const ph = phaseMap[phase] ?? phase
+  if (type === 'instant')  return phase === 'funded' ? 'INSTANT FUNDED' : `INSTANT · ${ph.toUpperCase()}`
+  if (type === 'payafter') return phase === 'funded' ? 'PAY AFTER · FUNDED' : `PAY AFTER · ${ph.toUpperCase()}`
+  if (type === '1step')    return phase === 'funded' ? '1-STEP · FUNDED' : `1-STEP · ${ph.toUpperCase()}`
+  return phase === 'funded' ? '2-STEP · FUNDED' : `2-STEP · ${ph.toUpperCase()}`
+}
+
 export function methodLabel(method: string): string {
   const map: Record<string, string> = {
     usdt_trc20: 'USDT TRC20', usdt_erc20: 'USDT ERC20',

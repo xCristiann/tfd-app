@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/useToast'
 import { useAccount } from '@/hooks/useAccount'
 import { ToastContainer } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
+import { accountTypeLabel } from '@/lib/utils'
 
 const LEVERAGE = 50
 const LOT_SIZE = 100_000
@@ -565,6 +566,9 @@ export function PlatformPage() {
           {accounts.map(a=>(
             <button key={a.id} onClick={()=>setSelAccId(a.id)} style={{padding:'3px 8px',background:a.id===primary?.id?'rgba(96,165,250,.2)':'rgba(255,255,255,.06)',border:a.id===primary?.id?'1px solid rgba(96,165,250,.4)':'1px solid rgba(255,255,255,.1)',borderRadius:'4px',color:a.id===primary?.id?'#60A5FA':'rgba(255,255,255,.4)',fontSize:'9px',...mono,cursor:'pointer'}}>
               {(a as any).account_number}
+              <span style={{marginLeft:'4px',fontSize:'8px',opacity:0.7}}>
+                {accountTypeLabel(a.phase, (a as any).challenge_products?.challenge_type)}
+              </span>
             </button>
           ))}
         </div>
@@ -700,7 +704,11 @@ export function PlatformPage() {
             )}
           </div>
           <div style={{padding:'8px 10px',borderTop:'1px solid #E8EEF8',flexShrink:0}}>
-            {[['Account',(primary as any)?.account_number??'—','#1A3A6B'],['Phase',primary?.phase??'—','#2255CC'],['Status',primary?.status??'—',primary?.status==='active'?'#16A34A':'#DC2626']].map(([l,v,c])=>(
+            {[
+                ['Account',(primary as any)?.account_number??'—','#1A3A6B'],
+                ['Type', accountTypeLabel(primary?.phase??'phase1', (primary as any)?.challenge_products?.challenge_type), '#2255CC'],
+                ['Status',primary?.status??'—',primary?.status==='active'?'#16A34A':'#DC2626']
+              ].map(([l,v,c])=>(
               <div key={String(l)} style={{display:'flex',justifyContent:'space-between',padding:'2px 0',fontSize:'9px'}}>
                 <span style={{color:'#8FA3BF'}}>{l}</span>
                 <span style={{...mono,color:String(c),fontWeight:500}}>{v}</span>

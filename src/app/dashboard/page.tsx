@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge, phaseVariant } from '@/components/ui/Badge'
 import { EquityCurve } from '@/components/charts/EquityCurve'
 import { ToastContainer } from '@/components/ui/Toast'
-import { fmt, phaseLabel } from '@/lib/utils'
+import { fmt, phaseLabel, accountTypeLabel, accountBadgeLabel } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/email'
@@ -201,7 +201,7 @@ export function DashboardPage() {
                 {accounts.map(a => (
                   <button key={a.id} onClick={() => setSelectedId(a.id)}
                     style={{ padding:'8px 14px', borderRadius:'20px', border:'none', cursor:'pointer', whiteSpace:'nowrap', background: a.id === account?.id ? '#2255CC' : '#fff', color: a.id === account?.id ? '#fff' : '#5C7A9E', fontSize:'12px', fontWeight:600, boxShadow:'0 1px 4px rgba(0,0,0,.08)' }}>
-                    {a.account_number} · {phaseLabel(a.phase)}
+                    {a.account_number} · {accountTypeLabel(a.phase, (a as any).challenge_products?.challenge_type)}
                   </button>
                 ))}
               </div>
@@ -304,7 +304,7 @@ export function DashboardPage() {
       <DashboardLayout
         title={`Welcome back, ${profile?.first_name ?? ''}!`}
         nav={TRADER_NAV} accentColor="gold"
-        accountBox={account ? { id: account.account_number, label: `${phaseLabel(account.phase)} · ${prod?.funded_profit_split ?? 85}% Split` } : undefined}
+        accountBox={account ? { id: account.account_number, label: `${accountTypeLabel(account.phase, prod?.challenge_type)} · ${prod?.funded_profit_split ?? 85}% Split` } : undefined}
         topbarRight={
           <>
             <span className="w-[5px] h-[5px] rounded-full bg-[#16A34A] animate-pulse" />
@@ -337,7 +337,7 @@ export function DashboardPage() {
                     <button key={a.id} onClick={() => setSelectedId(a.id)}
                       className={`px-3 py-[5px] text-[10px] font-mono font-semibold cursor-pointer border transition-all ${isActive ? 'bg-[rgba(34,85,204,.1)] border-[#C5D5FA] text-[#2255CC]' : 'bg-[#F4F7FD] border-[#E8EEF8] text-[#8FA3BF] hover:text-[#5C7A9E]'}`}>
                       {a.account_number}
-                      <span className={`ml-2 text-[8px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>{phaseLabel(a.phase)}</span>
+                      <span className={`ml-2 text-[8px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>{accountBadgeLabel(a.phase, (a as any).challenge_products?.challenge_type)}</span>
                     </button>
                   )
                 })}

@@ -18,7 +18,10 @@ function buildFundedSVG(data: {
 }): string {
   const { name, accountNumber, accountSize, challengeType, fundedAt, certId } = data
   const size  = `$${Number(accountSize).toLocaleString()}`
-  const type  = challengeType === '1step' ? '1-Step' : '2-Step'
+  const typeLabels: Record<string,string> = {
+    '1step': '1-Step', '2step': '2-Step', 'instant': 'Instant Funding', 'payafter': 'Pay After Pass'
+  }
+  const type = typeLabels[challengeType] ?? '2-Step'
   const date  = new Date(fundedAt).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })
   const [day, ...rest] = date.split(' ')
   const dateL1 = `${day} ${rest[0]}`
@@ -107,7 +110,7 @@ function buildFundedSVG(data: {
   <rect x="266" y="298" width="148" height="3" fill="url(#gldF)" rx="2" opacity="0.7"/>
   <text x="340" y="318" font-family="Georgia, serif" font-size="7.5" fill="#D4A843" text-anchor="middle" letter-spacing="2" opacity="0.8">CHALLENGE TYPE</text>
   <text x="340" y="336" font-family="Georgia, serif" font-size="13" fill="#FFFFFF" text-anchor="middle" font-weight="700">${type}-Step</text>
-  <text x="340" y="352" font-family="Georgia, serif" font-size="10.5" fill="#FFFFFF" text-anchor="middle" opacity="0.7">Evaluation</text>
+  <text x="340" y="352" font-family="Georgia, serif" font-size="10.5" fill="#FFFFFF" text-anchor="middle" opacity="0.7">${challengeType==="instant"?"Immediately Funded":challengeType==="payafter"?"Pay After Pass":"Evaluation"}</text>
   <rect x="444" y="298" width="148" height="62" fill="url(#statF)" rx="5"/>
   <rect x="444" y="298" width="148" height="62" fill="none" stroke="#D4A843" stroke-width="0.6" rx="5" opacity="0.35"/>
   <rect x="444" y="298" width="148" height="3" fill="url(#gldF)" rx="2" opacity="0.7"/>
@@ -422,7 +425,11 @@ export function CertificatesPage() {
           type: 'funded',
           icon: '🏆',
           title: `Funded Trader — ${account.account_number}`,
-          subtitle: `$${Number(size).toLocaleString()} · ${cType === '1step' ? '1-Step' : '2-Step'} Evaluation`,
+          subtitle: `$\${Number(size).toLocaleString()} · ${
+            cType === 'instant' ? 'Instant Funding' :
+            cType === 'payafter' ? 'Pay After Pass' :
+            cType === '1step' ? '1-Step Evaluation' : '2-Step Evaluation'
+          }`,
           filename: `TFD-Funded-Certificate-${account.account_number}`,
           svg: buildFundedSVG({ name, accountNumber: account.account_number, accountSize: size, challengeType: cType, fundedAt: fundedDate, certId }),
         })
