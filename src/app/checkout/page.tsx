@@ -106,11 +106,17 @@ export function CheckoutPage() {
     const password = generatePassword()
     const accountNumber = `TFD-${Number(product.account_size)/1000}K-${Math.floor(1000 + Math.random() * 9000)}`
 
+    // Determine phase based on challenge type
+    const isInstant  = product.challenge_type === 'instant'
+    const isPayAfter = product.challenge_type === 'payafter'
+    const initialPhase  = isInstant ? 'funded' : 'phase1'
+    const fundedAt      = isInstant ? new Date().toISOString() : null
+
     const { error: accErr } = await supabase.from('accounts').insert({
       user_id: profile.id,
       product_id: product.id,
       account_number: accountNumber,
-      phase: 'phase1',
+      phase: initialPhase,
       balance: product.account_size,
       equity: product.account_size,
       starting_balance: product.account_size,
@@ -120,6 +126,11 @@ export function CheckoutPage() {
       platform_login: login,
       server: 'TFD-Live-01',
       status: 'active',
+      funded_at: fundedAt,
+      drawdown_type: product.drawdown_type ?? 'static',
+      trailing_drawdown: product.trailing_drawdown ?? 8,
+      // For pay-after-pass: mark as pending activation until they pay activation fee
+      payout_locked: isPayAfter ? true : false,
     })
 
     if (accErr) console.error('Account creation error:', accErr)
@@ -180,7 +191,7 @@ export function CheckoutPage() {
       password,
       server:         'TFD-Live-01',
       amount:         (Number(_finalPrice) || 0).toFixed(2),
-      phase:          'Phase 1',
+      phase:          isInstant ? 'Funded' : isPayAfter ? 'Phase 1 (Pay After Pass)' : 'Phase 1',
     })
 
     setLoading(false)
@@ -218,6 +229,9 @@ export function CheckoutPage() {
 
   const discountAmount = couponData?._discount ?? 0
   const finalPrice = Math.max(0, (product?.price_usd ?? 0) - discountAmount)
+  const activationFee = product?.activation_fee ?? 0
+  const isInstantProduct  = product?.challenge_type === 'instant'
+  const isPayAfterProduct = product?.challenge_type === 'payafter'
 
   async function proceedToPayment() {
     if (!product || !profile) return
@@ -411,8 +425,39 @@ export function CheckoutPage() {
             {step === 2 && (
               <div>
                 <div className="text-[9px] tracking-[2px] uppercase text-[#2255CC] font-semibold mb-2">Step 2 of 3</div>
-                <h2 className="font-sans text-[24px] font-bold mb-1">Payment</h2>
-                <p className="text-[11px] text-[#5C7A9E] mb-8">You'll be redirected to Stripe's secure payment page.</p>
+                <h2 className="font-sans text-[24px] font-bold mb-1">
+                  {isInstantProduct ? '⚡ Instant Funding Payment' : isPayAfterProduct ? '💜 Start Your Evaluation' : 'Payment'}
+                </h2>
+                <p className="text-[11px] text-[#5C7A9E] mb-6">
+                  {isInstantProduct
+                    ? 'Pay once and receive your funded account immediately.'
+                    : isPayAfterProduct
+                    ? 'Pay the upfront evaluation fee. If you pass, you will be charged the activation fee to receive your funded account.'
+                    : "You'll be redirected to Stripe's secure payment page."}
+                </p>
+
+                {/* Pay After You Pass — fee breakdown */}
+                {isPayAfterProduct && activationFee > 0 && (
+                  <div className="mb-5 p-4 bg-[rgba(124,58,237,.05)] border border-[rgba(124,58,237,.2)] rounded-lg">
+                    <div className="text-[10px] font-bold text-[#7C3AED] uppercase tracking-wide mb-3">Payment Structure</div>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center py-2 border-b border-[rgba(124,58,237,.1)]">
+                        <div>
+                          <div className="text-[12px] font-semibold text-[#1A3A6B]">Upfront Fee — Pay now</div>
+                          <div className="text-[10px] text-[#8FA3BF]">Required to start the evaluation</div>
+                        </div>
+                        <span className="font-mono font-bold text-[#2255CC] text-[14px]">${product?.price_usd}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <div>
+                          <div className="text-[12px] font-semibold text-[#1A3A6B]">Activation Fee — Pay after passing</div>
+                          <div className="text-[10px] text-[#8FA3BF]">Charged only if you pass the evaluation</div>
+                        </div>
+                        <span className="font-mono font-bold text-[#7C3AED] text-[14px]">${activationFee}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="p-6 border border-[#E8EEF8] bg-white mb-6">
                   <div className="flex items-center gap-4 mb-4 pb-4 border-b border-[#F0F4FB]">
@@ -423,20 +468,35 @@ export function CheckoutPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {[
-                      ['Challenge Fee', `$${product?.price_usd}`],
-                      ['Processing Fee', '$0'],
-                      ['Total', `$${product?.price_usd}`],
-                    ].map(([l,v],i) => (
-                      <div key={l} className={`flex justify-between text-[12px] ${i === 2 ? 'font-bold pt-2 border-t border-[#F0F4FB] text-[#2255CC]' : 'text-[#5C7A9E]'}`}>
-                        <span>{l}</span><span className="">{v}</span>
+                    <div className="flex justify-between text-[12px] text-[#5C7A9E]">
+                      <span>{isPayAfterProduct ? 'Upfront Evaluation Fee' : isInstantProduct ? 'Instant Funding Fee' : 'Challenge Fee'}</span>
+                      <span>${product?.price_usd}</span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-[12px] text-[#16A34A]">
+                        <span>Discount ({couponCode})</span>
+                        <span>-${discountAmount.toFixed(2)}</span>
                       </div>
-                    ))}
+                    )}
+                    {isPayAfterProduct && activationFee > 0 && (
+                      <div className="flex justify-between text-[12px] text-[#7C3AED]">
+                        <span>Activation fee (after passing)</span>
+                        <span className="italic">${activationFee} — billed later</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-[12px] font-bold pt-2 border-t border-[#F0F4FB] text-[#2255CC]">
+                      <span>Total due today</span>
+                      <span>${(Number(finalPrice) || 0).toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-3 mb-6 text-[10px] text-[#8FA3BF]">
-                  {['256-bit SSL encryption — your card data never touches our servers','Powered by Stripe — trusted by millions of businesses worldwide','One-time payment · No recurring charges · No subscriptions'].map(t => (
+                  {[
+                    '256-bit SSL encryption — your card data never touches our servers',
+                    'Powered by Stripe — trusted by millions of businesses worldwide',
+                    isPayAfterProduct ? `Activation fee $${activationFee} only charged after successfully passing` : 'One-time payment · No recurring charges · No subscriptions',
+                  ].map(t => (
                     <div key={t} className="flex items-center gap-2"><span className="text-[#16A34A]">🔒</span>{t}</div>
                   ))}
                 </div>
@@ -448,7 +508,13 @@ export function CheckoutPage() {
                   </button>
                   <button onClick={proceedToPayment} disabled={placing}
                     className="flex-1 py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[#2255CC] text-[#F0F4FB] border-none cursor-pointer hover:bg-[#1A44B0] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                    {placing ? 'Redirecting to Stripe…' : `Pay $${(Number(finalPrice) || 0).toFixed(2)} Securely →`}
+                    {placing
+                      ? 'Redirecting to Stripe…'
+                      : isInstantProduct
+                      ? `⚡ Pay $${(Number(finalPrice)||0).toFixed(2)} & Get Funded →`
+                      : isPayAfterProduct
+                      ? `💜 Pay $${(Number(finalPrice)||0).toFixed(2)} & Start Evaluation →`
+                      : `Pay $${(Number(finalPrice)||0).toFixed(2)} Securely →`}
                   </button>
                 </div>
               </div>
@@ -457,9 +523,26 @@ export function CheckoutPage() {
             {/* Step 3: Credentials */}
             {step === 3 && createdAccount && (
               <div>
-                <div className="text-[9px] tracking-[2px] uppercase text-[#16A34A] font-semibold mb-2">Payment Confirmed ✓</div>
-                <h2 className="font-sans text-[24px] font-bold mb-1">Your Trading Account</h2>
-                <p className="text-[11px] text-[#5C7A9E] mb-6">Save these credentials — your password cannot be recovered.</p>
+                <div className="text-[9px] tracking-[2px] uppercase text-[#16A34A] font-semibold mb-2">
+                  {isInstantProduct ? '⚡ Funded Immediately ✓' : 'Payment Confirmed ✓'}
+                </div>
+                <h2 className="font-sans text-[24px] font-bold mb-1">
+                  {isInstantProduct ? 'Welcome, Funded Trader!' : 'Your Trading Account'}
+                </h2>
+                <p className="text-[11px] text-[#5C7A9E] mb-4">
+                  {isInstantProduct
+                    ? 'Your funded account is active. Save these credentials immediately.'
+                    : isPayAfterProduct
+                    ? 'Your evaluation account is ready. Pass the challenge to activate your funded account.'
+                    : 'Save these credentials — your password cannot be recovered.'}
+                </p>
+
+                {/* Pay After Pass reminder */}
+                {isPayAfterProduct && activationFee > 0 && (
+                  <div className="mb-4 p-3 bg-[rgba(124,58,237,.06)] border border-[rgba(124,58,237,.2)] rounded-lg text-[10px] text-[#7C3AED]">
+                    💜 <strong>Pay After You Pass:</strong> Once you hit your profit target, you will be charged the <strong>${activationFee}</strong> activation fee to unlock your funded account.
+                  </div>
+                )}
 
                 <div className="p-5 border border-[#2255CC] bg-[rgba(34,85,204,.03)] mb-6">
                   <div className="text-[8px] uppercase tracking-[2px] text-[#2255CC] font-semibold mb-4">TFD Platform Login Details</div>
@@ -470,7 +553,7 @@ export function CheckoutPage() {
                       ['Account Number', createdAccount.accountNumber],
                       ['Server', createdAccount.server],
                       ['Account Size', fmt(createdAccount.balance)],
-                      ['Phase', 'Phase 1'],
+                      ['Phase', isInstantProduct ? 'Funded ✓' : isPayAfterProduct ? 'Phase 1 (Pay After Pass)' : 'Phase 1'],
                     ].map(([l,v]) => (
                       <div key={l} className="bg-[#F4F7FD] border border-[#F0F4FB] p-3">
                         <div className="text-[7px] uppercase tracking-[1.5px] text-[#8FA3BF] mb-1">{l}</div>
@@ -487,11 +570,19 @@ export function CheckoutPage() {
 
                 <div className="p-4 border border-[#E8EEF8] bg-white mb-6">
                   <div className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-3">Next Steps</div>
-                  {[
+                  {(isInstantProduct ? [
+                    ['1', 'Save credentials', 'Copy and store the login details above securely.'],
+                    ['2', 'Open Trading Platform', 'Go to Dashboard → Trading Platform and select your funded account.'],
+                    ['3', 'Request Payouts', 'You are already funded — start trading and withdraw profits anytime.'],
+                  ] : isPayAfterProduct ? [
+                    ['1', 'Save credentials', 'Copy and store the login details above securely.'],
+                    ['2', 'Open Trading Platform', 'Go to Dashboard → Trading Platform and select your account.'],
+                    ['3', 'Pass the Evaluation', `Hit your profit target. Once you pass, pay the $${activationFee} activation fee to get funded.`],
+                  ] : [
                     ['1', 'Save credentials', 'Copy and store the login details above securely.'],
                     ['2', 'Open Trading Platform', 'Go to Dashboard → Trading Platform and select your new account.'],
                     ['3', 'Start Trading', 'Begin Phase 1 — hit your profit target to get funded.'],
-                  ].map(([n, t, d]) => (
+                  ]).map(([n, t, d]) => (
                     <div key={n} className="flex gap-3 mb-3 last:mb-0">
                       <div className="w-5 h-5 bg-[rgba(34,85,204,.08)] border border-[#C5D5EA] flex items-center justify-center text-[9px] font-bold text-[#2255CC] flex-shrink-0">{n}</div>
                       <div><div className="text-[11px] font-semibold mb-[2px]">{t}</div><div className="text-[10px] text-[#8FA3BF]">{d}</div></div>
@@ -515,19 +606,21 @@ export function CheckoutPage() {
                 ${product ? Number(product.account_size)/1000 : 0}K
               </div>
               <div className="text-[11px] text-[#5C7A9E] mb-1">{product?.name} Challenge</div>
-              <div className="text-[9px] text-[#8FA3BF] mb-5">{product?.challenge_type === '1step' ? '1-Step' : product?.challenge_type === 'instant' ? 'Instant' : '2-Step'} Challenge</div>
+              <div className="text-[9px] text-[#8FA3BF] mb-5">{product?.challenge_type === '1step' ? '1-Step Challenge' : product?.challenge_type === 'instant' ? '⚡ Instant Funding' : product?.challenge_type === 'payafter' ? '💜 Pay After You Pass' : '2-Step Challenge'}</div>
 
               <div className="flex flex-col gap-2 pb-4 mb-4 border-b border-[#F0F4FB]">
                 {product && [
-                  ['Phase 1 Target', `${product.ph1_profit_target}%`],
+                  ...(product.challenge_type !== 'instant' ? [['Phase 1 Target', `${product.ph1_profit_target}%`]] : []),
                   ['Daily Drawdown', `${product.ph1_daily_dd}%`],
-                  ['Max Drawdown', `${product.ph1_max_dd}%`],
+                  product.drawdown_type === 'trailing'
+                    ? ['Trailing DD', `${product.trailing_drawdown ?? 8}% from peak equity`]
+                    : ['Max Drawdown', `${product.ph1_max_dd}%`],
                   ['Profit Split', `${product.funded_profit_split}%`],
                   ['Platform', 'TFD Platform'],
                 ].map(([l,v]) => (
                   <div key={l} className="flex justify-between text-[10px]">
                     <span className="text-[#8FA3BF]">{l}</span>
-                    <span className=" text-[#2255CC]">{v}</span>
+                    <span className={`font-mono ${String(l).includes('Trailing') ? 'text-[#D97706]' : 'text-[#2255CC]'}`}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -564,8 +657,17 @@ export function CheckoutPage() {
                 </div>
               )}
 
+              {isPayAfterProduct && activationFee > 0 && (
+                <div className="flex justify-between text-[10px] text-[#7C3AED] mb-2">
+                  <span>Activation fee (after passing)</span>
+                  <span className="font-mono">${activationFee}</span>
+                </div>
+              )}
+
               <div className="flex justify-between items-center mb-4">
-                <span className="text-[11px] font-semibold">Total Due</span>
+                <span className="text-[11px] font-semibold">
+                  {isPayAfterProduct ? 'Due Today (upfront)' : 'Total Due'}
+                </span>
                 <div className="text-right">
                   {discountAmount > 0 && <div className="text-[10px] text-[#8FA3BF] line-through ">${product?.price_usd}</div>}
                   <span className=" text-[18px] font-bold text-[#2255CC]">${(Number(finalPrice) || 0).toFixed(2)}</span>
