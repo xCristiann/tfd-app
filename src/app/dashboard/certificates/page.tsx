@@ -69,19 +69,14 @@ function buildFundedSVG(data: {
   <rect x="14" y="14" width="652" height="56" fill="#D4A843" fill-opacity="0.07" rx="8"/>
   <rect x="14" y="68" width="652" height="1" fill="url(#gldF)" opacity="0.5"/>
   <rect x="14" y="14" width="652" height="1.5" fill="url(#gldF)"/>
-  <rect x="14" y="428" width="652" height="38" fill="#D4A843" fill-opacity="0.07" rx="8"/>
-  <rect x="14" y="428" width="652" height="1" fill="url(#gldF)" opacity="0.5"/>
   <rect x="14" y="464" width="652" height="1.5" fill="url(#gldF)"/>
-  <rect x="60" y="68" width="2" height="346" fill="url(#sideF)" rx="1"/>
-  <rect x="618" y="68" width="2" height="346" fill="url(#sideF)" rx="1"/>
+  <rect x="60" y="68" width="2" height="300" fill="url(#sideF)" rx="1"/>
+  <rect x="618" y="68" width="2" height="300" fill="url(#sideF)" rx="1"/>
   <polygon points="26,26 40,33 33,40 26,26" fill="#D4A843" opacity="0.5"/>
   <circle cx="26" cy="26" r="4" fill="#D4A843" opacity="0.28"/>
   <polygon points="654,26 640,33 647,40 654,26" fill="#D4A843" opacity="0.5"/>
   <circle cx="654" cy="26" r="4" fill="#D4A843" opacity="0.28"/>
-  <polygon points="26,454 40,447 33,440 26,454" fill="#D4A843" opacity="0.5"/>
-  <circle cx="26" cy="454" r="4" fill="#D4A843" opacity="0.28"/>
-  <polygon points="654,454 640,447 647,440 654,454" fill="#D4A843" opacity="0.5"/>
-  <circle cx="654" cy="454" r="4" fill="#D4A843" opacity="0.28"/>
+
   <polygon points="340,18 347,29 340,33 333,29" fill="#D4A843" opacity="0.65"/>
   <line x1="200" y1="27" x2="327" y2="27" stroke="#D4A843" stroke-width="0.5" opacity="0.3"/>
   <line x1="353" y1="27" x2="480" y2="27" stroke="#D4A843" stroke-width="0.5" opacity="0.3"/>
@@ -192,19 +187,14 @@ function buildPayoutSVG(data: {
   <rect x="14" y="14" width="652" height="56" fill="#D4A843" fill-opacity="0.07" rx="8"/>
   <rect x="14" y="68" width="652" height="1" fill="url(#gldP)" opacity="0.5"/>
   <rect x="14" y="14" width="652" height="1.5" fill="url(#gldP)"/>
-  <rect x="14" y="428" width="652" height="38" fill="#D4A843" fill-opacity="0.07" rx="8"/>
-  <rect x="14" y="428" width="652" height="1" fill="url(#gldP)" opacity="0.5"/>
   <rect x="14" y="464" width="652" height="1.5" fill="url(#gldP)"/>
-  <rect x="60" y="68" width="2" height="346" fill="url(#sideP)" rx="1"/>
-  <rect x="618" y="68" width="2" height="346" fill="url(#sideP)" rx="1"/>
+  <rect x="60" y="68" width="2" height="300" fill="url(#sideP)" rx="1"/>
+  <rect x="618" y="68" width="2" height="300" fill="url(#sideP)" rx="1"/>
   <polygon points="26,26 40,33 33,40 26,26" fill="#D4A843" opacity="0.5"/>
   <circle cx="26" cy="26" r="4" fill="#D4A843" opacity="0.28"/>
   <polygon points="654,26 640,33 647,40 654,26" fill="#D4A843" opacity="0.5"/>
   <circle cx="654" cy="26" r="4" fill="#D4A843" opacity="0.28"/>
-  <polygon points="26,454 40,447 33,440 26,454" fill="#D4A843" opacity="0.5"/>
-  <circle cx="26" cy="454" r="4" fill="#D4A843" opacity="0.28"/>
-  <polygon points="654,454 640,447 647,440 654,454" fill="#D4A843" opacity="0.5"/>
-  <circle cx="654" cy="454" r="4" fill="#D4A843" opacity="0.28"/>
+
   <polygon points="340,18 347,29 340,33 333,29" fill="#D4A843" opacity="0.65"/>
   <line x1="200" y1="27" x2="327" y2="27" stroke="#D4A843" stroke-width="0.5" opacity="0.3"/>
   <line x1="353" y1="27" x2="480" y2="27" stroke="#D4A843" stroke-width="0.5" opacity="0.3"/>
