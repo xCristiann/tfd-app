@@ -163,6 +163,58 @@ export function CheckoutPage() {
       try { await supabase.from('coupons').update({ uses_count: (couponData?.uses_count ?? 0) + 1 }).eq('code', couponCode) } catch {}
     }
 
+    // Handle BOGO — create reward record
+    if (couponData?.coupon_type === 'bogo' && couponData?.bogo_product_id) {
+      try {
+        const { data: newAcc } = await supabase.from('accounts').select('id').eq('account_number', accountNumber).single()
+        const bogoRewardPayload = {
+          coupon_id: couponData.id,
+          coupon_code: couponCode,
+          user_id: profile.id,
+          order_id: orderNum,
+          primary_account_id: newAcc?.id ?? null,
+          bogo_product_id: couponData.bogo_product_id,
+          trigger_type: couponData.bogo_trigger ?? 'immediate',
+          status: 'pending',
+        }
+        await supabase.from('bogo_rewards').insert(bogoRewardPayload)
+
+        // If trigger is immediate — create the second account right now
+        if (couponData.bogo_trigger === 'immediate') {
+          const { data: bogoProd } = await supabase.from('challenge_products').select('*').eq('id', couponData.bogo_product_id).single()
+          if (bogoProd) {
+            const bogoLogin    = generateLogin()
+            const bogoPassword = generatePassword()
+            const bogoSize     = bogoProd.account_size
+            const bogoAccNum   = `TFD-${Number(bogoSize)/1000}K-${Math.floor(1000 + Math.random() * 9000)}`
+            const { data: bogoAcc } = await supabase.from('accounts').insert({
+              user_id: profile.id,
+              product_id: bogoProd.id,
+              account_number: bogoAccNum,
+              phase: bogoProd.challenge_type === 'instant' ? 'funded' : 'phase1',
+              balance: bogoSize, equity: bogoSize, starting_balance: bogoSize,
+              daily_dd_used: 0, max_dd_used: 0, trading_days: 0,
+              platform_login: bogoLogin, server: 'TFD-Live-01', status: 'active',
+              drawdown_type: bogoProd.drawdown_type ?? 'static',
+              trailing_drawdown: bogoProd.trailing_drawdown ?? 8,
+              funded_at: bogoProd.challenge_type === 'instant' ? new Date().toISOString() : null,
+            }).select().single()
+
+            if (bogoAcc) {
+              // Mark BOGO as completed
+              await supabase.from('bogo_rewards')
+                .update({ status: 'completed', bogo_account_id: bogoAcc.id, triggered_at: new Date().toISOString() })
+                .eq('coupon_code', couponCode).eq('user_id', profile.id).eq('status', 'pending')
+
+              // Add BOGO creds to confirmation email
+              const _bogoMsg = `\n\n🎁 BOGO BONUS ACCOUNT:\nAccount: ${bogoAccNum}\nLogin: ${bogoLogin}\nPassword: ${bogoPassword}\nServer: TFD-Live-01`
+              console.log('[BOGO] Second account created:', bogoAccNum, _bogoMsg)
+            }
+          }
+        }
+      } catch (e) { console.error('[BOGO]', e) }
+    }
+
     if (refCode) {
       try {
         await supabase.rpc('record_affiliate_referral', {
@@ -221,7 +273,7 @@ export function CheckoutPage() {
     }
     // Fetch full coupon for display
     const { data: coupon } = await supabase.from('coupons').select('*').eq('code', couponInput.toUpperCase().trim()).single()
-    setCouponData({ ...coupon, _discount: data.discount_usd })
+    setCouponData({ ...coupon, _discount: data.discount_usd ?? 0 })
     setCouponCode(coupon.code)
   }
 
@@ -476,6 +528,12 @@ export function CheckoutPage() {
                       <div className="flex justify-between text-[12px] text-[#16A34A]">
                         <span>Discount ({couponCode})</span>
                         <span>-${discountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {couponData?.coupon_type === 'bogo' && (
+                      <div className="flex justify-between text-[12px] text-[#D97706]">
+                        <span>🎁 BOGO — second account included</span>
+                        <span>{couponData?.bogo_trigger === 'immediate' ? 'Created immediately' : couponData?.bogo_trigger === 'on_funded' ? 'When you get funded' : 'After Phase 2'}</span>
                       </div>
                     )}
                     {isPayAfterProduct && activationFee > 0 && (
