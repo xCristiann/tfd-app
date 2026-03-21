@@ -173,7 +173,8 @@ export function DashboardPage() {
   const maxLimit    = prod?.ph1_max_dd   ?? 10
   const targetPct   = account?.phase === 'phase2' ? (prod?.ph2_profit_target ?? 5) : (prod?.ph1_profit_target ?? 8)
   const isFunded    = account?.phase === 'funded'
-  const isLocked    = account?.status === 'breached' || account?.status === 'passed' || (account?.status === 'suspended' && !account?.payout_locked)
+  const isLocked    = account?.status === 'breached' || account?.status === 'passed' || account?.status === 'soft_locked' || (account?.status === 'suspended' && !account?.payout_locked)
+  const isFrozen    = account?.status === 'soft_locked'
 
   /* ── MOBILE VERSION ── */
   if (isMobile) {
@@ -208,6 +209,12 @@ export function DashboardPage() {
 
               {/* Status banner */}
               {isLocked && (
+                {isFrozen && (
+                  <div style={{ background:'rgba(220,38,38,.08)', border:'1px solid rgba(220,38,38,.3)', borderRadius:'12px', padding:'12px 16px', marginBottom:'16px' }}>
+                    <div style={{ fontWeight:700, fontSize:'13px', color:'#DC2626', marginBottom:'4px' }}>🔒 Account Frozen — Under Investigation</div>
+                    <div style={{ fontSize:'11px', color:'#DC2626', opacity:0.8 }}>Your account has been frozen by Risk Management pending an investigation. Trading is suspended. You will receive an email once the review is complete. Contact <a href="mailto:risk@thefundeddiaries.com" style={{color:'#DC2626'}}>risk@thefundeddiaries.com</a> for details.</div>
+                  </div>
+                )}
                 <div style={{ background: account?.status==='breached'?'rgba(220,38,38,.08)':'rgba(34,85,204,.08)', border:`1px solid ${account?.status==='breached'?'rgba(220,38,38,.3)':'rgba(34,85,204,.3)'}`, borderRadius:'12px', padding:'12px 16px', marginBottom:'16px' }}>
                   <div style={{ fontWeight:600, fontSize:'13px', color: account?.status==='breached'?'#DC2626':'#2255CC', marginBottom:'4px' }}>
                     {account?.status==='breached' ? '🚨 Account Breached' : '🎯 Target Reached'}
@@ -338,6 +345,7 @@ export function DashboardPage() {
                       className={`px-3 py-[5px] text-[10px] font-mono font-semibold cursor-pointer border transition-all ${isActive ? 'bg-[rgba(34,85,204,.1)] border-[#C5D5FA] text-[#2255CC]' : 'bg-[#F4F7FD] border-[#E8EEF8] text-[#8FA3BF] hover:text-[#5C7A9E]'}`}>
                       {a.account_number}
                       <span className={`ml-2 text-[8px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>{accountBadgeLabel(a.phase, (a as any).challenge_products?.challenge_type)}</span>
+                    {a.status==='soft_locked'&&<span className="ml-1 text-[7px] text-[#DC2626] font-bold bg-[rgba(220,38,38,.15)] px-1 py-0.5 rounded">🔒 FROZEN</span>}
                     </button>
                   )
                 })}

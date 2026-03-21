@@ -283,6 +283,70 @@ function buildEmail(type: string, to: string, d: Record<string, any>, fn: string
       `, from),
     }
 
+    case 'account_frozen': return {
+      from, to,
+      reply_to: 'risk@thefundeddiaries.com',
+      subject: `🔒 Account ${d.account_number ?? ''} — Frozen Pending Investigation`,
+      html: wrap(`
+        ${badge('🔒 Account Frozen', C.red, 'rgba(220,38,38,.08)')}
+        ${h1(`Your Account Has Been Frozen, ${fn}`)}
+        ${p(`Your trading account has been temporarily frozen by our Risk Management team pending an investigation into your recent activity. <strong>All trading has been suspended immediately.</strong>`)}
+        ${infoTable([
+          ['Account', d.account_number ?? '—', C.blue],
+          ['Status', 'Frozen — Trading Suspended', C.red],
+          ['Reason', d.reason ?? 'Risk management investigation', C.amber],
+          ['Investigation ID', d.flag_id ?? '—'],
+          ['Expected Resolution', 'Within 48–72 hours'],
+        ])}
+        ${alertBox('You cannot open or close trades on this account until the investigation is resolved. Your existing open positions may be closed by our risk team.', C.red, 'rgba(220,38,38,.05)')}
+        ${p(`You will receive a follow-up email once the investigation is complete. If you wish to provide information regarding this matter, please contact our risk team immediately.`)}
+        ${cta('Contact Risk Team', 'mailto:risk@thefundeddiaries.com', C.red)}
+      `, from),
+    }
+
+    case 'investigation_resolved': return {
+      from, to,
+      reply_to: 'risk@thefundeddiaries.com',
+      subject: `✅ Account ${d.account_number ?? ''} — Investigation Resolved`,
+      html: wrap(`
+        ${badge('✅ Investigation Resolved', C.green, 'rgba(22,163,74,.08)')}
+        ${h1(`Account Cleared, ${fn}`)}
+        ${p(`Following a thorough review of your trading activity, our Risk Management team has concluded the investigation on your account. <strong>Your account has been unfrozen and trading access has been restored.</strong>`)}
+        ${infoTable([
+          ['Account', d.account_number ?? '—', C.blue],
+          ['Status', 'Active — Trading Restored ✓', C.green],
+          ['Outcome', 'No violations found', C.green],
+          ['Reviewed By', 'TFD Risk Management Team'],
+          ['Resolution Date', new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})],
+        ])}
+        ${d.notes ? alertBox(`Risk team note: ${d.notes}`, C.muted, '#F8F9FC') : ''}
+        ${p(`We apologise for any inconvenience caused. Your account is now fully active. If you have any questions, please contact our support team.`)}
+        ${cta('Open Trading Platform', SITE + '/platform', C.green)}
+      `, from),
+    }
+
+    case 'account_banned': return {
+      from, to,
+      reply_to: 'risk@thefundeddiaries.com',
+      subject: `Account ${d.account_number ?? ''} — Permanent Suspension Notice`,
+      html: wrap(`
+        ${badge('Account Banned', C.red, 'rgba(220,38,38,.08)')}
+        ${h1(`Account Permanently Suspended, ${fn}`)}
+        ${p(`Following a thorough investigation, our Risk Management team has determined that your trading activity is in violation of The Funded Diaries Terms & Conditions. Your account has been permanently suspended.`)}
+        ${infoTable([
+          ['Account', d.account_number ?? '—', C.blue],
+          ['Status', 'Permanently Banned', C.red],
+          ['Violation', d.reason ?? 'Terms & Conditions violation', C.red],
+          ['Decision Date', new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})],
+          ['Appeal Window', '14 days from this notice'],
+        ])}
+        ${alertBox(`Violation Details: ${d.reason ?? 'Prohibited trading activity detected.'}${d.notes ? ' — ' + d.notes : ''}`, C.red, 'rgba(220,38,38,.05)')}
+        ${p(`This decision was made in accordance with our <a href="${SITE}" style="color:${C.blue}">Terms & Conditions</a>. Any funds earned through prohibited activity will be forfeited.`)}
+        ${p(`If you believe this decision was made in error, you may appeal within <strong>14 days</strong> by contacting <a href="mailto:risk@thefundeddiaries.com" style="color:${C.blue}">risk@thefundeddiaries.com</a> with supporting evidence.`)}
+        ${cta('Submit Appeal', 'mailto:risk@thefundeddiaries.com?subject=Appeal - ' + (d.account_number ?? ''), C.red)}
+      `, from),
+    }
+
     case 'kyc_approved': return {
       from, to,
       subject: 'Identity Verified — Payouts Unlocked',

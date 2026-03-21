@@ -156,16 +156,37 @@ export function AdminRiskPage() {
   useEffect(()=>{load()},[load])
 
   async function flagAcc(userId:string,account:string,reason:string) {
-    const {error} = await supabase.from('risk_flags').insert({user_id:userId,account_number:account,reason,notes:'',flagged_at:new Date().toISOString(),status:'open',flagged_by:'admin'})
+    // Insert flag
+    const {data:flag,error} = await supabase.from('risk_flags').insert({user_id:userId,account_number:account,reason,notes:'',flagged_at:new Date().toISOString(),status:'open',flagged_by:'admin'}).select().single()
     if(error){toast('error','❌','Error',error.message);return}
+    // AUTO-FREEZE all accounts for this user
+    await supabase.from('accounts').update({status:'soft_locked'}).eq('user_id',userId).eq('status','active')
     // Notify in-app
-    await supabase.from('notifications').insert({user_id:userId,type:'risk_warning',title:'🚩 Account Under Review',body:`Your account ${account} has been flagged by risk management: ${reason}. You will receive an email with details.`,is_read:false})
-    // Send email
+    await supabase.from('notifications').insert({user_id:userId,type:'risk_warning',title:'🔒 Account Frozen — Under Investigation',body:`Your account ${account} has been frozen pending a risk investigation. Trading has been suspended. Check your email for details.`,is_read:false})
+    // Send freeze email
     try {
       const {data:u} = await supabase.from('users').select('email,first_name').eq('id',userId).single()
-      if(u?.email) await sendEmail('account_flagged', u.email, {first_name:u.first_name??'Trader',account_number:account,reason}, 'risk')
+      if(u?.email) await sendEmail('account_frozen', u.email, {first_name:u.first_name??'Trader',account_number:account,reason,flag_id:flag?.id?.slice(0,8).toUpperCase()??'—'}, 'risk')
     } catch(e){console.error('[flag email]',e)}
-    toast('warning','🚩','Flagged',`${account} — ${reason}`)
+    toast('warning','🔒','Flagged + Frozen',`${account} frozen. Email sent to trader.`)
+    load()
+  }
+
+  async function banTrader(userId:string,account:string,reason:string,notes:string) {
+    // Ban user
+    await supabase.from('users').update({is_banned:true}).eq('id',userId)
+    // Breach + lock all accounts
+    await supabase.from('accounts').update({status:'breached',phase:'breached',breached_at:new Date().toISOString(),breach_reason:'Account banned: '+reason}).eq('user_id',userId)
+    // Update all open flags to resolved
+    await supabase.from('risk_flags').update({status:'banned',resolved_at:new Date().toISOString(),notes}).eq('user_id',userId).eq('status','open')
+    // In-app notification
+    await supabase.from('notifications').insert({user_id:userId,type:'breach_warning',title:'⛔ Account Permanently Banned',body:`Your account has been permanently suspended for: ${reason}. Check your email for the full notice.`,is_read:false})
+    // Send ban email
+    try {
+      const {data:u} = await supabase.from('users').select('email,first_name').eq('id',userId).single()
+      if(u?.email) await sendEmail('account_banned', u.email, {first_name:u.first_name??'Trader',account_number:account,reason,notes}, 'risk')
+    } catch(e){console.error('[ban email]',e)}
+    toast('error','⛔','Banned',`${account} — trader banned. Email sent.`)
     load()
   }
   async function warnTrader(userId:string,email:string,account:string,reason:string) {
@@ -186,9 +207,23 @@ export function AdminRiskPage() {
     toast('warning','🔒','Locked',`${account} soft locked + email sent.`)
     load()
   }
-  async function resolveFlag(id:string) {
-    await supabase.from('risk_flags').update({status:'resolved',resolved_at:new Date().toISOString()}).eq('id',id)
-    toast('success','✓','Resolved','Flag closed.')
+  async function resolveFlag(id:string,userId:string,account:string,resolveNotes:string) {
+    await supabase.from('risk_flags').update({status:'resolved',resolved_at:new Date().toISOString(),notes:resolveNotes||''}).eq('id',id)
+    // Unfreeze accounts (only if no other open flags for this user)
+    const {data:openFlags} = await supabase.from('risk_flags').select('id').eq('user_id',userId).eq('status','open')
+    if(!openFlags?.length) {
+      await supabase.from('accounts').update({status:'active'}).eq('user_id',userId).eq('status','soft_locked')
+      // Notify in-app
+      await supabase.from('notifications').insert({user_id:userId,type:'info',title:'✅ Account Unfrozen — Investigation Resolved',body:`Your account ${account} investigation has been resolved. Trading access has been restored.`,is_read:false})
+      // Send resolved email
+      try {
+        const {data:u} = await supabase.from('users').select('email,first_name').eq('id',userId).single()
+        if(u?.email) await sendEmail('investigation_resolved', u.email, {first_name:u.first_name??'Trader',account_number:account,notes:resolveNotes}, 'risk')
+      } catch(e){console.error('[resolve email]',e)}
+      toast('success','✅','Resolved + Unfrozen','Account restored. Confirmation email sent.')
+    } else {
+      toast('success','✓','Flag Resolved','Other flags still open — account remains frozen.')
+    }
     load()
   }
 
@@ -515,32 +550,90 @@ export function AdminRiskPage() {
             <CardHeader title={`Flagged Accounts CRM (${flagged.length})`}/>
             <div className="text-[10px] text-[#8FA3BF] px-4 pb-3">All risk flags across all tools. Add notes, track investigation status, resolve when cleared.</div>
             {flagged.length===0?<div className="py-8 text-center text-[#8FA3BF] text-[12px]">No flagged accounts yet</div>:
-            <table className="w-full border-collapse text-[11px]">
-              <thead><tr className="border-b border-[#F0F4FB]">
-                {['Account','Reason','When','Status','Investigation Notes','Action'].map(h=><th key={h} className="px-3 py-2 text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(34,85,204,.02)]">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {flagged.map((f:any)=>(
-                  <tr key={f.id} className="border-b border-[#F4F7FD] hover:bg-[rgba(34,85,204,.02)]">
-                    <td className="px-3 py-2"><div style={mono} className="text-[#2255CC] text-[10px]">{f.account_number}</div></td>
-                    <td className="px-3 py-2 text-[#DC2626] text-[10px] max-w-[180px]">{f.reason}</td>
-                    <td className="px-3 py-2 text-[9px] text-[#8FA3BF] whitespace-nowrap">{timeAgo(f.flagged_at)}</td>
-                    <td className="px-3 py-2">
-                      <span className={`text-[8px] font-bold px-2 py-0.5 border rounded ${f.status==='open'?'text-[#DC2626] bg-[rgba(220,38,38,.08)] border-[rgba(220,38,38,.2)]':'text-[#16A34A] bg-[rgba(22,163,74,.08)] border-[rgba(22,163,74,.2)]'}`}>{f.status}</span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <input value={notes[f.id]??f.notes??''} onChange={e=>setNotes(n=>({...n,[f.id]:e.target.value}))}
-                        onBlur={async()=>{ if(notes[f.id]!==undefined) await supabase.from('risk_flags').update({notes:notes[f.id]}).eq('id',f.id) }}
-                        placeholder="Add investigation note…"
-                        className="w-full px-2 py-1 bg-[#F4F7FD] border border-[#E8EEF8] text-[10px] outline-none focus:border-[#2255CC] rounded"/>
-                    </td>
-                    <td className="px-3 py-2">
-                      {f.status==='open'&&<button onClick={()=>resolveFlag(f.id)} className="px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(22,163,74,.08)] text-[#16A34A] border border-[rgba(22,163,74,.2)] rounded cursor-pointer">✓ Resolve</button>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>}
+            <div className="flex flex-col gap-3 p-1">
+              {flagged.map((f:any)=>(
+                <div key={f.id} className={`border rounded-lg p-4 ${
+                  f.status==='banned' ? 'border-[rgba(220,38,38,.3)] bg-[rgba(220,38,38,.04)]' :
+                  f.status==='resolved' ? 'border-[rgba(22,163,74,.2)] bg-[rgba(22,163,74,.02)]' :
+                  'border-[rgba(217,119,6,.25)] bg-[rgba(217,119,6,.03)]'
+                }`}>
+                  {/* Header row */}
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 flex-wrap mb-1">
+                        <span style={mono} className="text-[#2255CC] text-[11px] font-bold">{f.account_number}</span>
+                        <span className={`text-[8px] font-bold px-2 py-0.5 border rounded uppercase ${
+                          f.status==='banned' ? 'text-[#DC2626] bg-[rgba(220,38,38,.08)] border-[rgba(220,38,38,.2)]' :
+                          f.status==='resolved' ? 'text-[#16A34A] bg-[rgba(22,163,74,.08)] border-[rgba(22,163,74,.2)]' :
+                          'text-[#D97706] bg-[rgba(217,119,6,.08)] border-[rgba(217,119,6,.2)]'
+                        }`}>
+                          {f.status==='banned'?'⛔ Banned':f.status==='resolved'?'✅ Resolved':'🔒 Frozen — Open'}
+                        </span>
+                        <span className="text-[9px] text-[#8FA3BF]">{timeAgo(f.flagged_at)}</span>
+                      </div>
+                      <div className="text-[11px] text-[#DC2626] font-semibold">{f.reason}</div>
+                    </div>
+                  </div>
+
+                  {/* Investigation notes */}
+                  <div className="mb-3">
+                    <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-1">Investigation Notes</label>
+                    <textarea
+                      value={notes[f.id]??f.notes??''}
+                      onChange={e=>setNotes(n=>({...n,[f.id]:e.target.value}))}
+                      onBlur={async()=>{ if(notes[f.id]!==undefined) await supabase.from('risk_flags').update({notes:notes[f.id]}).eq('id',f.id) }}
+                      placeholder="Document your investigation findings, evidence, trader response…"
+                      rows={2}
+                      disabled={f.status!=='open'}
+                      className="w-full px-3 py-2 bg-[#F4F7FD] border border-[#E8EEF8] text-[10px] text-[#1A3A6B] outline-none focus:border-[#2255CC] rounded resize-none disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  {f.status==='open' && (
+                    <div className="flex gap-2 flex-wrap">
+                      <button onClick={()=>resolveFlag(f.id,f.user_id,f.account_number,notes[f.id]??f.notes??'')}
+                        className="px-3 py-2 text-[9px] font-bold uppercase bg-[rgba(22,163,74,.08)] text-[#16A34A] border border-[rgba(22,163,74,.2)] rounded cursor-pointer flex items-center gap-1">
+                        ✅ Resolve & Unfreeze
+                        <span className="text-[8px] opacity-60 normal-case font-normal">— send clearance email</span>
+                      </button>
+                      <button onClick={()=>{
+                        if(!window.confirm(`BAN trader for account ${f.account_number}?
+
+Reason: ${f.reason}
+Notes: ${notes[f.id]??f.notes??'(none)'}
+
+This will:
+• Permanently ban the trader
+• Breach all their accounts
+• Send ban notice email
+
+This cannot be undone.`)) return
+                        banTrader(f.user_id,f.account_number,f.reason,notes[f.id]??f.notes??'')
+                      }}
+                        className="px-3 py-2 text-[9px] font-bold uppercase bg-[rgba(220,38,38,.08)] text-[#DC2626] border border-[rgba(220,38,38,.2)] rounded cursor-pointer flex items-center gap-1">
+                        ⛔ Ban Trader
+                        <span className="text-[8px] opacity-60 normal-case font-normal">— send ban notice email</span>
+                      </button>
+                      <button onClick={()=>warnTrader(f.user_id,'',f.account_number,f.reason)}
+                        className="px-3 py-2 text-[9px] font-bold uppercase bg-[rgba(217,119,6,.08)] text-[#D97706] border border-[rgba(217,119,6,.2)] rounded cursor-pointer">
+                        📨 Re-send Warning
+                      </button>
+                    </div>
+                  )}
+                  {f.status==='resolved' && f.notes && (
+                    <div className="text-[10px] text-[#16A34A] bg-[rgba(22,163,74,.06)] border border-[rgba(22,163,74,.2)] rounded px-3 py-2">
+                      ✅ Resolution notes: {f.notes}
+                    </div>
+                  )}
+                  {f.status==='banned' && (
+                    <div className="text-[10px] text-[#DC2626] bg-[rgba(220,38,38,.06)] border border-[rgba(220,38,38,.2)] rounded px-3 py-2">
+                      ⛔ Trader banned. All accounts breached. Ban email sent.
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>}
           </Card>}
 
         </>}

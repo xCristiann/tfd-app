@@ -491,6 +491,7 @@ export function PlatformPage() {
     if (marketStatus === 'closed')  { toast('error','🔒','Market Closed','Trading is only available when the market is open.'); return }
     if (!primary?.id)              { toast('error','❌','No Account','Select an account'); return }
     if (primary.status==='breached'){ toast('error','❌','Breached','Account is breached'); return }
+    if (primary.status==='soft_locked'){ toast('error','🔒','Frozen','Account is frozen pending risk investigation. Trading suspended.'); return }
     if (reqMgn>freeMgn)            { toast('error','❌','Margin',`Max ${maxLots} lots`); return }
     setPlacing(true)
     // Capture trader IP at moment of trade
