@@ -151,7 +151,7 @@ export function MarketingPage() {
                   {/* Special model notices */}
                   {p.challenge_type==='payafter' && (
                     <div style={{background:'rgba(124,58,237,.06)',border:'1px solid rgba(124,58,237,.2)',borderRadius:'8px',padding:'8px 10px',marginBottom:'12px',fontSize:'10px',color:'#7C3AED'}}>
-                      💜 Trade the evaluation for free. Pay only if you pass.
+                      💜 Pay after you pass — complete the evaluation, then pay the activation fee to receive your funded account.
                     </div>
                   )}
                   {p.challenge_type==='instant' && (
@@ -166,7 +166,13 @@ export function MarketingPage() {
                   )}
 
                   <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'32px',fontWeight:500,color:'#2255CC',marginBottom:'3px'}}>${p.price_usd}</div>
-                  <div style={{fontSize:'12px',color:'#8FA3BF',marginBottom:'18px'}}>{p.challenge_type==='payafter'?'Only if you pass · no upfront cost':p.challenge_type==='instant'?'One-time · instant access':'One-time · no subscriptions'}</div>
+                  {p.activation_fee > 0 && (
+                    <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'4px'}}>
+                      <span style={{fontSize:'11px',color:'#8FA3BF'}}>+ activation fee after passing:</span>
+                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'13px',fontWeight:700,color:'#7C3AED'}}>${p.activation_fee}</span>
+                    </div>
+                  )}
+                  <div style={{fontSize:'12px',color:'#8FA3BF',marginBottom:'18px'}}>{p.challenge_type==='instant'?'One-time · instant access':'One-time · no subscriptions'}</div>
                   <div style={{height:'1px',background:'#E8EEF8',marginBottom:'14px'}}/>
 
                   {/* Phase 1 — skip for instant */}
@@ -235,7 +241,7 @@ export function MarketingPage() {
                     </span>
                   </div>
                   <button onClick={()=>navigate(`/checkout?product=${p.id}`)} style={{width:'100%',padding:'12px',fontSize:'12px',fontWeight:600,borderRadius:'8px',cursor:'pointer',border:'none',marginTop:'20px',background:featured?'#2255CC':p.challenge_type==='payafter'?'#7C3AED':p.challenge_type==='instant'?'#D97706':'#F4F7FD',color:featured||p.challenge_type==='payafter'||p.challenge_type==='instant'?'#fff':'#1A3A6B',transition:'all .2s'}}>
-                    {p.challenge_type==='payafter' ? '💜 Start Free →' : p.challenge_type==='instant' ? '⚡ Get Funded Now →' : 'Get started'}
+                    {p.challenge_type==='payafter' ? '💜 Start Evaluation →' : p.challenge_type==='instant' ? '⚡ Get Funded Now →' : 'Get started'}
                   </button>
                 </div>
               )

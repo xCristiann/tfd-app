@@ -143,7 +143,7 @@ export function ChallengesPage() {
                   )}
                   {p.challenge_type==='payafter' && (
                     <div className="mb-3 p-2 bg-[rgba(124,58,237,.05)] border border-[rgba(124,58,237,.2)] text-[9px] text-[#7C3AED] rounded">
-                      💜 Trade the evaluation for free — only pay if you pass.
+                      💜 Pay after you pass — complete the evaluation first, then pay the activation fee to get funded.
                     </div>
                   )}
 
@@ -213,9 +213,14 @@ export function ChallengesPage() {
                     </span>
                   </div>
 
+                  {p.activation_fee > 0 && (
+                    <div className="mt-3 p-2 bg-[rgba(124,58,237,.06)] border border-[rgba(124,58,237,.2)] rounded text-[10px] text-[#7C3AED]">
+                      💜 After passing: pay <strong>${p.activation_fee}</strong> activation fee to receive your funded account.
+                    </div>
+                  )}
                   <Button className="w-full mt-3"
                     onClick={()=>navigate('/checkout?product='+p.id)}>
-                    {p.challenge_type==='payafter' ? 'Start Free →' : p.challenge_type==='instant' ? '⚡ Get Funded →' : `Buy for $${p.price_usd} →`}
+                    {p.challenge_type==='payafter' ? `💜 Start Evaluation →` : p.challenge_type==='instant' ? '⚡ Get Funded →' : `Buy for $${p.price_usd} →`}
                   </Button>
                 </Card>
               ))}

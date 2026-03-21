@@ -11,7 +11,7 @@ const CHALLENGE_TYPES = [
   { value: '2step',    label: '2-Step Challenge',     desc: 'Phase 1 → Phase 2 → Funded' },
   { value: '1step',    label: '1-Step Challenge',      desc: 'Phase 1 → Funded' },
   { value: 'instant',  label: 'Instant Funding',       desc: 'Funded immediately, no evaluation' },
-  { value: 'payafter', label: 'Pay After You Pass',    desc: 'Trade free, pay only if you pass' },
+  { value: 'payafter', label: 'Pay After You Pass',    desc: 'Evaluate first, pay the fee only after passing' },
 ]
 
 const DRAWDOWN_TYPES = [
@@ -25,6 +25,7 @@ const EMPTY = {
   ph1_profit_target: '8', ph1_daily_dd: '5', ph1_max_dd: '10', ph1_min_days: '0',
   ph2_profit_target: '5', ph2_daily_dd: '5', ph2_max_dd: '10', ph2_min_days: '0',
   funded_daily_dd: '5', funded_max_dd: '10', funded_profit_split: '85',
+  activation_fee: '0',
   news_trading: true, weekend_holding: true, is_active: true,
 }
 
@@ -70,6 +71,7 @@ export function AdminChallengePage() {
       ph2_max_dd: String(p.ph2_max_dd), ph2_min_days: String(p.ph2_min_days ?? 0),
       funded_daily_dd: String(p.funded_daily_dd), funded_max_dd: String(p.funded_max_dd),
       funded_profit_split: String(p.funded_profit_split),
+      activation_fee: String(p.activation_fee ?? 0),
       news_trading: p.news_trading ?? true, weekend_holding: p.weekend_holding ?? true, is_active: p.is_active,
     })
     setModal(true)
@@ -100,6 +102,7 @@ export function AdminChallengePage() {
       funded_profit_split: parseFloat(form.funded_profit_split),
       funded_immediately: form.challenge_type === 'instant',
       pay_after_pass: form.challenge_type === 'payafter',
+      activation_fee: parseFloat(form.activation_fee || '0'),
       news_trading: form.news_trading,
       weekend_holding: form.weekend_holding,
       is_active: form.is_active,
@@ -223,7 +226,7 @@ export function AdminChallengePage() {
                   ))}
                 </div>
                 {isInstant && <div className="mt-2 p-3 bg-[rgba(217,119,6,.06)] border border-[rgba(217,119,6,.2)] rounded-lg text-[10px] text-[#D97706]">⚡ Trader pays and gets funded immediately — no evaluation.</div>}
-                {isPayAfter && <div className="mt-2 p-3 bg-[rgba(124,58,237,.06)] border border-[rgba(124,58,237,.2)] rounded-lg text-[10px] text-[#7C3AED]">💜 Trader evaluates for free — fee charged only after passing.</div>}
+                {isPayAfter && <div className="mt-2 p-3 bg-[rgba(124,58,237,.06)] border border-[rgba(124,58,237,.2)] rounded-lg text-[10px] text-[#7C3AED]">💜 Trader completes the evaluation first. The fee is charged only after successfully passing — not upfront.</div>}
               </div>
 
               {/* Basic info */}
@@ -231,6 +234,15 @@ export function AdminChallengePage() {
                 <div><label className={lbl}>Product Name *</label><input value={form.name} onChange={F('name')} placeholder="e.g. $50K 2-Step" className={inp}/></div>
                 <div><label className={lbl}>Account Size ($) *</label><input type="number" value={form.account_size} onChange={F('account_size')} placeholder="50000" className={inp}/></div>
                 <div><label className={lbl}>Price ($) *</label><input type="number" value={form.price_usd} onChange={F('price_usd')} placeholder="125" className={inp}/></div>
+                <div className="col-span-3 grid grid-cols-3 gap-3 p-3 bg-[rgba(124,58,237,.04)] border border-[rgba(124,58,237,.2)] rounded-lg">
+                  <div className="col-span-2">
+                    <label className={lbl + ' text-[#7C3AED]'}>Activation Fee ($) — paid after passing</label>
+                    <input type="number" value={form.activation_fee} onChange={F('activation_fee')} placeholder="0" className={inp}/>
+                  </div>
+                  <div className="flex items-end pb-1">
+                    <p className="text-[10px] text-[#7C3AED] opacity-70">If set, trader pays this fee after passing the evaluation to activate their funded account. Set to 0 to disable.</p>
+                  </div>
+                </div>
               </div>
 
               {/* Drawdown type */}
