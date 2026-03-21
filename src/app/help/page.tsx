@@ -22,7 +22,7 @@ interface Category {
 }
 
 /* ── Static fallback data (shown while DB loads or if empty) ──────── */
-const FALLBACK_CATEGORIES: Category[,
+const FALLBACK_CATEGORIES: Category[] = [
   {
     id: 'trailing-drawdown',
     title: 'Trailing Drawdown — How It Works',

@@ -694,7 +694,7 @@ export function PlatformPage() {
               {lotsNum>maxLots && <div style={{marginTop:'4px',fontSize:'9px',color:'#DC2626',fontWeight:600}}>⚠ Max {maxLots} lots</div>}
             </div>
             {marketStatus === 'closed' ? (
-              <div style={{width:'100%',padding:'10px',fontSize:'11px',fontWeight:700,border:'none',borderRadius:'7px',background:'#F4F7FD',color:'#9CA3AF',textAlign:'center',border:'1px solid #E8EEF8'}}>
+              <div style={{width:'100%',padding:'10px',fontSize:'11px',fontWeight:700,border:'none',borderRadius:'7px',background:'#F4F7FD',color:'#9CA3AF',textAlign:'center'}}>
                 🔒 Market Closed
               </div>
             ) : (
