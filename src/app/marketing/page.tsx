@@ -231,7 +231,7 @@ export function MarketingPage() {
                           <button onClick={()=>navigate(`/checkout?product=${prod.id}`)}
                             style={{marginTop:'16px',padding:'13px 32px',borderRadius:'8px',border:'none',cursor:'pointer',
                               background:g.color,color:'#fff',fontSize:'13px',fontWeight:700,transition:'all .2s'}}>
-                            {prod.challenge_type==='payafter'?'Start Evaluation':prod.challenge_type==='instant'?'Get Funded Now':'Get Started'} ->
+                            {prod.challenge_type==='payafter'?'Start Evaluation':prod.challenge_type==='instant'?'Get Funded Now':'Get Started'} &rarr;
                           </button>
                         </div>
                       </div>
@@ -275,7 +275,7 @@ export function MarketingPage() {
                       <button onClick={()=>navigate(`/checkout?product=${prod.id}`)}
                         style={{padding:'10px 24px',borderRadius:'8px',border:`1.5px solid ${g.color}`,cursor:'pointer',
                           background:'transparent',color:g.color,fontSize:'12px',fontWeight:700}}>
-                        View full details ->
+                        View full details &rarr;
                       </button>
                     </div>
                   </div>
