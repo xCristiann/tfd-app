@@ -282,13 +282,29 @@ export function MarketingPage() {
         </button>
       </div>
 
+      {/* ── DISCLAIMER ── */}
+      <div style={{background:'#0D1F42',padding:'32px 48px',borderTop:'1px solid rgba(255,255,255,.06)'}}>
+        <div style={{maxWidth:'900px',margin:'0 auto'}}>
+          <div style={{fontSize:'9px',fontWeight:700,color:'rgba(255,255,255,.25)',letterSpacing:'2px',textTransform:'uppercase',marginBottom:'12px'}}>Risk Disclaimer</div>
+          <p style={{fontSize:'10px',color:'rgba(255,255,255,.2)',lineHeight:'1.8',margin:'0 0 10px'}}>
+            Trading foreign exchange, contracts for difference (CFDs), and other financial instruments on margin carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. There is a possibility that you may sustain a loss of some or all of your initial investment and, therefore, you should not invest money that you cannot afford to lose.
+          </p>
+          <p style={{fontSize:'10px',color:'rgba(255,255,255,.2)',lineHeight:'1.8',margin:'0 0 10px'}}>
+            The Funded Diaries is a proprietary trading firm that provides simulated trading capital to qualified traders through an evaluation process. All trading activity conducted through The Funded Diaries platform is carried out on simulated accounts. Payouts are made from the firm's own funds based on simulated trading performance and are not derived from client investments or real market exposure. Past performance of any trader or trading system is not necessarily indicative of future results.
+          </p>
+          <p style={{fontSize:'10px',color:'rgba(255,255,255,.2)',lineHeight:'1.8',margin:'0'}}>
+            The information provided on this website is for informational purposes only and does not constitute financial, investment, or trading advice. The Funded Diaries does not accept clients from jurisdictions where such services are restricted or prohibited by local law. It is the sole responsibility of the user to ensure compliance with applicable laws and regulations in their jurisdiction. By accessing this website, you acknowledge that you have read, understood, and agreed to this disclaimer in its entirety.
+          </p>
+        </div>
+      </div>
+
       {/* ── FOOTER ── */}
-      <div style={{background:'#142D54',padding:'24px 48px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div style={{background:'#0A1628',padding:'20px 48px',display:'flex',alignItems:'center',justifyContent:'space-between',borderTop:'1px solid rgba(255,255,255,.04)'}}>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',color:'rgba(255,255,255,.4)'}}>The Funded <span style={{color:'#60A5FA',fontStyle:'italic'}}>Diaries</span></div>
-        <div style={{fontSize:'11px',color:'rgba(255,255,255,.25)'}}>© 2026 The Funded Diaries. All rights reserved.</div>
+        <div style={{fontSize:'10px',color:'rgba(255,255,255,.2)'}}>© {new Date().getFullYear()} The Funded Diaries. All rights reserved.</div>
         <div style={{display:'flex',gap:'20px'}}>
           {['Terms','Privacy','Support'].map(l=>(
-            <span key={l} style={{fontSize:'12px',color:'rgba(255,255,255,.35)',cursor:'pointer'}}>{l}</span>
+            <span key={l} style={{fontSize:'11px',color:'rgba(255,255,255,.3)',cursor:'pointer'}}>{l}</span>
           ))}
         </div>
       </div>
