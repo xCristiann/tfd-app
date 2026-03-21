@@ -36,7 +36,10 @@ export function MarketingPage() {
       {/* ── NAV ── */}
       <nav style={{...S.nav, padding: isMobile ? '0 16px' : undefined}}>
         <div style={{maxWidth:'1400px',width:'100%',margin:'0 auto',height:'64px',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center'}}>
-          <a href="/" style={S.logo}>The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span></a>
+          <a href="/" style={{...S.logo, textDecoration:'none', display:'flex', alignItems:'baseline', gap:'6px'}}>
+              <span style={{color:'#F5D878', letterSpacing:'-0.3px'}}>The Funded</span>
+              <span style={{color:'#ffffff', fontStyle:'italic'}}>Diaries</span>
+            </a>
           {!isMobile && (
             <div style={{display:'flex'}}>
               {[['How It Works','#how'],['Challenge Plans','#plans'],['Payouts','#payouts'],['Features','#features'],['FAQ','/help']].map(([l,h])=>(

@@ -177,18 +177,8 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
   const isAdmin = profile?.role === 'admin'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F0F4FB]">
-      <Sidebar
-        logo={{ icon: '◆', name: 'The Funded Diaries', subtitle: subtitleMap[accentColor] }}
-        accountBox={accountBox}
-        nav={nav}
-        user={{ initials, name: profile ? `${profile.first_name} ${profile.last_name}` : '…', role: profile?.role ?? 'trader' }}
-        onLogout={handleLogout}
-        accentColor={accentColor}
-      />
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top nav — royal blue matching help page */}
+    <div style={{display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden",background:"#F0F4FB"}}>
+      {/* Top nav — full width across entire page */}
         <nav style={{height:'64px',display:'flex',alignItems:'center',padding:'0 32px',borderBottom:'none',background:'linear-gradient(135deg, #1A3A8B 0%, #2255CC 100%)',flexShrink:0,zIndex:10,boxSizing:'border-box'}}>
           <div style={{width:'100%',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:'16px'}}>
             {/* Empty left column to keep links centered */}
@@ -216,19 +206,32 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
           </div>
         </nav>
 
-        {/* Page topbar — matches marketing navbar style */}
-        <div style={{height:'48px',background:'#fff',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',padding:'0 20px',flexShrink:0,gap:'12px'}}>
-          <h1 style={{fontSize:'14px',fontWeight:600,color:'#1A3A6B',margin:0}}>{title}</h1>
-          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'8px'}}>
-            {topbarRight}
-            {isAdmin ? <AdminNotifications/> : profile?.id ? <TraderNotifications userId={profile.id}/> : null}
-          </div>
-        </div>
+      {/* Row below nav: sidebar + content */}
+      <div style={{display:'flex',flex:1,overflow:'hidden'}}>
+        <Sidebar
+          logo={{ icon: '◆', name: 'The Funded Diaries', subtitle: subtitleMap[accentColor] }}
+          accountBox={accountBox}
+          nav={nav}
+          user={{ initials, name: profile ? `${profile.first_name} ${profile.last_name}` : '…', role: profile?.role ?? 'trader' }}
+          onLogout={handleLogout}
+          accentColor={accentColor}
+        />
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
-          {children}
-        </main>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Page topbar */}
+          <div style={{height:'48px',background:'#fff',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',padding:'0 20px',flexShrink:0,gap:'12px'}}>
+            <h1 style={{fontSize:'14px',fontWeight:600,color:'#1A3A6B',margin:0}}>{title}</h1>
+            <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'8px'}}>
+              {topbarRight}
+              {isAdmin ? <AdminNotifications/> : profile?.id ? <TraderNotifications userId={profile.id}/> : null}
+            </div>
+          </div>
+
+          {/* Content */}
+          <main className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   )
