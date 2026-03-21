@@ -33,6 +33,7 @@ import { PrivacyPage }         from './app/privacy/page'
 import { AdminCertificatesPage } from './app/admin/certificates/page'
 import { AdminPendingReviewPage } from './app/admin/pending-review/page'
 import { AdminFaqPage }        from './app/admin/faq/page'
+import { AdminPromoPage }       from './app/admin/promo/page'
 import { AdminRevenuePage }   from './app/admin/revenue/page'
 import { AffiliatePage as AffiliatesPage } from './app/dashboard/affiliate/page'
 import { BillingPage }        from './app/dashboard/billing/page'
@@ -112,6 +113,7 @@ export default function App() {
       <Route path="/dashboard/billing"    element={<ProtectedRoute roles={['trader']}><BillingPage /></ProtectedRoute>} />
       <Route path="/dashboard/kyc"        element={<ProtectedRoute roles={['trader']}><KycPage /></ProtectedRoute>} />
       <Route path="/admin/settings"       element={<ProtectedRoute roles={['admin']}><AdminSettingsPage /></ProtectedRoute>} />
+      <Route path="/admin/promo"              element={<ProtectedRoute roles={['admin']}><AdminPromoPage /></ProtectedRoute>} />
       <Route path="/admin/faq"             element={<ProtectedRoute roles={['admin']}><AdminFaqPage /></ProtectedRoute>} />
       <Route path="/help"                  element={<HelpPage />} />
       <Route path="/terms"                 element={<TermsPage />} />

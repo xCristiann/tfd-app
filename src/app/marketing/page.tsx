@@ -8,11 +8,14 @@ export function MarketingPage() {
   const navigate   = useNavigate()
   const { session } = useAuth()
   const [products, setProducts] = useState<any[]>([])
+  const [promoBar, setPromoBar] = useState<any>(null)
 
   useEffect(() => {
     supabase.from('challenge_products')
       .select('*').eq('is_active', true).order('account_size')
       .then(({ data }) => setProducts(data ?? []))
+    supabase.from('promo_bars').select('*').eq('is_active', true).limit(1).single()
+      .then(({ data }) => setPromoBar(data ?? null))
   }, [])
 
   const isLoggedIn = !!session
@@ -33,6 +36,44 @@ export function MarketingPage() {
 
   return (
     <div style={S.page}>
+
+      {/* ── PROMO BAR ── */}
+      {promoBar && (
+        <div style={{
+          background: promoBar.bg_color,
+          color: promoBar.text_color,
+          padding: isMobile ? '8px 16px' : '9px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: isMobile ? '8px' : '20px', flexWrap: 'wrap',
+          fontSize: isMobile ? '10px' : '12px', fontWeight: 600,
+          position: 'relative', zIndex: 101, letterSpacing: '0.2px',
+        }}>
+          <span>{promoBar.message}</span>
+          {promoBar.badge_1_code && (
+            <span style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap'}}>
+              {promoBar.badge_1_text && <span style={{opacity:.75,fontSize:'11px'}}>{promoBar.badge_1_text}</span>}
+              <span style={{background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',padding:'2px 10px',borderRadius:'4px',fontSize:'11px',fontWeight:700,letterSpacing:'1.5px',cursor:'pointer'}}
+                onClick={() => navigator.clipboard?.writeText(promoBar.badge_1_code).catch(()=>{})}>
+                CODE: {promoBar.badge_1_code}
+              </span>
+            </span>
+          )}
+          {promoBar.badge_2_code && (
+            <span style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap'}}>
+              {promoBar.badge_2_text && <span style={{opacity:.75,fontSize:'11px'}}>{promoBar.badge_2_text}</span>}
+              <span style={{background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',padding:'2px 10px',borderRadius:'4px',fontSize:'11px',fontWeight:700,letterSpacing:'1.5px',cursor:'pointer'}}
+                onClick={() => navigator.clipboard?.writeText(promoBar.badge_2_code).catch(()=>{})}>
+                CODE: {promoBar.badge_2_code}
+              </span>
+            </span>
+          )}
+          {promoBar.link_url && !isMobile && (
+            <a href={promoBar.link_url} style={{color:promoBar.text_color,opacity:.8,textDecoration:'underline',fontSize:'11px'}}>
+              {promoBar.link_text} &rarr;
+            </a>
+          )}
+        </div>
+      )}
 
       {/* ── NAV ── */}
       <nav style={{...S.nav, padding: isMobile ? '0 16px' : undefined}}>

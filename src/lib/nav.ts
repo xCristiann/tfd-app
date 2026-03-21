@@ -49,6 +49,7 @@ export const ADMIN_NAV: { section?: string; items: NavItem[] }[] = [
     { label: 'Coupon Codes',       icon: '🏷️', path: '/admin/coupons' },
     { label: 'KYC Verification',   icon: '🪪', path: '/admin/kyc' },
     { label: 'Certificates',       icon: '🏆', path: '/admin/certificates' },
+    { label: 'Promo Bar',          icon: '📣', path: '/admin/promo' },
     { label: 'FAQ / Help Centre',  icon: '❓', path: '/admin/faq' },
     { label: 'Affiliates',         icon: '🔗', path: '/admin/affiliates' },
     { label: 'Settings',           icon: '⚙',  path: '/admin/settings' },
