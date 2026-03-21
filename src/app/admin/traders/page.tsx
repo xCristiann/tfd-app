@@ -111,6 +111,7 @@ export function AdminTradersPage() {
     await supabase.from('accounts').update({ status: 'inactive', phase: nextPhase === 'phase2' ? 'passed' : 'passed' }).eq('id', account.id)
 
     // Create new account
+    const now = new Date().toISOString()
     const { error } = await supabase.from('accounts').insert({
       user_id: selectedTrader.id,
       product_id: account.product_id,
@@ -125,6 +126,9 @@ export function AdminTradersPage() {
       platform_login: login,
       server: 'TFD-Live-01',
       status: 'active',
+      purchased_at: now,
+      // Set funded_at when advancing to funded — needed for certificate generation
+      funded_at: nextPhase === 'funded' ? now : null,
     })
     if (error) { toast('error', '❌', 'Error', error.message); return }
     toast('success', '✅', 'Advanced', `Account moved to ${nextPhase}.`)
@@ -464,10 +468,21 @@ export function AdminTradersPage() {
                               </button>
                             )}
                             <button onClick={async ()=>{
-                              if (!window.confirm(`Delete account ${acc.account_number}? This cannot be undone.`)) return
-                              await supabase.from('accounts').delete().eq('id', acc.id)
-                              toast('error','🗑','Deleted',`${acc.account_number} deleted.`)
-                              openTrader(selectedTrader)
+                              if (!window.confirm(`Delete account ${acc.account_number}? This will also delete all trades, payouts and related data. Cannot be undone.`)) return
+                              try {
+                                // Delete in FK order to avoid constraint violations
+                                await supabase.from('trades').delete().eq('account_id', acc.id)
+                                await supabase.from('payouts').delete().eq('account_id', acc.id)
+                                await supabase.from('daily_snapshots').delete().eq('account_id', acc.id)
+                                await supabase.from('bogo_rewards').delete().eq('primary_account_id', acc.id)
+                                await supabase.from('bogo_rewards').delete().eq('bogo_account_id', acc.id)
+                                const { error } = await supabase.from('accounts').delete().eq('id', acc.id)
+                                if (error) throw error
+                                toast('error','🗑','Deleted',`${acc.account_number} deleted.`)
+                                openTrader(selectedTrader)
+                              } catch (e: any) {
+                                toast('error','❌','Delete Failed', e?.message ?? 'Could not delete account. Check for related records.')
+                              }
                             }}
                               className="px-[10px] py-[5px] text-[8px] uppercase font-bold cursor-pointer bg-[rgba(220,38,38,.1)] text-[#DC2626] border border-[rgba(220,38,38,.2)]">
                               Delete
