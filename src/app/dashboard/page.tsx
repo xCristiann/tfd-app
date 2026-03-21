@@ -201,19 +201,32 @@ export function DashboardPage() {
               <div style={{ display:'flex', gap:'8px', marginBottom:'16px', overflowX:'auto', paddingBottom:'4px' }}>
                 {accounts.map(a => (
                   <button key={a.id} onClick={() => setSelectedId(a.id)}
-                    style={{ padding:'8px 14px', borderRadius:'20px', border:'none', cursor:'pointer', whiteSpace:'nowrap', background: a.id === account?.id ? '#2255CC' : '#fff', color: a.id === account?.id ? '#fff' : '#5C7A9E', fontSize:'12px', fontWeight:600, boxShadow:'0 1px 4px rgba(0,0,0,.08)' }}>
+                    style={{ padding:'8px 14px', borderRadius:'20px', border: a.status==='soft_locked' ? '1.5px solid #DC2626' : 'none', cursor:'pointer', whiteSpace:'nowrap', background: a.status==='soft_locked' ? 'rgba(220,38,38,.08)' : a.id === account?.id ? '#2255CC' : '#fff', color: a.status==='soft_locked' ? '#DC2626' : a.id === account?.id ? '#fff' : '#5C7A9E', fontSize:'12px', fontWeight:600, boxShadow:'0 1px 4px rgba(0,0,0,.08)', display:'flex', alignItems:'center', gap:'6px' }}>
+                    {a.status==='soft_locked' && <span style={{fontSize:'11px'}}>🔒</span>}
                     {a.account_number} · {accountTypeLabel(a.phase, (a as any).challenge_products?.challenge_type)}
+                    {a.status==='soft_locked' && <span style={{fontSize:'9px',fontWeight:700,background:'#DC2626',color:'#fff',padding:'1px 5px',borderRadius:'10px'}}>FROZEN</span>}
                   </button>
                 ))}
               </div>
 
-              {/* Status banner */}
-              {isFrozen && (
-                <div style={{ background:'rgba(220,38,38,.08)', border:'1px solid rgba(220,38,38,.3)', borderRadius:'12px', padding:'12px 16px', marginBottom:'16px' }}>
-                  <div style={{ fontWeight:700, fontSize:'13px', color:'#DC2626', marginBottom:'4px' }}>🔒 Account Frozen — Under Investigation</div>
-                  <div style={{ fontSize:'11px', color:'#DC2626', opacity:0.8 }}>Your account has been frozen by Risk Management pending an investigation. Trading is suspended. You will receive an email once the review is complete. Contact <a href="mailto:risk@thefundeddiaries.com" style={{color:'#DC2626'}}>risk@thefundeddiaries.com</a> for details.</div>
+              {/* Frozen banners — show for every frozen account, always visible */}
+              {accounts.filter(a => a.status==='soft_locked').map(a => (
+                <div key={a.id} style={{ background:'rgba(220,38,38,.07)', border:'2px solid rgba(220,38,38,.35)', borderRadius:'12px', padding:'14px 16px', marginBottom:'12px', display:'flex', alignItems:'flex-start', gap:'12px' }}>
+                  <span style={{fontSize:'20px', flexShrink:0}}>🔒</span>
+                  <div style={{flex:1}}>
+                    <div style={{ fontWeight:700, fontSize:'13px', color:'#DC2626', marginBottom:'4px' }}>
+                      Account Frozen — {a.account_number}
+                    </div>
+                    <div style={{ fontSize:'11px', color:'#DC2626', lineHeight:1.6, marginBottom:'8px' }}>
+                      This account has been frozen by Risk Management pending an investigation into recent trading activity. <strong>All trading is suspended</strong> until the review is complete.
+                    </div>
+                    <div style={{ fontSize:'10px', color:'#DC2626', opacity:0.75 }}>
+                      Questions? Contact <a href="mailto:risk@thefundeddiaries.com" style={{color:'#DC2626',fontWeight:600}}>risk@thefundeddiaries.com</a>
+                    </div>
+                  </div>
+                  <div style={{ flexShrink:0, background:'#DC2626', color:'#fff', fontSize:'8px', fontWeight:700, padding:'3px 8px', borderRadius:'20px', letterSpacing:'1px', textTransform:'uppercase' }}>FROZEN</div>
                 </div>
-              )}
+              ))}
               {isLocked && !isFrozen && (
                 <div style={{ background: account?.status==='breached'?'rgba(220,38,38,.08)':'rgba(34,85,204,.08)', border:`1px solid ${account?.status==='breached'?'rgba(220,38,38,.3)':'rgba(34,85,204,.3)'}`, borderRadius:'12px', padding:'12px 16px', marginBottom:'16px' }}>
                   <div style={{ fontWeight:600, fontSize:'13px', color: account?.status==='breached'?'#DC2626':'#2255CC', marginBottom:'4px' }}>
@@ -363,6 +376,17 @@ export function DashboardPage() {
                   <div className="font-semibold text-[12px]">Payout Pending — Account Locked</div>
                   <div className="text-[10px] opacity-80">Your payout request is under review.</div>
                 </div>
+              </div>
+            )}
+
+            {isFrozen && (
+              <div className="flex items-center gap-3 px-5 py-3 border border-[rgba(220,38,38,.35)] bg-[rgba(220,38,38,.07)] text-[#DC2626]">
+                <span className="text-[18px]">🔒</span>
+                <div className="flex-1">
+                  <div className="font-bold text-[12px]">Account Frozen — Under Investigation</div>
+                  <div className="text-[10px] opacity-80 mt-0.5">Trading suspended pending risk review. Check your email or contact <span className="underline">risk@thefundeddiaries.com</span></div>
+                </div>
+                <span className="text-[8px] font-bold uppercase tracking-wider bg-[rgba(220,38,38,.15)] border border-[rgba(220,38,38,.3)] text-[#DC2626] px-2 py-1 rounded animate-pulse">FROZEN</span>
               </div>
             )}
 

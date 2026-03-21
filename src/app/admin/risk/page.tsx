@@ -189,13 +189,19 @@ export function AdminRiskPage() {
     toast('error','⛔','Banned',`${account} — trader banned. Email sent.`)
     load()
   }
-  async function warnTrader(userId:string,email:string,account:string,reason:string) {
+  async function warnTrader(userId:string,emailParam:string,account:string,reason:string) {
     await supabase.from('notifications').insert({user_id:userId,type:'risk_warning',title:'⚠️ Risk Management Alert',body:`Account ${account}: ${reason}. Check your email for details.`,is_read:false})
     try {
-      const {data:u} = await supabase.from('users').select('first_name').eq('id',userId).single()
-      await sendEmail('risk_warning', email, {first_name:u?.first_name??'Trader',account_number:account,reason}, 'risk')
-    } catch(e){console.error('[warn email]',e)}
-    toast('warning','📨','Warning Sent',`Email + notification sent to ${email}`)
+      // Always fetch fresh email+name from DB to avoid stale/empty params
+      const {data:u} = await supabase.from('users').select('email,first_name').eq('id',userId).single()
+      const toEmail = u?.email ?? emailParam
+      if(!toEmail) { toast('error','❌','No Email','Could not find trader email.'); return }
+      await sendEmail('risk_warning', toEmail, {first_name:u?.first_name??'Trader',account_number:account,reason}, 'risk')
+      toast('warning','📨','Warning Sent',`Email + notification sent to ${toEmail}`)
+    } catch(e){
+      console.error('[warn email]',e)
+      toast('error','❌','Email Failed', String(e))
+    }
   }
   async function softLockAcc(accId:string,account:string,userId:string,reason:string) {
     await supabase.from('accounts').update({status:'soft_locked'}).eq('id',accId)
@@ -208,21 +214,31 @@ export function AdminRiskPage() {
     load()
   }
   async function resolveFlag(id:string,userId:string,account:string,resolveNotes:string) {
+    // 1. Mark flag resolved
     await supabase.from('risk_flags').update({status:'resolved',resolved_at:new Date().toISOString(),notes:resolveNotes||''}).eq('id',id)
-    // Unfreeze accounts (only if no other open flags for this user)
-    const {data:openFlags} = await supabase.from('risk_flags').select('id').eq('user_id',userId).eq('status','open')
+    // 2. Check remaining open flags for this user
+    const {data:openFlags} = await supabase.from('risk_flags').select('id').eq('user_id',userId).eq('status','open').neq('id',id)
+    // 3. Fetch user
+    const {data:u} = await supabase.from('users').select('email,first_name').eq('id',userId).single()
     if(!openFlags?.length) {
+      // Unfreeze all soft-locked accounts
       await supabase.from('accounts').update({status:'active'}).eq('user_id',userId).eq('status','soft_locked')
-      // Notify in-app
-      await supabase.from('notifications').insert({user_id:userId,type:'info',title:'✅ Account Unfrozen — Investigation Resolved',body:`Your account ${account} investigation has been resolved. Trading access has been restored.`,is_read:false})
-      // Send resolved email
-      try {
-        const {data:u} = await supabase.from('users').select('email,first_name').eq('id',userId).single()
-        if(u?.email) await sendEmail('investigation_resolved', u.email, {first_name:u.first_name??'Trader',account_number:account,notes:resolveNotes}, 'risk')
-      } catch(e){console.error('[resolve email]',e)}
-      toast('success','✅','Resolved + Unfrozen','Account restored. Confirmation email sent.')
+      // In-app notification
+      await supabase.from('notifications').insert({user_id:userId,type:'info',title:'✅ Account Unfrozen — Investigation Resolved',body:`Your account ${account} has been cleared. Trading access is fully restored.`,is_read:false})
+      // Email
+      if(u?.email) {
+        try {
+          await sendEmail('investigation_resolved', u.email, {first_name:u.first_name??'Trader',account_number:account,notes:resolveNotes||'No violations found.'}, 'risk')
+          toast('success','✅','Resolved + Unfrozen',`Account restored. Email sent to ${u.email}.`)
+        } catch(e) {
+          console.error('[resolve email]',e)
+          toast('success','✅','Resolved + Unfrozen','Account restored but email failed — check logs.')
+        }
+      } else {
+        toast('success','✅','Resolved + Unfrozen','Account restored. (No email on file)')
+      }
     } else {
-      toast('success','✓','Flag Resolved','Other flags still open — account remains frozen.')
+      toast('success','✓','Flag Resolved',`${openFlags.length} other flag(s) still open — account remains frozen.`)
     }
     load()
   }
