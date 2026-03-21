@@ -22,7 +22,115 @@ interface Category {
 }
 
 /* ── Static fallback data (shown while DB loads or if empty) ──────── */
-const FALLBACK_CATEGORIES: Category[] = [
+const FALLBACK_CATEGORIES: Category[,
+  {
+    id: 'trailing-drawdown',
+    title: 'Trailing Drawdown — How It Works',
+    subtitle: 'Understanding your moving drawdown floor',
+    icon: '📉',
+    order_index: 3,
+    articles: [
+      { id: 'td1', category_id: 'trailing-drawdown', order_index: 1, is_published: true,
+        title: 'What is Trailing Drawdown?',
+        body: "A trailing drawdown is a dynamic loss limit that moves upward as your account equity grows. Unlike a static drawdown — which is calculated on your starting balance and never moves — a trailing drawdown floor rises with your peak equity, locking in a progressively higher minimum level.\n\nThis means the better you trade, the higher your protection floor moves. It rewards consistent, upward-trending performance while setting a clear maximum loss threshold from any given high point.\n\n**In simple terms:** You can never lose more than a set percentage from the highest point your account has ever reached." },
+      { id: 'td2', category_id: 'trailing-drawdown', order_index: 2, is_published: true,
+        title: 'How Is the Floor Calculated?',
+        body: "Your drawdown floor is calculated as:\n\n**Floor = Peak Equity × (1 − Trailing DD%)**\n\nThe floor is based on your peak **equity** — meaning the highest value of your account including any open positions at their unrealised P&L — not just your closed balance.\n\n**Example with 8% trailing drawdown on a $25,000 account:**\n\n- Account starts at $25,000 → floor starts at $23,000\n- You profit and equity peaks at $27,000 → floor moves up to $24,840\n- You take some losses, equity drops to $25,500 → floor remains at $24,840 (it never moves down)\n- Equity drops to $24,800 → floor is breached → account terminated\n\nThe floor only ever moves up. It cannot move down." },
+      { id: 'td3', category_id: 'trailing-drawdown', order_index: 3, is_published: true,
+        title: 'Does the Floor Stop Moving at Some Point?',
+        body: "On TFD's 1-Step Challenge accounts, the trailing drawdown floor **stops trailing once your floor reaches your starting balance**.\n\nThis means once you have built enough profit that your drawdown floor equals your initial account size, you can never lose the firm's initial capital — and the floor no longer moves upward. From that point, it functions like a static floor at your starting balance.\n\n**Example:** $25,000 account with 8% trailing DD.\n- Starting floor: $23,000\n- Once equity peaks at $27,174 or above, the floor reaches $25,000 (starting balance)\n- The floor locks at $25,000 and does not trail further\n\nThis protects you from ever going below your starting balance once you have reached that performance level." },
+      { id: 'td4', category_id: 'trailing-drawdown', order_index: 4, is_published: true,
+        title: 'Trailing DD vs Static DD — Key Differences',
+        body: "**Static Drawdown (2-Step accounts):**\n- Floor is fixed from day one (e.g. $90,000 on a $100K account with 10% max DD)\n- Floor never moves regardless of your performance\n- You always know exactly where your floor is\n- More forgiving if you start with losses early\n\n**Trailing Drawdown (1-Step accounts):**\n- Floor starts lower but rises as you profit\n- Rewards traders who grow their account consistently\n- Requires more discipline — early big profits mean a higher floor to maintain\n- Better for traders with a consistent, upward equity curve\n\nNeither is objectively better — the right choice depends on your trading style." },
+      { id: 'td5', category_id: 'trailing-drawdown', order_index: 5, is_published: true,
+        title: 'Tips for Trading with a Trailing Drawdown',
+        body: "1. **Trade consistently.** Rapid large gains early in the challenge raise your floor quickly. A more measured approach keeps your floor manageable.\n\n2. **Monitor open P&L.** The floor tracks your peak equity including unrealised profits. A large open winner that reverses can move your floor up then hit it on the way down. Consider taking partial profits.\n\n3. **Avoid revenge trading.** After a drawdown, your floor is already elevated. Trading aggressively to recover can breach the floor faster.\n\n4. **Use your dashboard.** Your live equity, current floor, and distance to breach are shown in real time on your Risk Dashboard." }
+    ]
+  },
+  {
+    id: '1step-guide',
+    title: '1-Step Challenge — Complete Guide',
+    subtitle: 'Everything about the 1-Step evaluation model',
+    icon: '1️⃣',
+    order_index: 4,
+    articles: [
+      { id: '1s1', category_id: '1step-guide', order_index: 1, is_published: true,
+        title: 'How the 1-Step Challenge Works',
+        body: "The 1-Step Challenge is our fastest path to a funded account. There is only one evaluation phase to complete before you receive your funded account.\n\n**The process:**\n1. Purchase the 1-Step Challenge\n2. Receive your trading credentials by email\n3. Trade Phase 1 — hit the profit target while respecting all rules\n4. Pass → your funded account is created automatically\n5. Request payouts every 14 days\n\nThere is no Phase 2. As soon as you hit the profit target, you move directly to a funded account." },
+      { id: '1s2', category_id: '1step-guide', order_index: 2, is_published: true,
+        title: 'Phase 1 Rules',
+        body: "**Profit target:** 10% of starting balance\n**Drawdown type:** Trailing Drawdown (8% from peak equity)\n**Daily drawdown:** 5% maximum per day\n**Minimum trading days:** None\n**News trading:** Check your plan details\n**Weekend holding:** Check your plan details\n\nAll rules are visible on your account dashboard under Risk Dashboard." },
+      { id: '1s3', category_id: '1step-guide', order_index: 3, is_published: true,
+        title: 'Trailing Drawdown on 1-Step Accounts',
+        body: "1-Step accounts use a **trailing drawdown** based on peak equity. See the Trailing Drawdown section for a full explanation.\n\nKey points for 1-Step traders:\n- Your floor starts 8% below your starting balance\n- It rises every time your equity reaches a new high\n- The floor locks at your starting balance once you have profited enough to reach that level\n- Manage your open positions carefully — unrealised profits affect your peak equity" },
+      { id: '1s4', category_id: '1step-guide', order_index: 4, is_published: true,
+        title: 'What Happens After You Pass?',
+        body: "Once your Phase 1 profit target is reached, your funded account is created automatically. You will receive:\n\n- An email with your new funded account credentials (login, password, server)\n- A Funded Trader Certificate\n- Full access to the payout system (first payout available 14 days after your first funded trade)\n\nYour funded account operates under the same trailing drawdown rules as Phase 1." }
+    ]
+  },
+  {
+    id: 'instant-guide',
+    title: '⚡ Instant Funding — Complete Guide',
+    subtitle: 'Get funded immediately with no evaluation',
+    icon: '⚡',
+    order_index: 5,
+    articles: [
+      { id: 'if1', category_id: 'instant-guide', order_index: 1, is_published: true,
+        title: 'How Instant Funding Works',
+        body: "Instant Funding is designed for experienced traders who want to skip the evaluation entirely. You pay once and receive a fully funded trading account immediately — no evaluation, no waiting.\n\n**The process:**\n1. Purchase the Instant Funding account\n2. Receive your funded account credentials by email within minutes\n3. Start trading immediately\n4. Request payouts every 14 days\n\nThere is no Phase 1 or Phase 2. Your account is live and funded from the moment your payment is confirmed." },
+      { id: 'if2', category_id: 'instant-guide', order_index: 2, is_published: true,
+        title: 'Instant Funding Rules & Drawdown',
+        body: "Because there is no evaluation phase, Instant Funding accounts have specific rules to manage risk:\n\n**Drawdown type:** Trailing Drawdown\n**Profit split:** As per your plan (typically 80%)\n**Daily drawdown:** 5% maximum\n**Payout eligibility:** 14 days after first trade\n\nAll funded account rules apply from day one. Violations result in immediate termination." },
+      { id: 'if3', category_id: 'instant-guide', order_index: 3, is_published: true,
+        title: 'Who Is Instant Funding For?',
+        body: "Instant Funding is best suited for:\n\n- Traders with a proven track record who do not wish to go through an evaluation\n- Experienced traders who prefer immediate access to capital\n- Traders who are confident in their risk management and consistency\n\nIf you are new to prop trading or still developing your strategy, we recommend starting with a 2-Step or 1-Step Challenge to build your track record in a lower-pressure environment." }
+    ]
+  },
+  {
+    id: 'payafter-guide',
+    title: '💜 Pay After You Pass — Complete Guide',
+    subtitle: 'Start trading now, pay only if you succeed',
+    icon: '💜',
+    order_index: 6,
+    articles: [
+      { id: 'pa1', category_id: 'payafter-guide', order_index: 1, is_published: true,
+        title: 'How Pay After You Pass Works',
+        body: "Pay After You Pass is our most accessible model. You pay a small upfront fee to access the evaluation, and the main activation fee is only charged if you successfully pass.\n\n**The process:**\n1. Pay the upfront evaluation fee\n2. Receive your Phase 1 credentials\n3. Trade the evaluation under standard rules\n4. If you pass → pay the activation fee → receive your funded account\n5. If you do not pass → no further charges\n\nThis model is designed for traders who are confident in their ability but want to reduce their initial financial commitment." },
+      { id: 'pa2', category_id: 'payafter-guide', order_index: 2, is_published: true,
+        title: 'The Two-Fee Structure',
+        body: "Pay After You Pass has two separate fees:\n\n**Upfront fee** — paid at purchase. This gives you access to the evaluation account. It is non-refundable once credentials are issued.\n\n**Activation fee** — paid only if you pass the evaluation. This fee activates your funded account. You have 14 days from passing to pay the activation fee. If not paid within 14 days, the funded account offer lapses.\n\nBoth fee amounts are clearly displayed on the challenge product page before you purchase. There are no hidden charges." },
+      { id: 'pa3', category_id: 'payafter-guide', order_index: 3, is_published: true,
+        title: 'What If I Do Not Pass?',
+        body: "If you do not reach the profit target or breach a drawdown rule during the evaluation, your account is terminated in the usual way. You are not charged the activation fee.\n\nYou may purchase a new challenge at any time to try again. Existing TFD traders receive no special penalty for failing a Pay After You Pass challenge — it is treated exactly like any other failed evaluation." },
+      { id: 'pa4', category_id: 'payafter-guide', order_index: 4, is_published: true,
+        title: 'Phase Rules for Pay After You Pass',
+        body: "The evaluation rules for Pay After You Pass accounts are identical to our standard challenges. Your specific profit target, drawdown type, and daily DD limit are shown on your account dashboard.\n\nPay After You Pass accounts may use either static or trailing drawdown depending on the plan you select. Check your plan details before trading." }
+    ]
+  },
+  {
+    id: '2step-guide',
+    title: '2-Step Challenge — Complete Guide',
+    subtitle: 'The classic two-phase evaluation model',
+    icon: '2️⃣',
+    order_index: 7,
+    articles: [
+      { id: '2s1', category_id: '2step-guide', order_index: 1, is_published: true,
+        title: 'How the 2-Step Challenge Works',
+        body: "The 2-Step Challenge is our original and most popular evaluation model. It consists of two distinct phases before you receive a funded account.\n\n**The process:**\n1. Purchase the challenge\n2. Complete Phase 1 — hit the profit target (typically 8%)\n3. Automatically advance to Phase 2\n4. Complete Phase 2 — hit the verification target (typically 5%)\n5. Our team reviews your Phase 2 performance\n6. Approved → funded account issued with credentials\n\nPhase 1 advances automatically once the target is hit. The transition from Phase 2 to funded requires a brief review by our team." },
+      { id: '2s2', category_id: '2step-guide', order_index: 2, is_published: true,
+        title: 'Phase 1 Rules',
+        body: "**Profit target:** 8% of starting balance\n**Drawdown type:** Static — fixed from your starting balance\n**Maximum drawdown:** 10% from starting balance\n**Daily drawdown:** 5% from daily high\n**Minimum trading days:** None\n**News trading & weekend holding:** Check your plan details\n\nOnce you hit 8% profit with your account active, you are automatically moved to Phase 2. A new set of credentials is issued for your Phase 2 account." },
+      { id: '2s3', category_id: '2step-guide', order_index: 3, is_published: true,
+        title: 'Phase 2 Rules',
+        body: "**Profit target:** 5% of starting balance\n**Drawdown type:** Static\n**Maximum drawdown:** 10%\n**Daily drawdown:** 5%\n\nPhase 2 is a consistency verification. The lower target reflects that we are confirming your Phase 1 performance was not a fluke.\n\nOnce you reach the 5% target, your account enters a brief pending review period. Our team checks your trading for rule compliance before issuing the funded account. This typically takes 24–48 hours. You will receive an email as soon as your funded account is approved." },
+      { id: '2s4', category_id: '2step-guide', order_index: 4, is_published: true,
+        title: 'Static Drawdown on 2-Step Accounts',
+        body: "2-Step accounts use a **static drawdown**. This means:\n\n- Your maximum loss limit is fixed from day one based on your starting balance\n- It does not move regardless of your performance\n- Example: On a $100,000 account with 10% max DD, your floor is always $90,000\n\nThe static floor means you always know exactly where you stand. It is generally considered more forgiving early in the challenge, as early losses do not compound against a rising floor.\n\nYour daily drawdown limit (5%) is calculated from your highest balance on the current trading day." },
+      { id: '2s5', category_id: '2step-guide', order_index: 5, is_published: true,
+        title: 'What Happens After Phase 2?',
+        body: "After hitting your Phase 2 target:\n\n1. Your account shows **Pending Review** on the dashboard\n2. Our team reviews your trading (typically 24–48 hours)\n3. You receive an email — either your funded account credentials, or a request for additional information\n4. Once approved, a Funded Trader Certificate is issued\n5. Your first payout can be requested 14 days after your first funded trade\n\nDuring the pending review period, trading on your Phase 2 account is paused. You cannot open new positions but can view all your statistics and history." }
+    ]
+  }] = [
   {
     id: 'getting-started',
     title: 'Getting Started',
@@ -77,37 +185,45 @@ const FALLBACK_CATEGORIES: Category[] = [
   {
     id: 'prohibited-practices',
     title: 'Prohibited Practices & Fair Trading Rules',
-    subtitle: 'What is and is not allowed — read before trading',
+    subtitle: 'What is and is not allowed',
     icon: '⚠️',
     order_index: 2,
     articles: [
       { id: 'p1', category_id: 'prohibited-practices', order_index: 1, is_published: true,
-        title: 'Zero Tolerance Fraud Policy — Overview',
-        body: "The Funded Diaries operates an automated Risk Management system that monitors all accounts 24/7 in real time. Any attempt to abuse our evaluation process or funded accounts will result in **immediate account termination, forfeiture of all profits, and a permanent ban**\n\nWe take the integrity of our programme seriously. Every trader who receives a funded account represents a real financial commitment from TFD. The following practices are strictly prohibited and are actively detected by our systems.\n\nIf your account is flagged, you will receive an email notification and your account will be frozen pending investigation. You have **14 days** to submit an appeal to risk@thefundeddiaries.com." },
+        title: 'Our Commitment to Fair Trading',
+        body: "The Funded Diaries is committed to rewarding genuine trading talent. To protect the integrity of our programme and ensure fairness for all traders, we maintain a strict set of trading rules.\n\nAll accounts are monitored by our Risk Management team. Violations of our rules will result in account termination and forfeiture of profits. Serious violations — including fraud and coordinated abuse — will result in a permanent ban.\n\nIf your account is placed under review, you will be notified by email. Investigations are typically resolved within 48–72 hours. If you disagree with a decision, you may submit an appeal within 14 days to risk@thefundeddiaries.com." },
+
       { id: 'p2', category_id: 'prohibited-practices', order_index: 2, is_published: true,
         title: '🔄 Cross-Account Hedging — Prohibited',
-        body: "**What it is:** Opening opposite positions (BUY and SELL) on the same instrument across two or more different accounts — whether owned by you or coordinated with another trader.\n\n**Why prohibited:** Guarantees profit on one side regardless of market direction, defeating the purpose of the evaluation.\n\n**Our detection:** Any two accounts that open opposite positions on the same symbol within **5 minutes** of each other are automatically flagged.\n\n**Penalty:** Immediate termination of all involved accounts, forfeiture of profits, and permanent ban for all associated traders." },
+        body: "Opening opposite positions on the same instrument across two or more TFD accounts — whether your own accounts or in coordination with another trader — is strictly prohibited.\n\nEach account must operate independently, based solely on your individual trading decisions.\n\n**Penalty:** Immediate termination of all involved accounts and permanent ban." },
+
       { id: 'p3', category_id: 'prohibited-practices', order_index: 3, is_published: true,
-        title: '🪞 Copy Trading & Mirror Trading — Prohibited',
-        body: "**What it is:** Using a copy trading service, signal group, or any system that replicates trades across multiple TFD accounts simultaneously.\n\n**Why prohibited:** Each account must represent an independent trader making independent decisions.\n\n**Our detection:** Our Mirror Trading Detection monitors all accounts. If **2 or more accounts** open the same instrument, same direction, and similar lot size within **60 seconds** of each other, all accounts are flagged. Repeated patterns across sessions are treated as confirmed violations.\n\n**What is allowed:** Automated strategies on a **single** account that are not replicated elsewhere.\n\n**Penalty:** All accounts in the copy ring are terminated. Profits forfeited. Permanent ban for all involved traders." },
+        title: '🪞 Copy Trading & Signal Groups — Prohibited',
+        body: "Replicating trades from an external signal provider, copy trading platform, or any service that mirrors positions across multiple TFD accounts simultaneously is not permitted.\n\nEvery TFD account must reflect the independent judgment of its registered trader.\n\n**Allowed:** You may use automated strategies (EAs/bots) on your own single account, provided they represent your own strategy and are not shared or mirrored to other accounts.\n\n**Penalty:** Termination of all accounts involved and permanent ban." },
+
       { id: 'p4', category_id: 'prohibited-practices', order_index: 4, is_published: true,
         title: '👤 Multi-Accounting — Prohibited',
-        body: "**What it is:** Creating or operating multiple user accounts under different identities, emails, or via family members to multiply allocations or hide prohibited activity.\n\n**Our detection:** We cross-reference login IP addresses, trade execution IPs, device fingerprints, and personal information. Shared IPs across different accounts are automatically flagged. Same-surname registrations with different emails are also reviewed.\n\n**What is allowed:** You may hold multiple challenge accounts under your **single verified profile**. You may not operate accounts under different identities.\n\n**Penalty:** All accounts terminated, permanent ban, KYC data flagged with compliance partners." },
+        body: "Each individual may hold only one registered trader profile with TFD. Creating or operating accounts under different identities, email addresses, or through family members for the purpose of multiplying allocations or concealing prohibited activity is not permitted.\n\n**Allowed:** You may purchase and hold multiple challenge accounts under your single verified profile.\n\n**Penalty:** All associated accounts terminated and permanent ban applied." },
+
       { id: 'p5', category_id: 'prohibited-practices', order_index: 5, is_published: true,
-        title: '📰 News Window Trading — Plan Dependent',
-        body: "**What it is:** Opening trades in the seconds immediately before major scheduled news events (NFP, FOMC, CPI, ECB/Fed decisions) to capture guaranteed price moves — news sniping.\n\n**Our detection:** Trades opened within **2 minutes of major news hours** (08:00, 09:00, 10:00, 13:00, 14:00, 15:00, 16:00, 21:00 UTC) are monitored. Repeated violations trigger an account review.\n\n**If your plan allows news trading:** You may trade freely around news events. Your plan details confirm this.\n\n**If your plan does not allow news trading:** You must not open or close positions within 2 minutes before or after any major news event.\n\n**Penalty:** Termination and forfeiture of profits generated during prohibited windows." },
+        title: '📰 News Trading — Plan Dependent',
+        body: "News trading rules depend on your specific challenge plan. Please check your account details on the dashboard to confirm whether news trading is permitted.\n\n**If your plan allows news trading:** You may trade freely during news events.\n\n**If your plan restricts news trading:** You must not open or close trades within the restricted window around major scheduled economic announcements (e.g. NFP, FOMC, CPI).\n\n**Penalty:** Termination and forfeiture of profits from trades placed in violation of your plan's news trading rules." },
+
       { id: 'p6', category_id: 'prohibited-practices', order_index: 6, is_published: true,
-        title: '⚡ High-Frequency Trading & Bots — Restricted',
-        body: "**Limit:** Maximum **15 trades per hour** per account. Accounts exceeding this are automatically flagged.\n\n**Also detected:** Our Bot Pattern system monitors daily P&L consistency. A coefficient of variation below 5% over 5+ trading days — meaning nearly identical profit every single day — is statistically impossible for human traders and triggers an investigation.\n\n**What is allowed:** Automated EAs and bots are permitted at normal frequencies. Scalping is allowed with no minimum hold time.\n\n**Not allowed:** HFT systems, latency arbitrage, tick scalpers, or any strategy exploiting data feed delays.\n\n**Penalty:** Account review. Termination if abuse is confirmed." },
+        title: '⚡ High-Frequency & Automated Trading — Restricted',
+        body: "Automated trading is permitted on TFD accounts, provided it operates at normal trading frequencies and represents a legitimate strategy.\n\nUltra-high-frequency strategies, latency arbitrage, tick data exploitation, and any system designed to exploit data feed anomalies rather than genuine market analysis are prohibited.\n\n**Allowed:** EAs, bots, and automated systems that trade at reasonable frequencies and apply a consistent, rule-based strategy.\n\n**Not allowed:** HFT systems, arbitrage bots, or any strategy exploiting platform or pricing vulnerabilities.\n\n**Penalty:** Account review. Termination if abuse is confirmed." },
+
       { id: 'p7', category_id: 'prohibited-practices', order_index: 7, is_published: true,
-        title: '📊 Abnormal Win Rate — Enhanced Monitoring',
-        body: "**Threshold:** Accounts achieving **90% or higher win rate** over a minimum of 20 closed trades are placed under enhanced monitoring.\n\n**Important:** This is NOT an automatic termination. Legitimate high-performance traders are never penalised for strong results. The review exists to verify legitimacy.\n\n**What happens:** You will be notified. Our team reviews your trading. If no violation is found, the review closes and your account continues normally. You may be asked to provide a brief trading plan or strategy description.\n\n**Why we review:** A 90%+ win rate over 20+ trades is statistically improbable without some form of exploitation. Our system is calibrated to investigate, not punish." },
+        title: '📅 Weekend Holding — Plan Dependent',
+        body: "Whether you may hold open positions over the weekend depends on your specific challenge plan.\n\n**If your plan allows weekend holding:** Positions may remain open from Friday close through Sunday market open.\n\n**If your plan restricts weekend holding:** All positions must be closed before the market closes on Friday (21:00 UTC). New positions may only be opened after markets reopen on Sunday (22:00 UTC).\n\nCheck your account dashboard for your plan's specific rules." },
+
       { id: 'p8', category_id: 'prohibited-practices', order_index: 8, is_published: true,
-        title: '🔒 Account Freezes — What to Expect',
-        body: "If your account is flagged, it will be **automatically frozen**. You will receive an email from risk@thefundeddiaries.com immediately.\n\n**During the investigation (48–72 hours):**\n- Trading is suspended\n- You can still view your dashboard and statistics\n- Do not attempt to open new accounts — this will be detected\n\n**Possible outcomes:**\n\n✅ **Cleared** — No violation. Account unfrozen, trading restored. Clearance email sent.\n\n⚠️ **Warning** — Minor concern. Account unfrozen with a formal warning. Repeat violations = termination.\n\n❌ **Terminated** — Violation confirmed. Account closed, profits forfeited, permanent ban.\n\n**Appeals:** You have **14 days** from the termination notice to appeal at risk@thefundeddiaries.com. Include your trading rationale and any supporting evidence." },
+        title: '🔒 Account Reviews & Frozen Accounts',
+        body: "If our Risk Management team flags your account for review, trading will be temporarily suspended and you will receive an email notification. This is a standard compliance procedure and does not necessarily indicate wrongdoing.\n\n**During a review:**\n- Trading is paused\n- You can still view your dashboard and history\n- Our team aims to resolve all reviews within 48–72 hours\n\n**Possible outcomes:**\n✅ Cleared — No issue found. Trading restored immediately.\n⚠️ Warning — A concern was noted. Trading restored with a formal caution.\n❌ Terminated — A rule violation was confirmed. Account closed, profits forfeited.\n\n**Appeals:** Termination decisions may be appealed within 14 days by emailing risk@thefundeddiaries.com with a written explanation and any supporting evidence." },
+
       { id: 'p9', category_id: 'prohibited-practices', order_index: 9, is_published: true,
-        title: '✅ What Is Fully Allowed',
-        body: "To be completely clear, the following are **fully permitted**:\n\n✓ **Automated trading / EAs** — allowed at normal frequencies (under 15 trades/hour)\n✓ **News trading** — allowed on plans with the News Trading feature\n✓ **Weekend holding** — allowed on plans with the Weekend Holding feature\n✓ **Scalping** — allowed, no minimum hold time\n✓ **Swing trading** — hold for days or weeks\n✓ **Multiple challenge accounts** — under your single verified profile\n✓ **High win rates** — legitimate performance is never penalised\n✓ **All instruments** — Forex, Indices, Gold, Oil, Crypto (where available)\n✓ **Hedging within one account** — on plans that permit it\n\nIf you are unsure whether a specific strategy is permitted, **contact us before using it** at support@thefundeddiaries.com. We would rather clarify upfront than terminate an account later." },
+        title: '✅ What Is Fully Permitted',
+        body: "The following are explicitly permitted on all TFD accounts (subject to your individual plan):\n\n✓ Automated trading and Expert Advisors (EAs) at normal frequencies\n✓ Scalping — no minimum hold time\n✓ Swing trading — hold positions for days or weeks\n✓ News trading (on plans where permitted)\n✓ Weekend holding (on plans where permitted)\n✓ Hedging within a single account (on plans where permitted)\n✓ Multiple challenge accounts under your single verified profile\n✓ All available instruments: Forex, Indices, Commodities, and others\n\nIf you are ever unsure whether a specific strategy or tool is permitted, contact us at support@thefundeddiaries.com before using it. We are happy to clarify — we would always rather answer a question upfront than terminate an account later." },
     ]
   },
   {
