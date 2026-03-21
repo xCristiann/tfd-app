@@ -9,6 +9,7 @@ export function MarketingPage() {
   const { session } = useAuth()
   const [products, setProducts] = useState<any[]>([])
   const [promoBar, setPromoBar] = useState<any>(null)
+  const [discordUrl, setDiscordUrl] = useState<string>('https://discord.gg/thefundeddiaries')
 
   useEffect(() => {
     supabase.from('challenge_products')
@@ -16,6 +17,8 @@ export function MarketingPage() {
       .then(({ data }) => setProducts(data ?? []))
     supabase.from('promo_bars').select('*').eq('is_active', true).limit(1).single()
       .then(({ data }) => setPromoBar(data ?? null))
+    supabase.from('site_settings').select('value').eq('key', 'discord_url').single()
+      .then(({ data }) => { if(data?.value) setDiscordUrl(data.value) })
   }, [])
 
   const isLoggedIn = !!session
@@ -109,6 +112,11 @@ export function MarketingPage() {
           <div style={{display:'flex',gap:'8px',justifyContent:'flex-end',alignItems:'center'}}>
             {isLoggedIn ? (
               <>
+                {!isMobile && <a href={discordUrl} target="_blank" rel="noopener noreferrer"
+                  style={{display:'flex',alignItems:'center',gap:'6px',padding:'7px 14px',background:'rgba(88,101,242,.25)',border:'1px solid rgba(88,101,242,.4)',borderRadius:'8px',textDecoration:'none',fontSize:'12px',fontWeight:600,color:'#fff',cursor:'pointer'}}>
+                  <svg width="16" height="12" viewBox="0 0 24 18" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M20.317 1.492a19.84 19.84 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 1.492a.07.07 0 0 0-.032.027C.533 6.093-.32 10.555.099 14.961a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 12.278c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+                  Discord
+                </a>}
                 <button onClick={()=>navigate('/dashboard')}
                   style={{fontSize:'12px',fontWeight:600,color:'#1A3A8B',padding:'8px 18px',background:'#ffffff',border:'none',borderRadius:'8px',cursor:'pointer'}}>
                   Dashboard
@@ -120,6 +128,11 @@ export function MarketingPage() {
               </>
             ) : (
               <>
+                {!isMobile && <a href={discordUrl} target="_blank" rel="noopener noreferrer"
+                  style={{display:'flex',alignItems:'center',gap:'6px',padding:'7px 14px',background:'rgba(88,101,242,.25)',border:'1px solid rgba(88,101,242,.4)',borderRadius:'8px',textDecoration:'none',fontSize:'12px',fontWeight:600,color:'#fff'}}>
+                  <svg width="16" height="12" viewBox="0 0 24 18" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M20.317 1.492a19.84 19.84 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 1.492a.07.07 0 0 0-.032.027C.533 6.093-.32 10.555.099 14.961a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 12.278c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+                  Discord
+                </a>}
                 {!isMobile && <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:500,color:'rgba(255,255,255,0.8)',padding:'8px 18px',border:'1.5px solid rgba(255,255,255,0.35)',background:'rgba(255,255,255,0.1)',borderRadius:'8px',cursor:'pointer'}}>Log in</button>}
                 <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:600,color:'#1A3A8B',padding:'8px 20px',background:'#ffffff',border:'none',borderRadius:'8px',cursor:'pointer'}}>{isMobile ? 'Start' : 'Get started'}</button>
               </>
@@ -488,6 +501,32 @@ export function MarketingPage() {
         </div>
       </div>
 
+      {/* ── DISCORD COMMUNITY ── */}
+      <div style={{background:'#5865F2',padding:isMobile?'40px 20px':'60px 48px',textAlign:'center'}}>
+        <div style={{maxWidth:'600px',margin:'0 auto'}}>
+          <div style={{display:'flex',justifyContent:'center',marginBottom:'20px'}}>
+            <svg width="56" height="42" viewBox="0 0 24 18" fill="white" xmlns="http://www.w3.org/2000/svg" style={{opacity:.9}}>
+              <path d="M20.317 1.492a19.84 19.84 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 1.492a.07.07 0 0 0-.032.027C.533 6.093-.32 10.555.099 14.961a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 12.278c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+            </svg>
+          </div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:isMobile?'28px':'36px',fontWeight:700,color:'#fff',marginBottom:'12px',letterSpacing:'-0.3px'}}>
+            Join our <span style={{fontStyle:'italic'}}>community</span>
+          </h2>
+          <p style={{fontSize:'14px',color:'rgba(255,255,255,.7)',marginBottom:'28px',lineHeight:1.7}}>
+            Connect with funded traders, share strategies, get support, and be the first to know about new challenges and promotions.
+          </p>
+          <div style={{display:'flex',justifyContent:'center',gap:'12px',flexWrap:'wrap'}}>
+            <a href={discordUrl} target="_blank" rel="noopener noreferrer"
+              style={{display:'inline-flex',alignItems:'center',gap:'8px',padding:'13px 32px',background:'#fff',color:'#5865F2',borderRadius:'8px',textDecoration:'none',fontSize:'14px',fontWeight:700,boxShadow:'0 4px 20px rgba(0,0,0,.2)'}}>
+              <svg width="18" height="14" viewBox="0 0 24 18" fill="#5865F2" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20.317 1.492a19.84 19.84 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 1.492a.07.07 0 0 0-.032.027C.533 6.093-.32 10.555.099 14.961a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 12.278c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+              </svg>
+              Join Discord Server
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* ── CTA ── */}
       <div style={{padding:'80px 48px',background:'#1A3A6B',textAlign:'center'}}>
         <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'44px',fontWeight:700,color:'#fff',letterSpacing:'-0.5px',marginBottom:'16px'}}>
@@ -520,6 +559,13 @@ export function MarketingPage() {
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',color:'rgba(255,255,255,.4)'}}>The Funded <span style={{color:'#60A5FA',fontStyle:'italic'}}>Diaries</span></div>
         <div style={{fontSize:'10px',color:'rgba(255,255,255,.2)'}}>© {new Date().getFullYear()} The Funded Diaries. All rights reserved.</div>
         <div style={{display:'flex',gap:'20px'}}>
+          <a href={discordUrl} target="_blank" rel="noopener noreferrer"
+            style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'11px',color:'rgba(255,255,255,.4)',textDecoration:'none'}}>
+            <svg width="14" height="11" viewBox="0 0 24 18" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20.317 1.492a19.84 19.84 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 1.492a.07.07 0 0 0-.032.027C.533 6.093-.32 10.555.099 14.961a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 12.278c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+            </svg>
+            Discord
+          </a>
           <a href="/terms" style={{fontSize:'11px',color:'rgba(255,255,255,.35)',cursor:'pointer',textDecoration:'none'}}>Terms</a>
             <a href="/privacy" style={{fontSize:'11px',color:'rgba(255,255,255,.35)',cursor:'pointer',textDecoration:'none'}}>Privacy</a>
             <a href="mailto:support@thefundeddiaries.com" style={{fontSize:'11px',color:'rgba(255,255,255,.35)',cursor:'pointer',textDecoration:'none'}}>Support</a>
