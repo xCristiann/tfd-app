@@ -27,7 +27,7 @@ const FALLBACK_CATEGORIES: Category[] = [
     id: 'trailing-drawdown',
     title: 'Trailing Drawdown -- How It Works',
     subtitle: 'Understanding your moving drawdown floor',
-    icon: '📉',
+    icon: '[Chart]',
     order_index: 3,
     articles: [
       { id: 'td1', category_id: 'trailing-drawdown', order_index: 1, is_published: true,
@@ -51,7 +51,7 @@ const FALLBACK_CATEGORIES: Category[] = [
     id: '1step-guide',
     title: '1-Step Challenge -- Complete Guide',
     subtitle: 'Everything about the 1-Step evaluation model',
-    icon: '1️⃣',
+    icon: '1-Step',
     order_index: 4,
     articles: [
       { id: '1s1', category_id: '1step-guide', order_index: 1, is_published: true,
@@ -70,9 +70,9 @@ const FALLBACK_CATEGORIES: Category[] = [
   },
   {
     id: 'instant-guide',
-    title: '⚡ Instant Funding -- Complete Guide',
+    title: '[Flash] Instant Funding -- Complete Guide',
     subtitle: 'Get funded immediately with no evaluation',
-    icon: '⚡',
+    icon: '[Flash]',
     order_index: 5,
     articles: [
       { id: 'if1', category_id: 'instant-guide', order_index: 1, is_published: true,
@@ -88,9 +88,9 @@ const FALLBACK_CATEGORIES: Category[] = [
   },
   {
     id: 'payafter-guide',
-    title: '💜 Pay After You Pass -- Complete Guide',
+    title: '[Purple] Pay After You Pass -- Complete Guide',
     subtitle: 'Start trading now, pay only if you succeed',
-    icon: '💜',
+    icon: '[Purple]',
     order_index: 6,
     articles: [
       { id: 'pa1', category_id: 'payafter-guide', order_index: 1, is_published: true,
@@ -111,7 +111,7 @@ const FALLBACK_CATEGORIES: Category[] = [
     id: '2step-guide',
     title: '2-Step Challenge -- Complete Guide',
     subtitle: 'The classic two-phase evaluation model',
-    icon: '2️⃣',
+    icon: '2-Step',
     order_index: 7,
     articles: [
       { id: '2s1', category_id: '2step-guide', order_index: 1, is_published: true,
@@ -130,12 +130,12 @@ const FALLBACK_CATEGORIES: Category[] = [
         title: 'What Happens After Phase 2?',
         body: "After hitting your Phase 2 target:\n\n1. Your account shows **Pending Review** on the dashboard\n2. Our team reviews your trading (typically 24-48 hours)\n3. You receive an email -- either your funded account credentials, or a request for additional information\n4. Once approved, a Funded Trader Certificate is issued\n5. Your first payout can be requested 14 days after your first funded trade\n\nDuring the pending review period, trading on your Phase 2 account is paused. You cannot open new positions but can view all your statistics and history." }
     ]
-  }] = [
+  },
   {
     id: 'getting-started',
     title: 'Getting Started',
     subtitle: 'Everything you need to begin',
-    icon: '🚀',
+    icon: '[Start]',
     order_index: 1,
     articles: [
       { id: '1', category_id: 'getting-started', title: 'What is The Funded Diaries?', order_index: 1, is_published: true, body: `The Funded Diaries is a proprietary trading firm that provides capital to skilled traders. You pass a trading evaluation (challenge), prove your skills, and we fund your account -- allowing you to trade with our money and keep up to 90% of the profits.\n\nWe currently offer challenges from $10,000 to $200,000 in account size, with no time limits and industry-leading profit splits.` },
@@ -147,7 +147,7 @@ const FALLBACK_CATEGORIES: Category[] = [
     id: 'challenge-rules',
     title: 'Challenge Rules',
     subtitle: 'Trading rules & evaluation criteria',
-    icon: '📋',
+    icon: '[Rules]',
     order_index: 2,
     articles: [
       { id: '4', category_id: 'challenge-rules', title: 'What are the profit targets?', order_index: 1, is_published: true, body: `**Phase 1 (Evaluation):** 8% profit target\n**Phase 2 (Verification):** 5% profit target\n**Funded:** No profit target -- trade freely\n\nAll targets are calculated on your starting balance. For example, on a $100,000 account:\n- Phase 1: $8,000 profit required\n- Phase 2: $5,000 profit required\n\nThere is **no time limit** to reach these targets.` },
@@ -161,7 +161,7 @@ const FALLBACK_CATEGORIES: Category[] = [
     id: 'payouts',
     title: 'Payouts & Withdrawals',
     subtitle: 'How to withdraw your profits',
-    icon: '💰',
+    icon: '[Money]',
     order_index: 3,
     articles: [
       { id: '9', category_id: 'payouts', title: 'When can I request my first payout?', order_index: 1, is_published: true, body: `You can request your first payout **14 days after placing your first trade** on a funded account. This biweekly cycle ensures fair and sustainable profit withdrawals.\n\nAfter your first payout, subsequent payouts can be requested every 14 days.` },
@@ -174,7 +174,7 @@ const FALLBACK_CATEGORIES: Category[] = [
     id: 'account-management',
     title: 'Account Management',
     subtitle: 'Managing your trading accounts',
-    icon: '🗂️',
+    icon: '🗂',
     order_index: 4,
     articles: [
       { id: '13', category_id: 'account-management', title: 'What happens if I breach my account?', order_index: 1, is_published: true, body: `If you breach the daily drawdown or maximum drawdown limit, your account is automatically locked and marked as breached.\n\nYou will receive an email notification immediately. Trading is suspended and the account cannot be reactivated.\n\nYou can purchase a new challenge at any time to start again. There are no restrictions on how many challenges you can attempt.` },
@@ -186,7 +186,7 @@ const FALLBACK_CATEGORIES: Category[] = [
     id: 'prohibited-practices',
     title: 'Prohibited Practices & Fair Trading Rules',
     subtitle: 'What is and is not allowed',
-    icon: '⚠️',
+    icon: '[!]',
     order_index: 2,
     articles: [
       { id: 'p1', category_id: 'prohibited-practices', order_index: 1, is_published: true,
@@ -194,23 +194,23 @@ const FALLBACK_CATEGORIES: Category[] = [
         body: "The Funded Diaries is committed to rewarding genuine trading talent. To protect the integrity of our programme and ensure fairness for all traders, we maintain a strict set of trading rules.\n\nAll accounts are monitored by our Risk Management team. Violations of our rules will result in account termination and forfeiture of profits. Serious violations -- including fraud and coordinated abuse -- will result in a permanent ban.\n\nIf your account is placed under review, you will be notified by email. Investigations are typically resolved within 48-72 hours. If you disagree with a decision, you may submit an appeal within 14 days to risk@thefundeddiaries.com." },
 
       { id: 'p2', category_id: 'prohibited-practices', order_index: 2, is_published: true,
-        title: '🔄 Cross-Account Hedging -- Prohibited',
+        title: '[Cycle] Cross-Account Hedging -- Prohibited',
         body: "Opening opposite positions on the same instrument across two or more TFD accounts -- whether your own accounts or in coordination with another trader -- is strictly prohibited.\n\nEach account must operate independently, based solely on your individual trading decisions.\n\n**Penalty:** Immediate termination of all involved accounts and permanent ban." },
 
       { id: 'p3', category_id: 'prohibited-practices', order_index: 3, is_published: true,
-        title: '🪞 Copy Trading & Signal Groups -- Prohibited',
+        title: '[Mirror] Copy Trading & Signal Groups -- Prohibited',
         body: "Replicating trades from an external signal provider, copy trading platform, or any service that mirrors positions across multiple TFD accounts simultaneously is not permitted.\n\nEvery TFD account must reflect the independent judgment of its registered trader.\n\n**Allowed:** You may use automated strategies (EAs/bots) on your own single account, provided they represent your own strategy and are not shared or mirrored to other accounts.\n\n**Penalty:** Termination of all accounts involved and permanent ban." },
 
       { id: 'p4', category_id: 'prohibited-practices', order_index: 4, is_published: true,
-        title: '👤 Multi-Accounting -- Prohibited',
+        title: '[User] Multi-Accounting -- Prohibited',
         body: "Each individual may hold only one registered trader profile with TFD. Creating or operating accounts under different identities, email addresses, or through family members for the purpose of multiplying allocations or concealing prohibited activity is not permitted.\n\n**Allowed:** You may purchase and hold multiple challenge accounts under your single verified profile.\n\n**Penalty:** All associated accounts terminated and permanent ban applied." },
 
       { id: 'p5', category_id: 'prohibited-practices', order_index: 5, is_published: true,
-        title: '📰 News Trading -- Plan Dependent',
+        title: '[News] News Trading -- Plan Dependent',
         body: "News trading rules depend on your specific challenge plan. Please check your account details on the dashboard to confirm whether news trading is permitted.\n\n**If your plan allows news trading:** You may trade freely during news events.\n\n**If your plan restricts news trading:** You must not open or close trades within the restricted window around major scheduled economic announcements (e.g. NFP, FOMC, CPI).\n\n**Penalty:** Termination and forfeiture of profits from trades placed in violation of your plan's news trading rules." },
 
       { id: 'p6', category_id: 'prohibited-practices', order_index: 6, is_published: true,
-        title: '⚡ High-Frequency & Automated Trading -- Restricted',
+        title: '[Flash] High-Frequency & Automated Trading -- Restricted',
         body: "Automated trading is permitted on TFD accounts, provided it operates at normal trading frequencies and represents a legitimate strategy.\n\nUltra-high-frequency strategies, latency arbitrage, tick data exploitation, and any system designed to exploit data feed anomalies rather than genuine market analysis are prohibited.\n\n**Allowed:** EAs, bots, and automated systems that trade at reasonable frequencies and apply a consistent, rule-based strategy.\n\n**Not allowed:** HFT systems, arbitrage bots, or any strategy exploiting platform or pricing vulnerabilities.\n\n**Penalty:** Account review. Termination if abuse is confirmed." },
 
       { id: 'p7', category_id: 'prohibited-practices', order_index: 7, is_published: true,
@@ -218,12 +218,12 @@ const FALLBACK_CATEGORIES: Category[] = [
         body: "Whether you may hold open positions over the weekend depends on your specific challenge plan.\n\n**If your plan allows weekend holding:** Positions may remain open from Friday close through Sunday market open.\n\n**If your plan restricts weekend holding:** All positions must be closed before the market closes on Friday (21:00 UTC). New positions may only be opened after markets reopen on Sunday (22:00 UTC).\n\nCheck your account dashboard for your plan's specific rules." },
 
       { id: 'p8', category_id: 'prohibited-practices', order_index: 8, is_published: true,
-        title: '🔒 Account Reviews & Frozen Accounts',
-        body: "If our Risk Management team flags your account for review, trading will be temporarily suspended and you will receive an email notification. This is a standard compliance procedure and does not necessarily indicate wrongdoing.\n\n**During a review:**\n- Trading is paused\n- You can still view your dashboard and history\n- Our team aims to resolve all reviews within 48-72 hours\n\n**Possible outcomes:**\n✅ Cleared -- No issue found. Trading restored immediately.\n⚠️ Warning -- A concern was noted. Trading restored with a formal caution.\n❌ Terminated -- A rule violation was confirmed. Account closed, profits forfeited.\n\n**Appeals:** Termination decisions may be appealed within 14 days by emailing risk@thefundeddiaries.com with a written explanation and any supporting evidence." },
+        title: '[Lock] Account Reviews & Frozen Accounts',
+        body: "If our Risk Management team flags your account for review, trading will be temporarily suspended and you will receive an email notification. This is a standard compliance procedure and does not necessarily indicate wrongdoing.\n\n**During a review:**\n- Trading is paused\n- You can still view your dashboard and history\n- Our team aims to resolve all reviews within 48-72 hours\n\n**Possible outcomes:**\n[OK] Cleared -- No issue found. Trading restored immediately.\n[!] Warning -- A concern was noted. Trading restored with a formal caution.\n[X] Terminated -- A rule violation was confirmed. Account closed, profits forfeited.\n\n**Appeals:** Termination decisions may be appealed within 14 days by emailing risk@thefundeddiaries.com with a written explanation and any supporting evidence." },
 
       { id: 'p9', category_id: 'prohibited-practices', order_index: 9, is_published: true,
-        title: '✅ What Is Fully Permitted',
-        body: "The following are explicitly permitted on all TFD accounts (subject to your individual plan):\n\n✓ Automated trading and Expert Advisors (EAs) at normal frequencies\n✓ Scalping -- no minimum hold time\n✓ Swing trading -- hold positions for days or weeks\n✓ News trading (on plans where permitted)\n✓ Weekend holding (on plans where permitted)\n✓ Hedging within a single account (on plans where permitted)\n✓ Multiple challenge accounts under your single verified profile\n✓ All available instruments: Forex, Indices, Commodities, and others\n\nIf you are ever unsure whether a specific strategy or tool is permitted, contact us at support@thefundeddiaries.com before using it. We are happy to clarify -- we would always rather answer a question upfront than terminate an account later." },
+        title: '[OK] What Is Fully Permitted',
+        body: "The following are explicitly permitted on all TFD accounts (subject to your individual plan):\n\nOK Automated trading and Expert Advisors (EAs) at normal frequencies\nOK Scalping -- no minimum hold time\nOK Swing trading -- hold positions for days or weeks\nOK News trading (on plans where permitted)\nOK Weekend holding (on plans where permitted)\nOK Hedging within a single account (on plans where permitted)\nOK Multiple challenge accounts under your single verified profile\nOK All available instruments: Forex, Indices, Commodities, and others\n\nIf you are ever unsure whether a specific strategy or tool is permitted, contact us at support@thefundeddiaries.com before using it. We are happy to clarify -- we would always rather answer a question upfront than terminate an account later." },
     ]
   },
   {
