@@ -473,22 +473,7 @@ export function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* No-refund policy notice */}
-                <div className="mb-5 p-4 bg-[rgba(220,38,38,.04)] border border-[rgba(220,38,38,.2)] rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <span className="text-[14px] flex-shrink-0 mt-0.5">⚠️</span>
-                    <div>
-                      <div className="text-[11px] font-bold text-[#DC2626] mb-1 uppercase tracking-wide">No-Refund Policy</div>
-                      <p className="text-[11px] text-[#5C7A9E] leading-[1.7] m-0">
-                        Challenge fees are <strong className="text-[#1A3A6B]">non-refundable</strong> once your trading account credentials have been issued.
-                        By proceeding, you acknowledge that no refund will be provided after account activation, regardless of trading performance or outcome.
-                        Refund requests before credential issuance may be considered — contact <a href="mailto:support@thefundeddiaries.com" className="text-[#2255CC]">support@thefundeddiaries.com</a> immediately.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* No-Refund Policy box */}
+                {/* No-Refund Policy */}
                 <div className="mb-5 p-4 bg-[rgba(220,38,38,.04)] border border-[rgba(220,38,38,.2)] rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-[14px]">⚠️</span>

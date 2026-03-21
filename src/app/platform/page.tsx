@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/useToast'
 import { useAccount } from '@/hooks/useAccount'
@@ -547,10 +548,12 @@ export function PlatformPage() {
     return [...filtered].sort((a,b)=>(favorites.has(a.sym)?0:1)-(favorites.has(b.sym)?0:1))
   }, [search, favorites])
 
+  const isMobile = useIsMobile()
+  const [mobilePanel, setMobilePanel] = useState<'chart'|'trade'|'positions'>('chart')
   const mono = {fontFamily:"'JetBrains Mono',monospace"} as const
 
   return (
-    <div style={{fontFamily:"'Inter',system-ui,sans-serif",background:'#F0F4FB',color:'#1A3A6B',height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+    <div style={{fontFamily:"'Inter',system-ui,sans-serif",background:'#F0F4FB',color:'#1A3A6B',height:'100dvh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
 
       {/* TOPBAR */}
       <div style={{height:'48px',background:'#1A3A6B',display:'flex',alignItems:'center',padding:'0 12px',gap:'8px',flexShrink:0}}>
@@ -584,7 +587,7 @@ export function PlatformPage() {
       <div style={{flex:1,display:'flex',overflow:'hidden'}}>
 
         {/* WATCHLIST */}
-        <div style={{width:'180px',background:'#fff',borderRight:'1px solid #E8EEF8',display:'flex',flexDirection:'column',flexShrink:0}}>
+        {!isMobile && <div style={{width:'180px',background:'#fff',borderRight:'1px solid #E8EEF8',display:'flex',flexDirection:'column',flexShrink:0}}>
           <div style={{padding:'7px',borderBottom:'1px solid #E8EEF8',flexShrink:0}}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
               style={{width:'100%',padding:'5px 8px',background:'#F4F7FD',border:'1px solid #E8EEF8',borderRadius:'6px',fontSize:'11px',color:'#1A3A6B',outline:'none',boxSizing:'border-box'}}/>
@@ -612,10 +615,10 @@ export function PlatformPage() {
               )
             })}
           </div>
-        </div>
+        </div>}
 
-        {/* CHART AREA */}
-        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        {/* CHART AREA - show on mobile when chart tab active */}
+        <div style={{flex:1,display:isMobile&&mobilePanel!=='chart'?'none':'flex',flexDirection:'column',overflow:'hidden'}}>
           <div style={{height:'38px',background:'#fff',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',padding:'0 12px',gap:'8px',flexShrink:0}}>
             <div style={{...mono,fontSize:'20px',fontWeight:700,color:up?'#16A34A':'#DC2626'}}>{livePrice.toFixed(inst.dec)}</div>
             <div style={{fontSize:'10px',color:up?'#16A34A':'#DC2626'}}>{up?'▲':'▼'} {Math.abs(livePrice-prevPrice).toFixed(inst.dec)}</div>
@@ -639,7 +642,7 @@ export function PlatformPage() {
         </div>
 
         {/* ORDER PANEL */}
-        <div style={{width:'230px',background:'#fff',borderLeft:'1px solid #E8EEF8',display:'flex',flexDirection:'column',flexShrink:0}}>
+        <div style={{width:isMobile?'100%':'230px',background:'#fff',borderLeft:'1px solid #E8EEF8',display:isMobile&&mobilePanel!=='trade'?'none':'flex',flexDirection:'column',flexShrink:0}}>
           <div style={{padding:'10px',flex:1,overflowY:'auto'}}>
             <div style={{fontSize:'9px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>New Order — {sym}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5px',marginBottom:'8px'}}>
@@ -830,6 +833,20 @@ export function PlatformPage() {
       )}
 
       <ToastContainer toasts={toasts} dismiss={dismiss}/>
+      {/* Mobile bottom tabs for platform */}
+      {isMobile && (
+        <div style={{display:'flex',background:'#1A3A6B',borderTop:'1px solid rgba(255,255,255,.1)',flexShrink:0}}>
+          {([['chart','📈','Chart'],['trade','🎯','Trade'],['positions','📋','Positions']] as const).map(([id,icon,label])=>(
+            <button key={id} onClick={()=>setMobilePanel(id)}
+              style={{flex:1,padding:'10px 4px',background:mobilePanel===id?'rgba(255,255,255,.15)':'transparent',
+                border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:'2px',
+                borderTop:mobilePanel===id?'2px solid #60A5FA':'2px solid transparent',color:'#fff'}}>
+              <span style={{fontSize:'16px'}}>{icon}</span>
+              <span style={{fontSize:'9px',fontWeight:600,letterSpacing:'0.5px'}}>{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

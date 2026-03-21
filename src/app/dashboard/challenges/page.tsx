@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAccount } from '@/hooks/useAccount'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -27,6 +28,7 @@ function ProgressBar({ label, value, max, color, done }: { label:string; value:n
 }
 
 export function ChallengesPage() {
+  const isMobile = useIsMobile()
   const { accounts, loading: accLoading } = useAccount()
   const { toasts, toast, dismiss } = useToast()
   const navigate = useNavigate()
@@ -63,7 +65,7 @@ export function ChallengesPage() {
               </div>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 gap-[14px]">
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:"14px"}}>
               {accounts.map(account => {
                 const prod = (account as any).challenge_products
                 const profitPct = account.starting_balance > 0
@@ -101,7 +103,7 @@ export function ChallengesPage() {
           availableProducts.length === 0 ? (
             <Card><div className="py-12 text-center text-[11px] text-[#8FA3BF]">No challenges available at the moment</div></Card>
           ) : (
-            <div className="grid grid-cols-3 gap-[14px]">
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:"14px"}}>
               {availableProducts.map(p=>(
                 <Card key={p.id}>
                   <div className="flex justify-between items-start mb-3">
