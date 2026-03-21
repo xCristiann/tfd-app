@@ -16,7 +16,7 @@ const CHALLENGE_TYPES = [
 
 const DRAWDOWN_TYPES = [
   { value: 'static',   label: 'Static Drawdown',   desc: 'Fixed floor — never moves' },
-  { value: 'trailing', label: 'Trailing Drawdown',  desc: 'Floor follows highest balance' },
+  { value: 'trailing', label: 'Trailing Drawdown',  desc: 'Floor follows highest equity' },
 ]
 
 const EMPTY = {
@@ -254,8 +254,8 @@ export function AdminChallengePage() {
                       <input type="number" value={form.trailing_drawdown} onChange={F('trailing_drawdown')} placeholder="8" className={inp}/>
                     </div>
                     <div className="flex-1 p-3 bg-[rgba(217,119,6,.05)] border border-[rgba(217,119,6,.2)] rounded-lg text-[10px] text-[#D97706]">
-                      ⟳ Floor = Peak Balance − {form.trailing_drawdown || 8}%. Moves up as balance grows, never down.
-                      <br/>Example: $50K account → floor starts at ${(50000*(1-parseFloat(form.trailing_drawdown||'8')/100)).toLocaleString()}. If balance peaks at $52K → floor moves to ${(52000*(1-parseFloat(form.trailing_drawdown||'8')/100)).toLocaleString()}.
+                      ⟳ Floor = Peak Equity − {form.trailing_drawdown || 8}%. Follows highest equity (balance + open P&L), never moves down.
+                      <br/>Example: $50K account → floor starts at ${(50000*(1-parseFloat(form.trailing_drawdown||'8')/100)).toLocaleString()}. If equity peaks at $52K → floor moves to ${(52000*(1-parseFloat(form.trailing_drawdown||'8')/100)).toLocaleString()}.
                     </div>
                   </div>
                 )}

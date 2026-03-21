@@ -137,27 +137,59 @@ export function MarketingPage() {
               return (
                 <div key={p.id} style={{border:featured?'2px solid #2255CC':'1.5px solid #E8EEF8',borderRadius:'12px',padding:'28px 24px',background:featured?'#F0F5FF':'#fff',position:'relative'}}>
                   {featured && <div style={{position:'absolute',top:'-1px',right:'20px',background:'#2255CC',color:'#fff',fontSize:'9px',fontWeight:700,padding:'4px 12px',borderRadius:'0 0 8px 8px',letterSpacing:'1px',textTransform:'uppercase'}}>Most popular</div>}
+
+                  {/* Model badge */}
+                  <div style={{display:'flex',gap:'6px',marginBottom:'10px',flexWrap:'wrap'}}>
+                    {p.challenge_type==='instant' && <span style={{fontSize:'9px',fontWeight:700,padding:'2px 8px',borderRadius:'20px',background:'rgba(217,119,6,.08)',color:'#D97706',border:'1px solid rgba(217,119,6,.2)'}}>⚡ Instant Funding</span>}
+                    {p.challenge_type==='payafter' && <span style={{fontSize:'9px',fontWeight:700,padding:'2px 8px',borderRadius:'20px',background:'rgba(124,58,237,.08)',color:'#7C3AED',border:'1px solid rgba(124,58,237,.2)'}}>💜 Pay After You Pass</span>}
+                    {p.drawdown_type==='trailing' && <span style={{fontSize:'9px',fontWeight:700,padding:'2px 8px',borderRadius:'20px',background:'rgba(217,119,6,.08)',color:'#D97706',border:'1px solid rgba(217,119,6,.2)'}}>⟳ Trailing DD</span>}
+                  </div>
+
                   <div style={{fontFamily:"'Playfair Display',serif",fontSize:'34px',fontWeight:700,color:'#1A3A6B',marginBottom:'4px'}}>${(p.account_size/1000).toFixed(0)}K</div>
-                  <div style={{fontSize:'11px',fontWeight:600,color:'#8FA3BF',letterSpacing:'1.5px',textTransform:'uppercase',marginBottom:'20px'}}>{p.name}</div>
+                  <div style={{fontSize:'11px',fontWeight:600,color:'#8FA3BF',letterSpacing:'1.5px',textTransform:'uppercase',marginBottom:'16px'}}>{p.name}</div>
+
+                  {/* Special model notices */}
+                  {p.challenge_type==='payafter' && (
+                    <div style={{background:'rgba(124,58,237,.06)',border:'1px solid rgba(124,58,237,.2)',borderRadius:'8px',padding:'8px 10px',marginBottom:'12px',fontSize:'10px',color:'#7C3AED'}}>
+                      💜 Trade the evaluation for free. Pay only if you pass.
+                    </div>
+                  )}
+                  {p.challenge_type==='instant' && (
+                    <div style={{background:'rgba(217,119,6,.06)',border:'1px solid rgba(217,119,6,.2)',borderRadius:'8px',padding:'8px 10px',marginBottom:'12px',fontSize:'10px',color:'#D97706'}}>
+                      ⚡ Get funded immediately. No evaluation required.
+                    </div>
+                  )}
+                  {p.drawdown_type==='trailing' && (
+                    <div style={{background:'rgba(217,119,6,.06)',border:'1px solid rgba(217,119,6,.2)',borderRadius:'8px',padding:'8px 10px',marginBottom:'12px',fontSize:'10px',color:'#D97706'}}>
+                      ⟳ Trailing DD: floor follows your peak equity. Max loss: {p.trailing_drawdown ?? 8}% from highest equity.
+                    </div>
+                  )}
+
                   <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'32px',fontWeight:500,color:'#2255CC',marginBottom:'3px'}}>${p.price_usd}</div>
-                  <div style={{fontSize:'12px',color:'#8FA3BF',marginBottom:'22px'}}>One-time · no subscriptions</div>
+                  <div style={{fontSize:'12px',color:'#8FA3BF',marginBottom:'18px'}}>{p.challenge_type==='payafter'?'Only if you pass · no upfront cost':p.challenge_type==='instant'?'One-time · instant access':'One-time · no subscriptions'}</div>
                   <div style={{height:'1px',background:'#E8EEF8',marginBottom:'14px'}}/>
 
-                  {/* Phase 1 */}
-                  <div style={{fontSize:'8px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>Phase 1</div>
-                  {[
-                    ['Profit target', `${p.ph1_profit_target}%`],
-                    ['Daily drawdown', `${p.ph1_daily_dd}%`],
-                    ['Max drawdown', `${p.ph1_max_dd ?? 10}%`],
-                    ['Min days', p.ph1_min_days ? `${p.ph1_min_days}` : 'None'],
-                  ].map(([l,v])=>(
-                    <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
-                      <span style={{color:'#5C7A9E'}}>{l}</span>
-                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:'#1A3A6B'}}>{v}</span>
-                    </div>
-                  ))}
+                  {/* Phase 1 — skip for instant */}
+                  {p.challenge_type !== 'instant' && (
+                    <>
+                      <div style={{fontSize:'8px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>{p.challenge_type==='payafter'?'Phase 1 (Free)':'Phase 1'}</div>
+                      {[
+                        ['Profit target', `${p.ph1_profit_target}%`],
+                        ['Daily drawdown', `${p.ph1_daily_dd}%`],
+                        p.drawdown_type==='trailing'
+                          ? ['Trailing DD', `${p.trailing_drawdown ?? 8}% from peak equity`]
+                          : ['Max drawdown', `${p.ph1_max_dd ?? 10}%`],
+                        ['Min days', p.ph1_min_days ? `${p.ph1_min_days}` : 'None'],
+                      ].map(([l,v])=>(
+                        <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
+                          <span style={{color:'#5C7A9E'}}>{l}</span>
+                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:String(l).includes('Trailing')?'#D97706':'#1A3A6B'}}>{v}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
 
-                  {/* Phase 2 — only for 2-step */}
+                  {/* Phase 2 — only 2step */}
                   {p.challenge_type === '2step' && (
                     <>
                       <div style={{height:'1px',background:'#E8EEF8',margin:'10px 0 8px'}}/>
@@ -165,11 +197,13 @@ export function MarketingPage() {
                       {[
                         ['Profit target', `${p.ph2_profit_target ?? 5}%`],
                         ['Daily drawdown', `${p.ph2_daily_dd ?? p.ph1_daily_dd}%`],
-                        ['Max drawdown', `${p.ph2_max_dd ?? p.ph1_max_dd ?? 10}%`],
+                        p.drawdown_type==='trailing'
+                          ? ['Trailing DD', `${p.trailing_drawdown ?? 8}% from peak equity`]
+                          : ['Max drawdown', `${p.ph2_max_dd ?? p.ph1_max_dd ?? 10}%`],
                       ].map(([l,v])=>(
                         <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
                           <span style={{color:'#5C7A9E'}}>{l}</span>
-                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:'#1A3A6B'}}>{v}</span>
+                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:String(l).includes('Trailing')?'#D97706':'#1A3A6B'}}>{v}</span>
                         </div>
                       ))}
                     </>
@@ -181,11 +215,13 @@ export function MarketingPage() {
                   {[
                     ['Profit split', `${p.funded_profit_split}%`],
                     ['Daily drawdown', `${p.funded_daily_dd ?? p.ph1_daily_dd}%`],
-                    ['Max drawdown', `${p.funded_max_dd ?? p.ph1_max_dd ?? 10}%`],
+                    p.drawdown_type==='trailing'
+                      ? ['Trailing DD', `${p.trailing_drawdown ?? 8}% from peak equity`]
+                      : ['Max drawdown', `${p.funded_max_dd ?? p.ph1_max_dd ?? 10}%`],
                   ].map(([l,v])=>(
                     <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
                       <span style={{color:'#5C7A9E'}}>{l}</span>
-                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:'#16A34A'}}>{v}</span>
+                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:String(l).includes('Trailing')?'#D97706':String(l).includes('split')?'#16A34A':'#16A34A'}}>{v}</span>
                     </div>
                   ))}
 
@@ -198,8 +234,8 @@ export function MarketingPage() {
                       {p.weekend_holding ? '✓' : '✕'} Weekend Hold
                     </span>
                   </div>
-                  <button onClick={()=>navigate(`/checkout?product=${p.id}`)} style={{width:'100%',padding:'12px',fontSize:'12px',fontWeight:600,borderRadius:'8px',cursor:'pointer',border:'none',marginTop:'20px',background:featured?'#2255CC':'#F4F7FD',color:featured?'#fff':'#1A3A6B',transition:'all .2s'}}>
-                    Get started
+                  <button onClick={()=>navigate(`/checkout?product=${p.id}`)} style={{width:'100%',padding:'12px',fontSize:'12px',fontWeight:600,borderRadius:'8px',cursor:'pointer',border:'none',marginTop:'20px',background:featured?'#2255CC':p.challenge_type==='payafter'?'#7C3AED':p.challenge_type==='instant'?'#D97706':'#F4F7FD',color:featured||p.challenge_type==='payafter'||p.challenge_type==='instant'?'#fff':'#1A3A6B',transition:'all .2s'}}>
+                    {p.challenge_type==='payafter' ? '💜 Start Free →' : p.challenge_type==='instant' ? '⚡ Get Funded Now →' : 'Get started'}
                   </button>
                 </div>
               )
