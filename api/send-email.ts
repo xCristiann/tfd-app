@@ -74,8 +74,8 @@ function wrap(content: string, from: string) {
       <div style="font-size:26px;font-weight:800;color:${C.navy};letter-spacing:-0.5px;font-family:Georgia,'Times New Roman',serif">
         The Funded <span style="color:${C.blue};font-style:italic">Diaries</span>
       </div>
-      <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:${C.muted};margin-top:4px">
-        Proprietary Trading Firm
+      <div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:${C.muted};margin-top:5px;font-style:italic;font-family:Georgia,'Times New Roman',serif">
+        Write Your Trading Story
       </div>
       <div style="height:2px;background:linear-gradient(to right,transparent,${C.blue},transparent);margin-top:10px;opacity:0.3"></div>
     </div>
