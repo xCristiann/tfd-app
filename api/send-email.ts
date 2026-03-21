@@ -224,6 +224,65 @@ function buildEmail(type: string, to: string, d: Record<string, any>, fn: string
       `, from),
     }
 
+    case 'risk_warning': return {
+      from, to,
+      reply_to: 'risk@thefundeddiaries.com',
+      subject: `⚠️ Risk Alert — Account ${d.account_number ?? ''} Flagged`,
+      html: wrap(`
+        ${badge('⚠️ Risk Management Alert', C.amber, 'rgba(217,119,6,.08)')}
+        ${h1(`Action Required, ${fn}`)}
+        ${p(`Your trading account has been flagged by our Risk Management team. Please review the details below and take the appropriate action immediately.`)}
+        ${infoTable([
+          ['Account', d.account_number ?? '—', C.blue],
+          ['Alert Type', d.reason ?? 'Risk flag', C.amber],
+          ['Flagged By', 'TFD Risk Management'],
+          ['Action Required', 'Review your recent trading activity'],
+        ])}
+        ${alertBox(`⚠️ ${d.reason ?? 'Your account has been flagged for unusual activity. Please review your trading strategy and ensure compliance with challenge rules.'}`, C.amber, 'rgba(217,119,6,.06)')}
+        ${p(`If you believe this flag was issued in error, please contact our risk team immediately at <a href="mailto:risk@thefundeddiaries.com" style="color:${C.blue}">risk@thefundeddiaries.com</a> and we will review your case.`)}
+        ${cta('Contact Risk Team', 'mailto:risk@thefundeddiaries.com', C.amber)}
+      `, from),
+    }
+
+    case 'account_soft_locked': return {
+      from, to,
+      reply_to: 'risk@thefundeddiaries.com',
+      subject: `🔒 Account ${d.account_number ?? ''} — Temporary Trading Restriction`,
+      html: wrap(`
+        ${badge('🔒 Account Restricted', C.red, 'rgba(220,38,38,.08)')}
+        ${h1(`Account Temporarily Restricted, ${fn}`)}
+        ${p(`Your account has been placed under a temporary trading restriction by our Risk Management team pending review. You can still view your account but trading has been paused.`)}
+        ${infoTable([
+          ['Account', d.account_number ?? '—', C.blue],
+          ['Status', 'Soft Locked — Trading Paused', C.red],
+          ['Reason', d.reason ?? 'Risk management review', C.amber],
+          ['Next Step', 'Contact risk@thefundeddiaries.com'],
+        ])}
+        ${alertBox('This is a precautionary measure. Please contact our Risk Management team to resolve this restriction as soon as possible.', C.red, 'rgba(220,38,38,.05)')}
+        ${cta('Contact Risk Team', 'mailto:risk@thefundeddiaries.com', C.red)}
+      `, from),
+    }
+
+    case 'account_flagged': return {
+      from, to,
+      reply_to: 'risk@thefundeddiaries.com',
+      subject: `🚩 Notice — Account ${d.account_number ?? ''} Under Review`,
+      html: wrap(`
+        ${badge('🚩 Account Under Review', C.red, 'rgba(220,38,38,.08)')}
+        ${h1(`Your Account Is Under Review, ${fn}`)}
+        ${p(`Our Risk Management team has opened an investigation on your account. This is a formal notice that your recent trading activity is being reviewed for compliance with our challenge rules.`)}
+        ${infoTable([
+          ['Account', d.account_number ?? '—', C.blue],
+          ['Review Reason', d.reason ?? 'Compliance review', C.red],
+          ['Status', 'Under Investigation', C.amber],
+          ['Response Time', 'Within 48 hours'],
+        ])}
+        ${p(`During this review, your trading may be monitored more closely. If the investigation finds a violation of our <a href="https://www.thefundeddiaries.com" style="color:${C.blue}">Terms & Conditions</a>, your account may be suspended or terminated.`)}
+        ${p(`If you have any questions or wish to provide a statement, please contact us at <a href="mailto:risk@thefundeddiaries.com" style="color:${C.blue}">risk@thefundeddiaries.com</a> immediately.`)}
+        ${cta('Respond to Investigation', 'mailto:risk@thefundeddiaries.com', C.red)}
+      `, from),
+    }
+
     case 'kyc_approved': return {
       from, to,
       subject: 'Identity Verified — Payouts Unlocked',

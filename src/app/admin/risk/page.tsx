@@ -30,6 +30,9 @@ export function AdminRiskPage() {
   const [winRate, setWinRate]       = useState<any[]>([])
   const [flagged, setFlagged]       = useState<any[]>([])
   const [notes, setNotes]           = useState<Record<string,string>>({})
+  const [sameDevice, setSameDevice] = useState<any[]>([])  // Same name/email diff accounts
+  const [newsViolations, setNewsViolations] = useState<any[]>([])  // Trades opened during news
+  const [consistentProfit, setConsistentProfit] = useState<any[]>([]) // Suspiciously consistent daily P&L
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -94,7 +97,56 @@ export function AdminRiskPage() {
       for (const t of closed??[]) { const acc=t.accounts as any; if(!acc) continue; if(!wMap[t.account_id]) wMap[t.account_id]={wins:0,total:0,pnl:0,acc}; wMap[t.account_id].total++; if((t.net_pnl??0)>0) wMap[t.account_id].wins++; wMap[t.account_id].pnl+=t.net_pnl??0 }
       setWinRate(Object.values(wMap).filter((v:any)=>v.total>=20&&v.wins/v.total>=0.9).map((v:any)=>({account_number:v.acc.account_number,name:`${v.acc.users?.first_name} ${v.acc.users?.last_name}`,email:v.acc.users?.email,user_id:v.acc.user_id,win_rate:Math.round(v.wins/v.total*100),total:v.total,pnl:v.pnl})))
 
-      // ── 7. Flagged accounts ──
+      // ── 7. Same-name/email multi-accounting ──
+      const { data: allUsers } = await supabase.from('users').select('id,first_name,last_name,email,created_at').order('created_at',{ascending:false}).limit(500)
+      // Group by last name (simple heuristic) — same surname different email
+      const nameMap: Record<string,any[]> = {}
+      for (const u of allUsers??[]) {
+        const ln = u.last_name?.toLowerCase().trim()
+        if(!ln||ln.length<3) continue
+        if(!nameMap[ln]) nameMap[ln]=[]
+        nameMap[ln].push(u)
+      }
+      setSameDevice(Object.entries(nameMap).filter(([,u])=>u.length>=2&&new Set(u.map((x:any)=>x.email)).size===u.length).map(([name,users])=>({name,users})))
+
+      // ── 8. News window trading (trades opened within ±2min of round hours on weekdays) ──
+      // Round-number hour trades: 08:00, 09:00, 10:00, 13:00, 14:00, 15:00, 16:00 UTC = typical news times
+      const { data: allOpenTrades } = await supabase.from('trades').select('id,symbol,direction,lots,opened_at,accounts(account_number,user_id,users(first_name,last_name,email))').eq('status','closed').gte('opened_at',new Date(Date.now()-7*86400000).toISOString()).not('net_pnl','is',null).limit(2000)
+      const newsHours = [8,9,10,13,14,15,16,21]
+      const newsVio: any[] = []
+      for (const t of allOpenTrades??[]) {
+        const dt = new Date(t.opened_at)
+        const h = dt.getUTCHours(), m = dt.getUTCMinutes()
+        if(newsHours.includes(h) && m<=2) {
+          const acc = t.accounts as any
+          if(!acc) continue
+          newsVio.push({account_number:acc.account_number,name:`${acc.users?.first_name} ${acc.users?.last_name}`,email:acc.users?.email,user_id:acc.user_id,symbol:t.symbol,direction:t.direction,opened_at:t.opened_at,trade_id:t.id})
+        }
+      }
+      // Deduplicate by account
+      const nv: Record<string,any> = {}
+      for(const n of newsVio){if(!nv[n.account_number])nv[n.account_number]={...n,count:0};nv[n.account_number].count++}
+      setNewsViolations(Object.values(nv).filter((n:any)=>n.count>=2))
+
+      // ── 9. Suspiciously consistent P&L (every day almost exactly same profit = bot) ──
+      const { data: snapshots } = await supabase.from('daily_snapshots').select('account_id,daily_pnl,snapshot_date,accounts(account_number,user_id,users(first_name,last_name,email))').gte('snapshot_date',new Date(Date.now()-14*86400000).toISOString().split('T')[0]).order('snapshot_date',{ascending:false}).limit(2000)
+      const snapMap: Record<string,any> = {}
+      for (const s of snapshots??[]) {
+        const acc = s.accounts as any; if(!acc) continue
+        if(!snapMap[s.account_id]) snapMap[s.account_id]={pnls:[],acc}
+        snapMap[s.account_id].pnls.push(Math.abs(s.daily_pnl??0))
+      }
+      const consistent: any[] = []
+      for(const [,v] of Object.entries(snapMap) as any) {
+        if(v.pnls.length<5) continue
+        const avg = v.pnls.reduce((a:number,b:number)=>a+b,0)/v.pnls.length
+        const variance = v.pnls.reduce((a:number,b:number)=>a+Math.pow(b-avg,2),0)/v.pnls.length
+        const cv = avg>0?Math.sqrt(variance)/avg:0
+        if(cv<0.05&&avg>50) consistent.push({account_number:v.acc.account_number,name:`${v.acc.users?.first_name} ${v.acc.users?.last_name}`,email:v.acc.users?.email,user_id:v.acc.user_id,avg_daily:avg.toFixed(2),cv:(cv*100).toFixed(1),days:v.pnls.length})
+      }
+      setConsistentProfit(consistent)
+
+      // ── 10. Flagged accounts ──
       const { data: fl } = await supabase.from('risk_flags').select('*').order('flagged_at',{ascending:false}).limit(200)
       setFlagged(fl??[])
     } catch(e) { console.error('[Risk]',e) }
@@ -106,17 +158,32 @@ export function AdminRiskPage() {
   async function flagAcc(userId:string,account:string,reason:string) {
     const {error} = await supabase.from('risk_flags').insert({user_id:userId,account_number:account,reason,notes:'',flagged_at:new Date().toISOString(),status:'open',flagged_by:'admin'})
     if(error){toast('error','❌','Error',error.message);return}
+    // Notify in-app
+    await supabase.from('notifications').insert({user_id:userId,type:'risk_warning',title:'🚩 Account Under Review',body:`Your account ${account} has been flagged by risk management: ${reason}. You will receive an email with details.`,is_read:false})
+    // Send email
+    try {
+      const {data:u} = await supabase.from('users').select('email,first_name').eq('id',userId).single()
+      if(u?.email) await sendEmail('account_flagged', u.email, {first_name:u.first_name??'Trader',account_number:account,reason}, 'risk')
+    } catch(e){console.error('[flag email]',e)}
     toast('warning','🚩','Flagged',`${account} — ${reason}`)
     load()
   }
   async function warnTrader(userId:string,email:string,account:string,reason:string) {
-    await supabase.from('notifications').insert({user_id:userId,type:'risk_warning',title:'⚠️ Risk Management Alert',body:`Account ${account} flagged: ${reason}. Review your trading activity or contact support.`,is_read:false})
-    toast('warning','📨','Warning Sent',`Sent to ${email}`)
+    await supabase.from('notifications').insert({user_id:userId,type:'risk_warning',title:'⚠️ Risk Management Alert',body:`Account ${account}: ${reason}. Check your email for details.`,is_read:false})
+    try {
+      const {data:u} = await supabase.from('users').select('first_name').eq('id',userId).single()
+      await sendEmail('risk_warning', email, {first_name:u?.first_name??'Trader',account_number:account,reason}, 'risk')
+    } catch(e){console.error('[warn email]',e)}
+    toast('warning','📨','Warning Sent',`Email + notification sent to ${email}`)
   }
   async function softLockAcc(accId:string,account:string,userId:string,reason:string) {
     await supabase.from('accounts').update({status:'soft_locked'}).eq('id',accId)
-    await supabase.from('notifications').insert({user_id:userId,type:'breach_warning',title:'🔒 Account Soft Locked',body:`Account ${account} locked pending risk review. Reason: ${reason}.`,is_read:false})
-    toast('warning','🔒','Locked',`${account} soft locked.`)
+    await supabase.from('notifications').insert({user_id:userId,type:'breach_warning',title:'🔒 Account Restricted',body:`Account ${account} has been temporarily restricted. Reason: ${reason}. Check your email.`,is_read:false})
+    try {
+      const {data:u} = await supabase.from('users').select('email,first_name').eq('id',userId).single()
+      if(u?.email) await sendEmail('account_soft_locked', u.email, {first_name:u.first_name??'Trader',account_number:account,reason}, 'risk')
+    } catch(e){console.error('[softlock email]',e)}
+    toast('warning','🔒','Locked',`${account} soft locked + email sent.`)
     load()
   }
   async function resolveFlag(id:string) {
@@ -126,15 +193,18 @@ export function AdminRiskPage() {
   }
 
   const tabs = [
-    {id:'hedging',  label:'🔄 Hedging',         count:hedgePairs.length},
-    {id:'copyip',   label:'🔗 Duplicate IPs',    count:dupIps.length},
-    {id:'tradeip',  label:'📡 Trade IP Match',   count:tradeIps.length},
-    {id:'drawdown', label:'📉 Drawdown',         count:ddAlerts.critical.length+ddAlerts.warning.length},
-    {id:'velocity', label:'⚡ Velocity',         count:velocity.length},
-    {id:'winrate',  label:'📊 Win Rate',         count:winRate.length},
-    {id:'flagged',  label:'🚩 Flagged CRM',      count:flagged.filter(f=>f.status==='open').length},
+    {id:'hedging',   label:'🔄 Hedging',          count:hedgePairs.length},
+    {id:'copyip',    label:'🔗 Duplicate IPs',     count:dupIps.length},
+    {id:'tradeip',   label:'📡 Trade IP Match',    count:tradeIps.length},
+    {id:'drawdown',  label:'📉 Drawdown',          count:ddAlerts.critical.length+ddAlerts.warning.length},
+    {id:'velocity',  label:'⚡ Velocity',          count:velocity.length},
+    {id:'winrate',   label:'📊 Win Rate',          count:winRate.length},
+    {id:'samename',  label:'👤 Same Name',         count:sameDevice.length},
+    {id:'newstrade', label:'📰 News Trading',      count:newsViolations.length},
+    {id:'botprofit', label:'🤖 Bot Pattern',       count:consistentProfit.length},
+    {id:'flagged',   label:'🚩 Flagged CRM',       count:flagged.filter(f=>f.status==='open').length},
   ]
-  const totalAlerts = hedgePairs.length+dupIps.length+tradeIps.length+ddAlerts.critical.length+velocity.length+winRate.length
+  const totalAlerts = hedgePairs.length+dupIps.length+tradeIps.length+ddAlerts.critical.length+velocity.length+winRate.length+sameDevice.length+newsViolations.length+consistentProfit.length
 
   return (
     <>
@@ -350,6 +420,89 @@ export function AdminRiskPage() {
                     <td className="px-3 py-2"><div className="flex gap-1">
                       <button onClick={()=>flagAcc(w.user_id,w.account_number,`Win rate ${w.win_rate}% over ${w.total} trades`)} className="px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(220,38,38,.08)] text-[#DC2626] border border-[rgba(220,38,38,.2)] rounded cursor-pointer">🚩 Flag</button>
                       <button onClick={()=>warnTrader(w.user_id,w.email,w.account_number,'Abnormal win rate flagged for review')} className="px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(217,119,6,.08)] text-[#D97706] border border-[rgba(217,119,6,.2)] rounded cursor-pointer">📨 Warn</button>
+                    </div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>}
+          </Card>}
+
+          {/* ═══ SAME NAME MULTI-ACCOUNTING ═══ */}
+          {activeTab==='samename'&&<Card>
+            <CardHeader title={`Same Surname / Possible Multi-Account (${sameDevice.length})`}/>
+            <div className="text-[10px] text-[#8FA3BF] px-4 pb-3">Multiple accounts sharing the same last name but different emails. May indicate family accounts or multi-accounting under different identities.</div>
+            {sameDevice.length===0?<div className="py-8 text-center text-[#16A34A] text-[12px]">✓ No same-name multi-accounts detected</div>:
+            sameDevice.map((g:any,i:number)=>(
+              <div key={i} className="border border-[rgba(217,119,6,.2)] bg-[rgba(217,119,6,.03)] rounded-lg p-4 mb-3">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-[12px] font-bold text-[#D97706] capitalize">{g.name}</span>
+                  <span className="text-[9px] bg-[rgba(217,119,6,.1)] text-[#D97706] border border-[rgba(217,119,6,.2)] px-2 py-0.5 font-bold rounded">{g.users.length} accounts</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {g.users.map((u:any)=>(
+                    <div key={u.id} className="bg-white border border-[#E8EEF8] rounded p-3">
+                      <div className="font-semibold text-[11px]">{u.first_name} {u.last_name}</div>
+                      <div className="text-[9px] text-[#8FA3BF]">{u.email}</div>
+                      <div className="text-[9px] text-[#8FA3BF]">{new Date(u.created_at).toLocaleDateString()}</div>
+                      <button onClick={()=>flagAcc(u.id,u.email,'Suspected multi-accounting — same surname')} className="mt-2 w-full px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(220,38,38,.08)] text-[#DC2626] border border-[rgba(220,38,38,.2)] rounded cursor-pointer">🚩 Flag</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </Card>}
+
+          {/* ═══ NEWS WINDOW TRADING ═══ */}
+          {activeTab==='newstrade'&&<Card>
+            <CardHeader title={`News Window Trading (${newsViolations.length} accounts)`}/>
+            <div className="text-[10px] text-[#8FA3BF] px-4 pb-3">Accounts repeatedly opening trades within 2 minutes of major news hours (08:00, 09:00, 10:00, 13:00, 14:00, 15:00, 16:00, 21:00 UTC) — news sniping detection.</div>
+            {newsViolations.length===0?<div className="py-8 text-center text-[#16A34A] text-[12px]">✓ No news window violations detected</div>:
+            <table className="w-full border-collapse text-[11px]">
+              <thead><tr className="border-b border-[#F0F4FB]">
+                {['Account','Trader','Symbol','Direction','Time','Violations','Actions'].map(h=><th key={h} className="px-3 py-2 text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(34,85,204,.02)]">{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {newsViolations.map((n:any,i:number)=>(
+                  <tr key={i} className="border-b border-[#F4F7FD] hover:bg-[rgba(34,85,204,.02)]">
+                    <td className="px-3 py-2" style={mono}>{n.account_number}</td>
+                    <td className="px-3 py-2"><div className="font-semibold">{n.name}</div><div className="text-[9px] text-[#8FA3BF]">{n.email}</div></td>
+                    <td className="px-3 py-2 font-bold" style={mono}>{n.symbol}</td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded text-white ${n.direction==='buy'?'bg-[#16A34A]':'bg-[#DC2626]'}`}>{n.direction?.toUpperCase()}</span></td>
+                    <td className="px-3 py-2 text-[9px] text-[#8FA3BF]" style={mono}>{new Date(n.opened_at).toUTCString().slice(0,25)}</td>
+                    <td className="px-3 py-2"><span className="text-[#D97706] font-bold" style={mono}>{n.count}x</span></td>
+                    <td className="px-3 py-2"><div className="flex gap-1">
+                      <button onClick={()=>flagAcc(n.user_id,n.account_number,`News window trading: ${n.count} violations on ${n.symbol}`)} className="px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(220,38,38,.08)] text-[#DC2626] border border-[rgba(220,38,38,.2)] rounded cursor-pointer">🚩 Flag</button>
+                      <button onClick={()=>warnTrader(n.user_id,n.email,n.account_number,'News window trading detected — not permitted under challenge rules')} className="px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(217,119,6,.08)] text-[#D97706] border border-[rgba(217,119,6,.2)] rounded cursor-pointer">📨 Warn</button>
+                    </div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>}
+          </Card>}
+
+          {/* ═══ BOT / CONSISTENT PROFIT PATTERN ═══ */}
+          {activeTab==='botprofit'&&<Card>
+            <CardHeader title={`Suspiciously Consistent Daily P&L — Bot Pattern (${consistentProfit.length})`}/>
+            <div className="text-[10px] text-[#8FA3BF] px-4 pb-3">Accounts with coefficient of variation &lt;5% on daily P&L over 5+ days — statistically impossible for human traders. Indicates algorithmic execution, copy bots or tick manipulation.</div>
+            {consistentProfit.length===0?<div className="py-8 text-center text-[#16A34A] text-[12px]">✓ No bot-like profit patterns detected</div>:
+            <table className="w-full border-collapse text-[11px]">
+              <thead><tr className="border-b border-[#F0F4FB]">
+                {['Account','Trader','Avg Daily P&L','Consistency','Days Sampled','Actions'].map(h=><th key={h} className="px-3 py-2 text-[7px] tracking-[2px] uppercase text-[#8FA3BF] font-semibold text-left bg-[rgba(34,85,204,.02)]">{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {consistentProfit.map((c:any,i:number)=>(
+                  <tr key={i} className="border-b border-[#F4F7FD] hover:bg-[rgba(34,85,204,.02)]">
+                    <td className="px-3 py-2" style={mono}>{c.account_number}</td>
+                    <td className="px-3 py-2"><div className="font-semibold">{c.name}</div><div className="text-[9px] text-[#8FA3BF]">{c.email}</div></td>
+                    <td className="px-3 py-2 text-[#16A34A] font-bold" style={mono}>${c.avg_daily}/day</td>
+                    <td className="px-3 py-2">
+                      <span className="text-[#DC2626] font-bold" style={mono}>{c.cv}% variance</span>
+                      <div className="text-[9px] text-[#8FA3BF]">{"<5% = bot-like"}</div>
+                    </td>
+                    <td className="px-3 py-2" style={mono}>{c.days}</td>
+                    <td className="px-3 py-2"><div className="flex gap-1">
+                      <button onClick={()=>flagAcc(c.user_id,c.account_number,`Bot-like profit pattern: ${c.cv}% variance over ${c.days} days`)} className="px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(220,38,38,.08)] text-[#DC2626] border border-[rgba(220,38,38,.2)] rounded cursor-pointer">🚩 Flag</button>
+                      <button onClick={()=>warnTrader(c.user_id,c.email,c.account_number,'Abnormally consistent daily profit pattern flagged for manual review')} className="px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(217,119,6,.08)] text-[#D97706] border border-[rgba(217,119,6,.2)] rounded cursor-pointer">📨 Warn</button>
                     </div></td>
                   </tr>
                 ))}
