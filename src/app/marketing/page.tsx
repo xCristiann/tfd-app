@@ -125,127 +125,180 @@ export function MarketingPage() {
       <div id="plans" style={{...S.section, background:'#fff'}}>
         <div style={{maxWidth:'1200px',margin:'0 auto'}}>
           <div style={S.eyebrow}><div style={S.line}/><span style={S.tag}>Challenge plans</span></div>
-          <h2 style={S.h2}>Pick your <span style={{color:'#2255CC',fontStyle:'italic'}}>account size.</span></h2>
-          <p style={{fontSize:'13px',color:'#8FA3BF',marginBottom:'40px'}}>All plans include TFD platform, real-time risk monitoring, and same-day payouts.</p>
-          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':`repeat(${Math.min((products.length||3),4)},1fr)`,gap:'16px'}}>
-            {(products.length ? products : [
-              {id:'1',name:'Starter',account_size:25000,price_usd:199,ph1_profit_target:8,ph1_daily_dd:5,funded_profit_split:80},
-              {id:'2',name:'Professional',account_size:100000,price_usd:549,ph1_profit_target:10,ph1_daily_dd:5,funded_profit_split:85},
-              {id:'3',name:'Elite',account_size:200000,price_usd:999,ph1_profit_target:10,ph1_daily_dd:5,funded_profit_split:90},
-            ]).map((p:any,i:number)=>{
-              const featured = i === 1
+          <h2 style={S.h2}>Pick your <span style={{color:'#2255CC',fontStyle:'italic'}}>model.</span></h2>
+          <p style={{fontSize:'13px',color:'#8FA3BF',marginBottom:'48px'}}>All plans include TFD platform, real-time risk monitoring, and same-day payouts.</p>
+
+          {(() => {
+            const groups: Record<string,{label:string,color:string,bg:string,border:string,desc:string}> = {
+              '2step':   {label:'2-Step Challenge',     color:'#2255CC',bg:'rgba(34,85,204,.05)', border:'rgba(34,85,204,.15)', desc:'Phase 1 → Phase 2 → Funded. The classic evaluation model.'},
+              '1step':   {label:'1-Step Challenge',     color:'#16A34A',bg:'rgba(22,163,74,.05)', border:'rgba(22,163,74,.15)', desc:'Phase 1 → Funded. Faster path with trailing drawdown.'},
+              'instant': {label:'⚡ Instant Funding',   color:'#D97706',bg:'rgba(217,119,6,.05)', border:'rgba(217,119,6,.15)', desc:'Pay once and get funded immediately — no evaluation.'},
+              'payafter':{label:'💜 Pay After You Pass',color:'#7C3AED',bg:'rgba(124,58,237,.05)',border:'rgba(124,58,237,.15)', desc:'Pay upfront + activation fee only after passing.'},
+            }
+            const allProducts = (products.length ? products : [
+              {id:'1',name:'Starter',account_size:25000,price_usd:125,challenge_type:'2step',ph1_profit_target:8,ph1_daily_dd:5,ph1_max_dd:10,ph1_min_days:5,ph2_profit_target:5,ph2_daily_dd:5,ph2_max_dd:10,funded_profit_split:80,drawdown_type:'static',trailing_drawdown:8,news_trading:true,weekend_holding:true},
+              {id:'2',name:'Standard',account_size:50000,price_usd:235,challenge_type:'2step',ph1_profit_target:8,ph1_daily_dd:5,ph1_max_dd:10,ph1_min_days:5,ph2_profit_target:5,ph2_daily_dd:5,ph2_max_dd:10,funded_profit_split:80,drawdown_type:'static',trailing_drawdown:8,news_trading:true,weekend_holding:true},
+              {id:'3',name:'Pro',account_size:25000,price_usd:199,challenge_type:'1step',ph1_profit_target:10,ph1_daily_dd:5,ph1_max_dd:10,ph1_min_days:5,funded_profit_split:80,drawdown_type:'trailing',trailing_drawdown:8,news_trading:true,weekend_holding:true},
+            ])
+            const typeOrder = ['2step','1step','instant','payafter']
+            const grouped: Record<string,any[]> = {}
+            for (const p of allProducts) {
+              const t = p.challenge_type ?? '2step'
+              if (!grouped[t]) grouped[t] = []
+              grouped[t].push(p)
+            }
+            return typeOrder.filter(t => grouped[t]?.length > 0).map(type => {
+              const g = groups[type]
+              const list = grouped[type]
               return (
-                <div key={p.id} style={{border:featured?'2px solid #2255CC':'1.5px solid #E8EEF8',borderRadius:'12px',padding:'28px 24px',background:featured?'#F0F5FF':'#fff',position:'relative'}}>
-                  {featured && <div style={{position:'absolute',top:'-1px',right:'20px',background:'#2255CC',color:'#fff',fontSize:'9px',fontWeight:700,padding:'4px 12px',borderRadius:'0 0 8px 8px',letterSpacing:'1px',textTransform:'uppercase'}}>Most popular</div>}
-
-                  {/* Model badge */}
-                  <div style={{display:'flex',gap:'6px',marginBottom:'10px',flexWrap:'wrap'}}>
-                    {p.challenge_type==='instant' && <span style={{fontSize:'9px',fontWeight:700,padding:'2px 8px',borderRadius:'20px',background:'rgba(217,119,6,.08)',color:'#D97706',border:'1px solid rgba(217,119,6,.2)'}}>⚡ Instant Funding</span>}
-                    {p.challenge_type==='payafter' && <span style={{fontSize:'9px',fontWeight:700,padding:'2px 8px',borderRadius:'20px',background:'rgba(124,58,237,.08)',color:'#7C3AED',border:'1px solid rgba(124,58,237,.2)'}}>💜 Pay After You Pass</span>}
-                    {p.drawdown_type==='trailing' && <span style={{fontSize:'9px',fontWeight:700,padding:'2px 8px',borderRadius:'20px',background:'rgba(217,119,6,.08)',color:'#D97706',border:'1px solid rgba(217,119,6,.2)'}}>⟳ Trailing DD</span>}
+                <div key={type} style={{marginBottom:'48px'}}>
+                  {/* Section header */}
+                  <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'20px',paddingBottom:'12px',borderBottom:`2px solid ${g.border}`}}>
+                    <div style={{display:'flex',flexDirection:'column'}}>
+                      <span style={{fontSize:'18px',fontWeight:700,color:g.color,letterSpacing:'-0.3px'}}>{g.label}</span>
+                      <span style={{fontSize:'12px',color:'#8FA3BF',marginTop:'2px'}}>{g.desc}</span>
+                    </div>
                   </div>
 
-                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:'34px',fontWeight:700,color:'#1A3A6B',marginBottom:'4px'}}>${(p.account_size/1000).toFixed(0)}K</div>
-                  <div style={{fontSize:'11px',fontWeight:600,color:'#8FA3BF',letterSpacing:'1.5px',textTransform:'uppercase',marginBottom:'16px'}}>{p.name}</div>
+                  {/* Cards grid */}
+                  <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':`repeat(${Math.min(list.length,4)},1fr)`,gap:'16px'}}>
+                    {list.map((p:any, i:number) => {
+                      const featured = i === 0 && list.length > 1 && type === '2step'
+                      return (
+                        <div key={p.id} style={{border:featured?`2px solid ${g.color}`:`1.5px solid #E8EEF8`,borderRadius:'12px',padding:'24px 20px',background:featured?g.bg:'#fff',position:'relative'}}>
+                          {featured && <div style={{position:'absolute',top:'-1px',right:'16px',background:g.color,color:'#fff',fontSize:'9px',fontWeight:700,padding:'3px 10px',borderRadius:'0 0 6px 6px',letterSpacing:'1px',textTransform:'uppercase'}}>Most popular</div>}
 
-                  {/* Special model notices */}
-                  {p.challenge_type==='payafter' && (
-                    <div style={{background:'rgba(124,58,237,.06)',border:'1px solid rgba(124,58,237,.2)',borderRadius:'8px',padding:'8px 10px',marginBottom:'12px',fontSize:'10px',color:'#7C3AED'}}>
-                      💜 Pay after you pass — complete the evaluation, then pay the activation fee to receive your funded account.
-                    </div>
-                  )}
-                  {p.challenge_type==='instant' && (
-                    <div style={{background:'rgba(217,119,6,.06)',border:'1px solid rgba(217,119,6,.2)',borderRadius:'8px',padding:'8px 10px',marginBottom:'12px',fontSize:'10px',color:'#D97706'}}>
-                      ⚡ Get funded immediately. No evaluation required.
-                    </div>
-                  )}
-                  {p.drawdown_type==='trailing' && (
-                    <div style={{background:'rgba(217,119,6,.06)',border:'1px solid rgba(217,119,6,.2)',borderRadius:'8px',padding:'8px 10px',marginBottom:'12px',fontSize:'10px',color:'#D97706'}}>
-                      ⟳ Trailing DD: floor follows your peak equity. Max loss: {p.trailing_drawdown ?? 8}% from highest equity.
-                    </div>
-                  )}
+                          {/* DD badge */}
+                          {p.drawdown_type==='trailing' && <div style={{display:'inline-block',fontSize:'8px',fontWeight:700,padding:'2px 8px',borderRadius:'20px',background:'rgba(217,119,6,.08)',color:'#D97706',border:'1px solid rgba(217,119,6,.2)',marginBottom:'8px'}}>⟳ Trailing DD</div>}
 
-                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'32px',fontWeight:500,color:'#2255CC',marginBottom:'3px'}}>${p.price_usd}</div>
-                  {p.activation_fee > 0 && (
-                    <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'4px'}}>
-                      <span style={{fontSize:'11px',color:'#8FA3BF'}}>+ activation fee after passing:</span>
-                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'13px',fontWeight:700,color:'#7C3AED'}}>${p.activation_fee}</span>
-                    </div>
-                  )}
-                  <div style={{fontSize:'12px',color:'#8FA3BF',marginBottom:'18px'}}>{p.challenge_type==='instant'?'One-time · instant access':'One-time · no subscriptions'}</div>
-                  <div style={{height:'1px',background:'#E8EEF8',marginBottom:'14px'}}/>
+                          <div style={{fontFamily:"'Playfair Display',serif",fontSize:'30px',fontWeight:700,color:'#1A3A6B',marginBottom:'2px'}}>${(p.account_size/1000).toFixed(0)}K</div>
+                          <div style={{fontSize:'11px',fontWeight:600,color:'#8FA3BF',letterSpacing:'1.5px',textTransform:'uppercase',marginBottom:'14px'}}>{p.name}</div>
 
-                  {/* Phase 1 — skip for instant */}
-                  {p.challenge_type !== 'instant' && (
-                    <>
-                      <div style={{fontSize:'8px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>{p.challenge_type==='payafter'?'Phase 1 (Free)':'Phase 1'}</div>
-                      {[
-                        ['Profit target', `${p.ph1_profit_target}%`],
-                        ['Daily drawdown', `${p.ph1_daily_dd}%`],
-                        p.drawdown_type==='trailing'
-                          ? ['Trailing DD', `${p.trailing_drawdown ?? 8}% from peak equity`]
-                          : ['Max drawdown', `${p.ph1_max_dd ?? 10}%`],
-                        ['Min days', p.ph1_min_days ? `${p.ph1_min_days}` : 'None'],
-                      ].map(([l,v])=>(
-                        <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
-                          <span style={{color:'#5C7A9E'}}>{l}</span>
-                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:String(l).includes('Trailing')?'#D97706':'#1A3A6B'}}>{v}</span>
+                          {/* Price */}
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'28px',fontWeight:500,color:g.color,marginBottom:'2px'}}>${p.price_usd}</div>
+                          {p.activation_fee > 0 && (
+                            <div style={{fontSize:'10px',color:'#7C3AED',marginBottom:'2px'}}>+ ${p.activation_fee} activation fee after passing</div>
+                          )}
+                          <div style={{fontSize:'11px',color:'#8FA3BF',marginBottom:'16px'}}>{type==='instant'?'One-time · instant access':type==='payafter'?'Upfront · + activation if you pass':'One-time · no subscriptions'}</div>
+                          <div style={{height:'1px',background:'#E8EEF8',marginBottom:'12px'}}/>
+
+                          {/* Phase 1 */}
+                          {type !== 'instant' && (
+                            <>
+                              <div style={{fontSize:'8px',fontWeight:700,color:g.color,textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'6px'}}>{type==='payafter'?'Phase 1':type==='1step'?'Phase 1 → Funded':'Phase 1'}</div>
+                              {[
+                                ['Profit target', `${p.ph1_profit_target}%`],
+                                ['Daily DD', `${p.ph1_daily_dd}%`],
+                                p.drawdown_type==='trailing'?['Trailing DD',`${p.trailing_drawdown??8}% from peak equity`]:['Max DD',`${p.ph1_max_dd??10}%`],
+                                p.ph1_min_days?['Min days',`${p.ph1_min_days}`]:null,
+                              ].filter(Boolean).map(([l,v]:any)=>(
+                                <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'5px',fontSize:'11px'}}>
+                                  <span style={{color:'#5C7A9E'}}>{l}</span>
+                                  <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:String(l).includes('Trailing')?'#D97706':'#1A3A6B'}}>{v}</span>
+                                </div>
+                              ))}
+                            </>
+                          )}
+
+                          {/* Phase 2 */}
+                          {type === '2step' && (
+                            <>
+                              <div style={{height:'1px',background:'#E8EEF8',margin:'8px 0'}}/>
+                              <div style={{fontSize:'8px',fontWeight:700,color:'#16A34A',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'6px'}}>Phase 2</div>
+                              {[
+                                ['Profit target', `${p.ph2_profit_target??5}%`],
+                                ['Daily DD', `${p.ph2_daily_dd??p.ph1_daily_dd}%`],
+                                p.drawdown_type==='trailing'?['Trailing DD',`${p.trailing_drawdown??8}% from peak equity`]:['Max DD',`${p.ph2_max_dd??p.ph1_max_dd??10}%`],
+                              ].map(([l,v]:any)=>(
+                                <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'5px',fontSize:'11px'}}>
+                                  <span style={{color:'#5C7A9E'}}>{l}</span>
+                                  <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:String(l).includes('Trailing')?'#D97706':'#1A3A6B'}}>{v}</span>
+                                </div>
+                              ))}
+                            </>
+                          )}
+
+                          {/* Funded */}
+                          <div style={{height:'1px',background:'#E8EEF8',margin:'8px 0'}}/>
+                          <div style={{fontSize:'8px',fontWeight:700,color:'#D97706',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'6px'}}>Funded</div>
+                          {[
+                            ['Profit split', `${p.funded_profit_split}%`],
+                            ['Daily DD', `${p.funded_daily_dd??p.ph1_daily_dd}%`],
+                            p.drawdown_type==='trailing'?['Trailing DD',`${p.trailing_drawdown??8}% from peak equity`]:['Max DD',`${p.funded_max_dd??p.ph1_max_dd??10}%`],
+                          ].map(([l,v]:any)=>(
+                            <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'5px',fontSize:'11px'}}>
+                              <span style={{color:'#5C7A9E'}}>{l}</span>
+                              <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:String(l).includes('Trailing')?'#D97706':String(l).includes('split')?'#16A34A':'#1A3A6B'}}>{v}</span>
+                            </div>
+                          ))}
+
+                          {/* Rules */}
+                          <div style={{display:'flex',gap:'5px',marginTop:'10px',flexWrap:'wrap'}}>
+                            {p.news_trading&&<span style={{fontSize:'8px',padding:'2px 6px',borderRadius:'20px',background:'rgba(22,163,74,.06)',color:'#16A34A',border:'1px solid rgba(22,163,74,.15)'}}>✓ News</span>}
+                            {p.weekend_holding&&<span style={{fontSize:'8px',padding:'2px 6px',borderRadius:'20px',background:'rgba(22,163,74,.06)',color:'#16A34A',border:'1px solid rgba(22,163,74,.15)'}}>✓ Weekend</span>}
+                          </div>
+
+                          <button onClick={()=>navigate(`/checkout?product=${p.id}`)}
+                            style={{width:'100%',padding:'11px',fontSize:'12px',fontWeight:600,borderRadius:'8px',cursor:'pointer',border:'none',marginTop:'14px',
+                              background:type==='payafter'?'#7C3AED':type==='instant'?'#D97706':featured?g.color:'#F4F7FD',
+                              color:type==='payafter'||type==='instant'||featured?'#fff':'#1A3A6B',transition:'all .2s'}}>
+                            {type==='payafter'?'💜 Start Evaluation →':type==='instant'?'⚡ Get Funded →':'Get started'}
+                          </button>
                         </div>
-                      ))}
-                    </>
-                  )}
-
-                  {/* Phase 2 — only 2step */}
-                  {p.challenge_type === '2step' && (
-                    <>
-                      <div style={{height:'1px',background:'#E8EEF8',margin:'10px 0 8px'}}/>
-                      <div style={{fontSize:'8px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>Phase 2</div>
-                      {[
-                        ['Profit target', `${p.ph2_profit_target ?? 5}%`],
-                        ['Daily drawdown', `${p.ph2_daily_dd ?? p.ph1_daily_dd}%`],
-                        p.drawdown_type==='trailing'
-                          ? ['Trailing DD', `${p.trailing_drawdown ?? 8}% from peak equity`]
-                          : ['Max drawdown', `${p.ph2_max_dd ?? p.ph1_max_dd ?? 10}%`],
-                      ].map(([l,v])=>(
-                        <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
-                          <span style={{color:'#5C7A9E'}}>{l}</span>
-                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:String(l).includes('Trailing')?'#D97706':'#1A3A6B'}}>{v}</span>
-                        </div>
-                      ))}
-                    </>
-                  )}
-
-                  {/* Funded */}
-                  <div style={{height:'1px',background:'#E8EEF8',margin:'10px 0 8px'}}/>
-                  <div style={{fontSize:'8px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>Funded</div>
-                  {[
-                    ['Profit split', `${p.funded_profit_split}%`],
-                    ['Daily drawdown', `${p.funded_daily_dd ?? p.ph1_daily_dd}%`],
-                    p.drawdown_type==='trailing'
-                      ? ['Trailing DD', `${p.trailing_drawdown ?? 8}% from peak equity`]
-                      : ['Max drawdown', `${p.funded_max_dd ?? p.ph1_max_dd ?? 10}%`],
-                  ].map(([l,v])=>(
-                    <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:'7px',fontSize:'12px'}}>
-                      <span style={{color:'#5C7A9E'}}>{l}</span>
-                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:String(l).includes('Trailing')?'#D97706':String(l).includes('split')?'#16A34A':'#16A34A'}}>{v}</span>
-                    </div>
-                  ))}
-
-                  {/* Rules tags */}
-                  <div style={{display:'flex',gap:'6px',marginTop:'12px',flexWrap:'wrap'}}>
-                    <span style={{fontSize:'9px',fontWeight:600,padding:'2px 8px',borderRadius:'20px',background:p.news_trading?'rgba(22,163,74,.08)':'#F4F7FD',color:p.news_trading?'#16A34A':'#9CA3AF',border:`1px solid ${p.news_trading?'rgba(22,163,74,.2)':'#E8EEF8'}`}}>
-                      {p.news_trading ? '✓' : '✕'} News Trading
-                    </span>
-                    <span style={{fontSize:'9px',fontWeight:600,padding:'2px 8px',borderRadius:'20px',background:p.weekend_holding?'rgba(22,163,74,.08)':'#F4F7FD',color:p.weekend_holding?'#16A34A':'#9CA3AF',border:`1px solid ${p.weekend_holding?'rgba(22,163,74,.2)':'#E8EEF8'}`}}>
-                      {p.weekend_holding ? '✓' : '✕'} Weekend Hold
-                    </span>
+                      )
+                    })}
                   </div>
-                  <button onClick={()=>navigate(`/checkout?product=${p.id}`)} style={{width:'100%',padding:'12px',fontSize:'12px',fontWeight:600,borderRadius:'8px',cursor:'pointer',border:'none',marginTop:'20px',background:featured?'#2255CC':p.challenge_type==='payafter'?'#7C3AED':p.challenge_type==='instant'?'#D97706':'#F4F7FD',color:featured||p.challenge_type==='payafter'||p.challenge_type==='instant'?'#fff':'#1A3A6B',transition:'all .2s'}}>
-                    {p.challenge_type==='payafter' ? '💜 Start Evaluation →' : p.challenge_type==='instant' ? '⚡ Get Funded Now →' : 'Get started'}
-                  </button>
                 </div>
               )
-            })}
+            })
+          })()}
+
+          {/* Comparison table */}
+          <div style={{marginTop:'48px',paddingTop:'40px',borderTop:'1px solid #E8EEF8'}}>
+            <div style={S.eyebrow}><div style={S.line}/><span style={S.tag}>Compare models</span></div>
+            <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:'26px',fontWeight:700,color:'#1A3A6B',marginBottom:'24px'}}>Which model is right for you?</h3>
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:'12px'}}>
+                <thead>
+                  <tr style={{background:'#F8F9FC'}}>
+                    <th style={{padding:'12px 16px',textAlign:'left',fontSize:'9px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',borderBottom:'2px solid #E8EEF8'}}>Feature</th>
+                    {[
+                      {label:'2-Step',color:'#2255CC'},
+                      {label:'1-Step',color:'#16A34A'},
+                      {label:'⚡ Instant',color:'#D97706'},
+                      {label:'💜 Pay After',color:'#7C3AED'},
+                    ].map(({label,color})=>(
+                      <th key={label} style={{padding:'12px 16px',textAlign:'center',fontSize:'11px',fontWeight:700,color,borderBottom:'2px solid #E8EEF8',whiteSpace:'nowrap'}}>{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ['Evaluation required',        '✓ 2 phases',  '✓ 1 phase',  '✗ None',        '✓ 1 phase'],
+                    ['Pay upfront',                '✓ Yes',       '✓ Yes',      '✓ Yes',          '✓ Yes'],
+                    ['Activation fee after pass',  '✗ No',        '✗ No',       '✗ No',           '✓ Yes'],
+                    ['Funded immediately',         '✗ No',        '✗ No',       '✓ Yes',          '✗ No'],
+                    ['Drawdown type',              'Static',      'Trailing',   'Trailing',        'Trailing'],
+                    ['Best for',                   'Disciplined', 'Aggressive', 'Experienced',    'Risk-averse'],
+                  ].map(([feat,...vals],ri)=>(
+                    <tr key={feat} style={{background:ri%2===0?'#fff':'#F8F9FC'}}>
+                      <td style={{padding:'11px 16px',color:'#5C7A9E',fontWeight:500,borderBottom:'1px solid #F0F4FB'}}>{feat}</td>
+                      {vals.map((v,vi)=>{
+                        const colors=['#2255CC','#16A34A','#D97706','#7C3AED']
+                        const isCheck = String(v).startsWith('✓')
+                        const isCross = String(v).startsWith('✗')
+                        return (
+                          <td key={vi} style={{padding:'11px 16px',textAlign:'center',borderBottom:'1px solid #F0F4FB',
+                            color:isCheck?colors[vi]:isCross?'#9CA3AF':'#1A3A6B',fontWeight:isCheck?600:400}}>
+                            {v}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
