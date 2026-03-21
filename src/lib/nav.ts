@@ -33,6 +33,7 @@ export const ADMIN_NAV: { section?: string; items: NavItem[] }[] = [
   { section: 'Traders', items: [
     { label: 'Trader Management', icon: '👥', path: '/admin/traders' },
     { label: 'All Accounts',      icon: '🗂', path: '/admin/accounts' },
+    { label: 'Pending Review',     icon: '⏳', path: '/admin/pending-review' },
   ]},
   { section: 'Finance', items: [
     { label: 'Payout Queue', icon: '💰', path: '/admin/payouts' },
