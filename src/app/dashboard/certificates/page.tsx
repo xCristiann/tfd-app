@@ -392,16 +392,31 @@ export function CertificatesPage() {
     const result: typeof certs = []
     const year = new Date().getFullYear()
 
+    // Fetch real user profile — useAccount doesn't include users join
+    let name = 'Trader'
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser?.id) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', authUser.id)
+          .single()
+        if (profile?.first_name) {
+          name = `${profile.first_name} ${profile.last_name ?? ''}`.trim()
+        }
+      }
+    } catch {}
+
     for (const account of accounts) {
       const prod   = (account as any).challenge_products
-      const user   = (account as any).users
-      const name   = user ? `${user.first_name} ${user.last_name}` : 'Trader'
       const split  = prod?.funded_profit_split ?? 80
       const size   = account.starting_balance
       const cType  = prod?.challenge_type ?? '2step'
 
       // Funded certificate — only if phase is funded or passed
-      if ((account.phase === 'funded' || account.phase === 'passed') && account.funded_at) {
+      const fundedDate = account.funded_at ?? account.purchased_at ?? account.created_at
+      if ((account.phase === 'funded' || account.phase === 'passed') && fundedDate) {
         const certId = `TFD-F-${year}-${account.account_number.replace('TFD-','').replace(/-/g,'').slice(-4)}`
         result.push({
           type: 'funded',
@@ -409,7 +424,7 @@ export function CertificatesPage() {
           title: `Funded Trader — ${account.account_number}`,
           subtitle: `$${Number(size).toLocaleString()} · ${cType === '1step' ? '1-Step' : '2-Step'} Evaluation`,
           filename: `TFD-Funded-Certificate-${account.account_number}`,
-          svg: buildFundedSVG({ name, accountNumber: account.account_number, accountSize: size, challengeType: cType, fundedAt: account.funded_at, certId }),
+          svg: buildFundedSVG({ name, accountNumber: account.account_number, accountSize: size, challengeType: cType, fundedAt: fundedDate, certId }),
         })
       }
     }
@@ -424,8 +439,7 @@ export function CertificatesPage() {
         .eq('status', 'paid')
         .order('updated_at', { ascending: false })
 
-      const user0 = (accounts[0] as any).users
-      const name  = user0 ? `${user0.first_name} ${user0.last_name}` : 'Trader'
+      // name already fetched above from auth profile
 
       let payoutIdx = 1
       for (const p of payouts ?? []) {
