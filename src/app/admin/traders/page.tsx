@@ -179,20 +179,71 @@ export function AdminTradersPage() {
             if (trader?.email) sendEmail('account_breached', trader.email, { first_name: trader.first_name ?? 'Trader', account_number: account.account_number, reason: 'Drawdown limit exceeded.', balance: `$${newBal.toLocaleString()}` })
           } catch(e) {}
         }
-      } else if (profitPct >= targetPct && account.status !== 'passed' && account.status !== 'breached') {
-        await supabase.from('accounts').update({ status: 'passed' }).eq('id', account.id)
-        await supabase.from('notifications').insert([
-          { user_id: account.user_id, type: 'target_reached', title: 'Profit Target Reached!',
-            body: `Account ${account.account_number} hit the ${targetPct}% target. Awaiting review.`, is_read: false },
-          { user_id: null, type: 'admin_target_reached', title: `Trader Target Reached — ${account.account_number}`,
-            body: `${selectedTrader?.first_name} ${selectedTrader?.last_name} reached ${(Number(profitPct) || 0).toFixed(2)}% on ${account.account_number}. Review and advance phase.`, is_read: false }
-        ])
-        toast('success', '🎯', 'Target Reached', `${account.account_number} hit profit target.`)
-        // Email trader
-        try {
-          const { data: trader } = await supabase.from('users').select('email,first_name').eq('id', account.user_id).single()
-          if (trader?.email) sendEmail('phase_advanced', trader.email, { first_name: trader.first_name ?? 'Trader', account_number: account.account_number, from_phase: account.phase, to_phase: 'review', login: account.platform_login ?? '', server: account.server ?? 'TFD-Live-01' })
-        } catch(e) {}
+      } else if (profitPct >= targetPct && account.status !== 'passed' && account.status !== 'breached' && account.status !== 'inactive') {
+        if (account.phase === 'phase1') {
+          // Phase 1 target hit — AUTO create Phase 2 account immediately
+          const login    = generateLogin()
+          const password = generatePassword()
+          const size     = account.starting_balance
+          const accNum   = `TFD-\${Number(size)/1000}K-\${Math.floor(1000 + Math.random() * 9000)}`
+          const now      = new Date().toISOString()
+
+          // Mark phase1 inactive
+          await supabase.from('accounts').update({ status: 'inactive', phase_passed_at: now }).eq('id', account.id)
+
+          // Create phase2 account
+          const { error: p2Err } = await supabase.from('accounts').insert({
+            user_id:           account.user_id,
+            product_id:        account.product_id,
+            account_number:    accNum,
+            phase:             'phase2',
+            balance:           size, equity: size, starting_balance: size,
+            daily_dd_used:     0, max_dd_used: 0, trading_days: 0,
+            platform_login:    login, server: 'TFD-Live-01', status: 'active',
+            purchased_at:      now,
+            drawdown_type:     prod.drawdown_type ?? 'static',
+            trailing_drawdown: prod.trailing_drawdown ?? 8,
+          })
+
+          if (!p2Err) {
+            // Notify trader
+            await supabase.from('notifications').insert({
+              user_id: account.user_id, type: 'phase_advanced',
+              title: '🎯 Phase 1 Passed — Advanced to Phase 2!',
+              body: `Automatically advanced to Phase 2. New account: \${accNum} | Login: \${login} | Server: TFD-Live-01`,
+              is_read: false,
+            })
+            // Send email with new phase2 credentials
+            try {
+              const { data: trader } = await supabase.from('users').select('email,first_name').eq('id', account.user_id).single()
+              if (trader?.email) sendEmail('phase_advanced', trader.email, {
+                first_name: trader.first_name ?? 'Trader',
+                account_number: accNum,
+                from_phase: 'phase1', to_phase: 'phase2',
+                login, password, server: 'TFD-Live-01',
+              }, 'accounts')
+            } catch(e) {}
+            toast('success', '🎯', 'Phase 1 → Phase 2', `Auto-advanced to Phase 2. Account: \${accNum}`)
+          }
+        } else if (account.phase === 'phase2') {
+          // Phase 2 target hit — set passed, NO email, wait for admin approval
+          await supabase.from('accounts').update({ status: 'passed', phase_passed_at: new Date().toISOString() }).eq('id', account.id)
+          await supabase.from('notifications').insert({
+            user_id: account.user_id, type: 'target_reached',
+            title: '🎯 Phase 2 Target Reached — Pending Funding Review',
+            body: `You hit your Phase 2 target on \${account.account_number}. Our team will review and approve your funded account shortly.`,
+            is_read: false,
+          })
+          // Send phase2 pending review email
+          try {
+            const { data: trader } = await supabase.from('users').select('email,first_name').eq('id', account.user_id).single()
+            if (trader?.email) sendEmail('phase2_pending_review', trader.email, {
+              first_name: trader.first_name ?? 'Trader',
+              account_number: account.account_number,
+            }, 'accounts')
+          } catch(e) {}
+          toast('success', '🎯', 'Phase 2 Complete', `\${account.account_number} pending funding review. Email sent.`)
+        }
       }
     }
 

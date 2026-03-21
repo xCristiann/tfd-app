@@ -505,6 +505,48 @@ function buildEmail(type: string, to: string, d: Record<string, any>, fn: string
       `, from),
     }
 
+    case 'phase2_pending_review': return {
+      from, to,
+      reply_to: 'accounts@thefundeddiaries.com',
+      subject: `🎯 Phase 2 Passed — Funded Account Pending Approval`,
+      html: wrap(`
+        ${badge('🎯 Phase 2 Complete', C.green, 'rgba(22,163,74,.08)')}
+        ${h1(`Congratulations, ${fn}!`)}
+        ${p(`You have successfully completed Phase 2 of your evaluation and hit your profit target. Outstanding trading!`)}
+        ${p(`Your performance is now being reviewed by our funding team. Once approved, you will receive your fully funded account credentials by email.`)}
+        ${infoTable([
+          ['Account', d.account_number ?? '—', C.blue],
+          ['Phase Completed', 'Phase 2 ✓', C.green],
+          ['Next Step', 'Funded Account', C.blue],
+          ['Status', 'Pending Funding Review', '#D97706'],
+          ['Expected Turnaround', '24–48 hours'],
+        ])}
+        ${alertBox('Our team reviews all funded account applications manually to ensure the highest standards. You will receive an email with your funded account credentials as soon as the review is complete.', '#D97706', 'rgba(217,119,6,.06)')}
+        ${p(`While you wait, you can review your trading statistics and prepare your trading plan for your funded account. Remember — funded accounts operate under the same rules as the evaluation.`)}
+        ${cta('View Dashboard', SITE + '/dashboard', C.green)}
+      `, from),
+    }
+
+    case 'phase_rejected': return {
+      from, to,
+      reply_to: 'accounts@thefundeddiaries.com',
+      subject: `Account ${d.account_number ?? ''} — Funding Review Not Approved`,
+      html: wrap(`
+        ${badge('Review Not Approved', C.red, 'rgba(220,38,38,.08)')}
+        ${h1(`Funding Review Unsuccessful, ${fn}`)}
+        ${p(`Following a thorough review of your ${d.phase ?? 'evaluation'} performance, our compliance team has determined that your account does not meet the requirements to advance to the next phase at this time.`)}
+        ${infoTable([
+          ['Account', d.account_number ?? '—', C.blue],
+          ['Phase Reviewed', d.phase ?? '—'],
+          ['Decision', 'Not Approved', C.red],
+          ['Reason', d.reason ?? '—', C.red],
+        ])}
+        ${alertBox(`Rejection Reason: ${d.reason ?? '—'}`, C.red, 'rgba(220,38,38,.05)')}
+        ${p(`Your account has been closed. You are welcome to purchase a new challenge and try again. If you believe this decision was made in error or have questions, please contact our accounts team.`)}
+        ${cta('Purchase New Challenge', SITE + '/dashboard/challenges', C.blue)}
+      `, from),
+    }
+
     case 'ticket_reply': return {
       from, to,
       reply_to: 'support@thefundeddiaries.com',

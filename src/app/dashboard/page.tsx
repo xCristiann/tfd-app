@@ -133,10 +133,10 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (!account || !prod) return
-    if (account.phase === 'phase1' || account.phase === 'phase2') {
+    if ((account.phase === 'phase1' || account.phase === 'phase2') && account.status === 'active') {
       checkRuleViolations(account, prod)
     }
-  }, [account?.balance, account?.daily_dd_used, account?.max_dd_used])
+  }, [account?.balance, account?.daily_dd_used, account?.max_dd_used, account?.status, account?.id])
 
   async function checkRuleViolations(acc: Account, product: any) {
     if (!product) return
@@ -162,6 +162,10 @@ export function DashboardPage() {
     }
     if (profitPct >= targetPct && acc.status === 'active') {
       if (acc.phase === 'phase1') {
+        // Guard: first mark as processing to prevent double execution
+        const { error: guardErr } = await supabase.from('accounts')
+          .update({ status: 'passed' }).eq('id', acc.id).eq('status', 'active')
+        if (guardErr) return // Another process already handled it
         // Phase 1 → Phase 2: AUTO advance immediately, no admin review needed
         const login    = `TFD${Math.floor(100000 + Math.random() * 900000)}`
         const chars    = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$'
@@ -170,7 +174,7 @@ export function DashboardPage() {
         const accNum   = `TFD-${Number(size)/1000}K-${Math.floor(1000 + Math.random() * 9000)}`
         const now      = new Date().toISOString()
 
-        // Close phase1 account
+        // Close phase1 account (already set to 'passed' by guard above, now set inactive)
         await supabase.from('accounts').update({ status: 'inactive', phase_passed_at: now }).eq('id', acc.id)
 
         // Create phase2 account automatically
@@ -227,8 +231,14 @@ export function DashboardPage() {
           body:    `You have hit your Phase 2 profit target! Your account is now pending review by our team. You will be notified once your funded account is approved.`,
           is_read: false,
         })
-        toast('success', '🎯', 'Phase 2 Complete!', 'Target reached! Pending admin review before funding.')
-        // NO email here — admin sends it manually when they approve funding
+        // Send phase2 pending review email
+        if (profile?.email) {
+          sendEmail('phase2_pending_review', profile.email, {
+            first_name: profile.first_name ?? 'Trader',
+            account_number: acc.account_number,
+          }, 'accounts').catch(() => {})
+        }
+        toast('success', '🎯', 'Phase 2 Complete!', 'Target reached! Pending admin review — email sent.')
       }
     }
   }

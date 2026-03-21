@@ -132,28 +132,37 @@ export function AdminPendingReviewPage() {
     const reason = notes[acc.id]?.trim()
     if (!reason) { toast('warning','⚠️','Required','Add a rejection reason in the notes field.'); return }
 
-    await supabase.from('accounts').update({ status: 'active' }).eq('id', acc.id)
+    // Close the account — mark as breached with rejection reason (NOT reset to active)
+    await supabase.from('accounts').update({
+      status:        'breached',
+      phase:         'breached',
+      breached_at:   new Date().toISOString(),
+      breach_reason: `Funding review rejected: ${reason}`,
+    }).eq('id', acc.id)
 
+    // In-app notification
     await supabase.from('notifications').insert({
       user_id: acc.user_id,
       type:    'risk_warning',
-      title:   '⚠️ Phase Review — Not Approved',
-      body:    `Your ${phaseLabel(acc.phase)} review was not approved. Reason: ${reason}. Contact support for details.`,
+      title:   '❌ Funding Review Not Approved — Account Closed',
+      body:    `Your ${phaseLabel(acc.phase)} review was not approved and your account has been closed. Reason: ${reason}. You may purchase a new challenge to try again.`,
       is_read: false,
     })
 
+    // Send rejection email
     try {
       const { data: u } = await supabase.from('users').select('email,first_name').eq('id', acc.user_id).single()
       if (u?.email) {
-        await sendEmail('risk_warning', u.email, {
+        await sendEmail('phase_rejected', u.email, {
           first_name:     u.first_name ?? 'Trader',
           account_number: acc.account_number,
-          reason:         `Phase review not approved: ${reason}`,
+          phase:          phaseLabel(acc.phase),
+          reason,
         }, 'accounts')
       }
-    } catch (e) { console.error('[email]', e) }
+    } catch (e) { console.error('[reject email]', e) }
 
-    toast('warning','❌','Rejected', `${acc.account_number} sent back to active.`)
+    toast('warning','❌','Rejected & Closed', `${acc.account_number} closed. Rejection email sent.`)
     load()
   }
 
