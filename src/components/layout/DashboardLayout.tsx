@@ -188,23 +188,40 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top strip — marketing links */}
-        <div className="h-10 bg-[#1A3A6B] flex items-center px-5 flex-shrink-0">
-          <div className="flex items-center gap-0 mr-auto">
-            {[['How It Works','/#how'],['Challenge Plans','/#plans'],['Payouts','/#payouts'],['Features','/#features'],['Help Centre','/help']].map(([l,h])=>(
-              <a key={l} href={h} className="text-[10px] font-500 text-[rgba(255,255,255,.4)] hover:text-white transition-colors no-underline px-3 h-10 flex items-center" style={{fontWeight:500}}>{l}</a>
-            ))}
+        {/* Top nav — identical to marketing page navbar */}
+        <nav style={{height:'64px',display:'flex',alignItems:'center',padding:'0 32px',borderBottom:'1px solid #E8EEF8',backgroundColor:'#ffffff',flexShrink:0,zIndex:10,boxSizing:'border-box'}}>
+          <div style={{width:'100%',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:'16px'}}>
+            {/* Logo */}
+            <a href="/" style={{fontFamily:"'Playfair Display',serif",fontSize:'18px',fontWeight:700,color:'#1A3A6B',textDecoration:'none',letterSpacing:'-0.3px',whiteSpace:'nowrap',justifySelf:'start'}}>
+              The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span>
+            </a>
+            {/* Center links */}
+            <div style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
+              {[['How It Works','/#how'],['Challenge Plans','/#plans'],['Payouts','/#payouts'],['Features','/#features'],['Help Centre','/help']].map(([l,h])=>(
+                <a key={l} href={h}
+                  style={{fontSize:'13px',fontWeight:500,color:'#5C7A9E',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s',whiteSpace:'nowrap'}}
+                  onMouseEnter={e=>(e.currentTarget.style.color='#1A3A6B')}
+                  onMouseLeave={e=>(e.currentTarget.style.color='#5C7A9E')}>{l}</a>
+              ))}
+            </div>
+            {/* Right buttons */}
+            <div style={{display:'flex',gap:'8px',alignItems:'center',justifyContent:'flex-end'}}>
+              <button onClick={() => navigate('/dashboard')}
+                style={{fontSize:'13px',fontWeight:600,color:'#fff',padding:'9px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer',whiteSpace:'nowrap'}}>
+                Dashboard
+              </button>
+              <button onClick={handleLogout}
+                style={{fontSize:'13px',fontWeight:500,color:'#5C7A9E',padding:'9px 18px',backgroundColor:'transparent',border:'1.5px solid #C5D5EA',borderRadius:'8px',cursor:'pointer',whiteSpace:'nowrap'}}>
+                Log Out
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/dashboard')} className="px-3 py-1.5 text-[10px] font-600 bg-[#2255CC] text-white border-none cursor-pointer rounded hover:bg-[#1A44B0] transition-colors" style={{fontWeight:600}}>Dashboard</button>
-            <button onClick={handleLogout} className="px-3 py-1.5 text-[10px] font-600 bg-transparent border border-[rgba(255,255,255,.2)] text-[rgba(255,255,255,.6)] cursor-pointer rounded hover:border-white hover:text-white transition-all" style={{fontWeight:600}}>Log Out</button>
-          </div>
-        </div>
+        </nav>
 
-        {/* Page topbar */}
-        <div className="h-12 bg-white border-b border-[#E8EEF8] flex items-center px-5 gap-3 flex-shrink-0">
-          <h1 className="text-[15px] font-600 text-[#1A3A6B]" style={{fontWeight:600}}>{title}</h1>
-          <div className="ml-auto flex items-center gap-2">
+        {/* Page topbar — matches marketing navbar style */}
+        <div style={{height:'48px',background:'#fff',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',padding:'0 20px',flexShrink:0,gap:'12px'}}>
+          <h1 style={{fontSize:'14px',fontWeight:600,color:'#1A3A6B',margin:0}}>{title}</h1>
+          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'8px'}}>
             {topbarRight}
             {isAdmin ? <AdminNotifications/> : profile?.id ? <TraderNotifications userId={profile.id}/> : null}
           </div>

@@ -46,9 +46,18 @@ export function MarketingPage() {
             </div>
           )}
           {isMobile && <div/>}
-          <div style={{display:'flex',gap:'8px',justifyContent:'flex-end'}}>
+          <div style={{display:'flex',gap:'8px',justifyContent:'flex-end',alignItems:'center'}}>
             {isLoggedIn ? (
-              <button onClick={()=>navigate('/dashboard')} style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>Dashboard →</button>
+              <>
+                <button onClick={()=>navigate('/dashboard')}
+                  style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 18px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>
+                  Dashboard
+                </button>
+                <button onClick={async()=>{const{supabase}=await import('@/lib/supabase');await supabase.auth.signOut();navigate('/login')}}
+                  style={{fontSize:'12px',fontWeight:500,color:'#5C7A9E',padding:'8px 16px',background:'transparent',border:'1.5px solid #C5D5EA',borderRadius:'8px',cursor:'pointer'}}>
+                  Log Out
+                </button>
+              </>
             ) : (
               <>
                 {!isMobile && <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:500,color:'#1A3A6B',padding:'8px 18px',border:'1.5px solid #C5D5EA',background:'#fff',borderRadius:'8px',cursor:'pointer'}}>Log in</button>}
