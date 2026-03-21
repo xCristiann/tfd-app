@@ -9,6 +9,7 @@ export const TRADER_NAV: { section?: string; items: NavItem[] }[] = [
   ]},
   { section: 'Account', items: [
     { label: 'Payouts',    icon: '💰', path: '/dashboard/payouts' },
+    { label: 'Certificates', icon: '🏆', path: '/dashboard/certificates' },
     { label: 'Analytics',  icon: '📊', path: '/dashboard/analytics' },
     { label: 'Challenges', icon: '🎯', path: '/dashboard/challenges' },
     { label: 'Accounts',   icon: '🗂', path: '/dashboard/accounts' },
@@ -46,6 +47,7 @@ export const ADMIN_NAV: { section?: string; items: NavItem[] }[] = [
     { label: 'Challenge Products', icon: '🎯', path: '/admin/challenges' },
     { label: 'Coupon Codes',       icon: '🏷️', path: '/admin/coupons' },
     { label: 'KYC Verification',   icon: '🪪', path: '/admin/kyc' },
+    { label: 'Certificates',       icon: '🏆', path: '/admin/certificates' },
     { label: 'FAQ / Help Centre',  icon: '❓', path: '/admin/faq' },
     { label: 'Affiliates',         icon: '🔗', path: '/admin/affiliates' },
     { label: 'Settings',           icon: '⚙',  path: '/admin/settings' },

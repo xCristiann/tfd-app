@@ -27,6 +27,8 @@ import { AdminAffiliatePage } from './app/admin/affiliates/page'
 import { AdminAccountsPage }  from './app/admin/accounts/page'
 import { AdminSettingsPage }  from './app/admin/settings/page'
 import { HelpPage }           from './app/help/page'
+import { CertificatesPage }   from './app/dashboard/certificates/page'
+import { AdminCertificatesPage } from './app/admin/certificates/page'
 import { AdminFaqPage }        from './app/admin/faq/page'
 import { AdminRevenuePage }   from './app/admin/revenue/page'
 import { AffiliatePage as AffiliatesPage } from './app/dashboard/affiliate/page'
@@ -109,6 +111,8 @@ export default function App() {
       <Route path="/admin/settings"       element={<ProtectedRoute roles={['admin']}><AdminSettingsPage /></ProtectedRoute>} />
       <Route path="/admin/faq"             element={<ProtectedRoute roles={['admin']}><AdminFaqPage /></ProtectedRoute>} />
       <Route path="/help"                  element={<HelpPage />} />
+      <Route path="/dashboard/certificates" element={<ProtectedRoute roles={['trader']}><CertificatesPage /></ProtectedRoute>} />
+      <Route path="/admin/certificates"    element={<ProtectedRoute roles={['admin']}><AdminCertificatesPage /></ProtectedRoute>} />
 
       {/* Support CRM */}
       <Route path="/support-crm"            element={<ProtectedRoute roles={['support','admin']}><SupportCRMPage /></ProtectedRoute>} />
