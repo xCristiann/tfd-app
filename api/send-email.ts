@@ -220,7 +220,7 @@ function buildEmail(type: string, to: string, d: Record<string, any>, fn: string
           ['Server', d.server ?? 'TFD-Live-01'],
         ])}
         ${p(`Log in to the platform using these credentials and start trading. Good luck!`)}
-        ${cta('Open Trading Platform', \`\${SITE}/platform\`)}
+        ${cta('Open Trading Platform', SITE + '/platform')}
       `, from),
     }
 
