@@ -183,9 +183,9 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
           <div style={{width:'100%',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:'16px'}}>
             {/* Empty left column to keep links centered */}
             <div/>
-            {/* Center links */}
+            {/* Center links — hidden on mobile */}
             <div style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
-              {[['How It Works','/#how'],['Challenge Plans','/#plans'],['Payouts','/#payouts'],['Features','/#features'],['Help Centre','/help']].map(([l,h])=>(
+              {!isMobile && [['How It Works','/#how'],['Challenge Plans','/#plans'],['Payouts','/#payouts'],['Features','/#features'],['Help Centre','/help']].map(([l,h])=>(
                 <a key={l} href={h}
                   style={{fontSize:'13px',fontWeight:500,color:'rgba(255,255,255,0.75)',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s',whiteSpace:'nowrap'}}
                   onMouseEnter={e=>(e.currentTarget.style.color='#ffffff')}
@@ -228,7 +228,7 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
           </div>
 
           {/* Content */}
-          <main className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+          <main className="flex-1 overflow-y-auto p-5 flex flex-col gap-4" style={{paddingBottom:'calc(env(safe-area-inset-bottom) + 72px)'}}>
             {children}
           </main>
         </div>
