@@ -208,13 +208,13 @@ export function DashboardPage() {
               </div>
 
               {/* Status banner */}
-              {isLocked && (
-                {isFrozen && (
-                  <div style={{ background:'rgba(220,38,38,.08)', border:'1px solid rgba(220,38,38,.3)', borderRadius:'12px', padding:'12px 16px', marginBottom:'16px' }}>
-                    <div style={{ fontWeight:700, fontSize:'13px', color:'#DC2626', marginBottom:'4px' }}>🔒 Account Frozen — Under Investigation</div>
-                    <div style={{ fontSize:'11px', color:'#DC2626', opacity:0.8 }}>Your account has been frozen by Risk Management pending an investigation. Trading is suspended. You will receive an email once the review is complete. Contact <a href="mailto:risk@thefundeddiaries.com" style={{color:'#DC2626'}}>risk@thefundeddiaries.com</a> for details.</div>
-                  </div>
-                )}
+              {isFrozen && (
+                <div style={{ background:'rgba(220,38,38,.08)', border:'1px solid rgba(220,38,38,.3)', borderRadius:'12px', padding:'12px 16px', marginBottom:'16px' }}>
+                  <div style={{ fontWeight:700, fontSize:'13px', color:'#DC2626', marginBottom:'4px' }}>🔒 Account Frozen — Under Investigation</div>
+                  <div style={{ fontSize:'11px', color:'#DC2626', opacity:0.8 }}>Your account has been frozen by Risk Management pending an investigation. Trading is suspended. You will receive an email once the review is complete. Contact <a href="mailto:risk@thefundeddiaries.com" style={{color:'#DC2626'}}>risk@thefundeddiaries.com</a> for details.</div>
+                </div>
+              )}
+              {isLocked && !isFrozen && (
                 <div style={{ background: account?.status==='breached'?'rgba(220,38,38,.08)':'rgba(34,85,204,.08)', border:`1px solid ${account?.status==='breached'?'rgba(220,38,38,.3)':'rgba(34,85,204,.3)'}`, borderRadius:'12px', padding:'12px 16px', marginBottom:'16px' }}>
                   <div style={{ fontWeight:600, fontSize:'13px', color: account?.status==='breached'?'#DC2626':'#2255CC', marginBottom:'4px' }}>
                     {account?.status==='breached' ? '🚨 Account Breached' : '🎯 Target Reached'}
