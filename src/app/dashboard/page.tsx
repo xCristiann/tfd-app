@@ -161,8 +161,75 @@ export function DashboardPage() {
       return
     }
     if (profitPct >= targetPct && acc.status === 'active') {
-      await supabase.from('accounts').update({ status: 'passed' }).eq('id', acc.id)
-      toast('success', '🎯', 'Target Reached!', 'Profit target hit! Account locked pending admin review.')
+      if (acc.phase === 'phase1') {
+        // Phase 1 → Phase 2: AUTO advance immediately, no admin review needed
+        const login    = `TFD${Math.floor(100000 + Math.random() * 900000)}`
+        const chars    = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$'
+        const password = Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+        const size     = acc.starting_balance
+        const accNum   = `TFD-${Number(size)/1000}K-${Math.floor(1000 + Math.random() * 9000)}`
+        const now      = new Date().toISOString()
+
+        // Close phase1 account
+        await supabase.from('accounts').update({ status: 'inactive', phase_passed_at: now }).eq('id', acc.id)
+
+        // Create phase2 account automatically
+        const { data: newAcc, error: accErr } = await supabase.from('accounts').insert({
+          user_id:           acc.user_id,
+          product_id:        acc.product_id,
+          account_number:    accNum,
+          phase:             'phase2',
+          balance:           size,
+          equity:            size,
+          starting_balance:  size,
+          daily_dd_used:     0,
+          max_dd_used:       0,
+          trading_days:      0,
+          platform_login:    login,
+          server:            'TFD-Live-01',
+          status:            'active',
+          purchased_at:      now,
+          drawdown_type:     product.drawdown_type ?? 'static',
+          trailing_drawdown: product.trailing_drawdown ?? 8,
+        }).select().single()
+
+        if (!accErr && newAcc) {
+          // In-app notification
+          await supabase.from('notifications').insert({
+            user_id: acc.user_id,
+            type:    'phase_advanced',
+            title:   '🎯 Phase 1 Passed — Advanced to Phase 2!',
+            body:    `Congratulations! You have automatically advanced to Phase 2. New account: ${accNum} | Login: ${login} | Server: TFD-Live-01`,
+            is_read: false,
+          })
+          // Send email with new credentials
+          if (profile?.email) {
+            sendEmail('phase_advanced', profile.email, {
+              first_name:     profile.first_name ?? 'Trader',
+              account_number: accNum,
+              from_phase:     'phase1',
+              to_phase:       'phase2',
+              login,
+              password,
+              server:         'TFD-Live-01',
+            }, 'accounts').catch(() => {})
+          }
+          toast('success', '🎯', 'Phase 1 Complete!', `Automatically advanced to Phase 2! New account: ${accNum}`)
+        }
+      } else if (acc.phase === 'phase2') {
+        // Phase 2 → Funded: set passed, wait for admin — NO email yet
+        await supabase.from('accounts').update({ status: 'passed', phase_passed_at: new Date().toISOString() }).eq('id', acc.id)
+        // In-app notification only
+        await supabase.from('notifications').insert({
+          user_id: acc.user_id,
+          type:    'phase_advanced',
+          title:   '🎯 Phase 2 Target Reached — Pending Funding Review',
+          body:    `You have hit your Phase 2 profit target! Your account is now pending review by our team. You will be notified once your funded account is approved.`,
+          is_read: false,
+        })
+        toast('success', '🎯', 'Phase 2 Complete!', 'Target reached! Pending admin review before funding.')
+        // NO email here — admin sends it manually when they approve funding
+      }
     }
   }
 
@@ -197,6 +264,23 @@ export function DashboardPage() {
             </div>
           ) : (
             <div style={{ padding:'16px' }}>
+
+              {/* ── FROZEN ALERT — top of page, always visible ── */}
+              {accounts.some(a => a.status === 'soft_locked') && (
+                <div style={{ background:'#DC2626', borderRadius:'10px', padding:'14px 18px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'14px' }}>
+                  <span style={{fontSize:'24px'}}>🔒</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700, fontSize:'14px', color:'#fff', marginBottom:'4px'}}>
+                      Account(s) Frozen — Trading Suspended
+                    </div>
+                    <div style={{fontSize:'11px', color:'rgba(255,255,255,.85)', lineHeight:1.6}}>
+                      {accounts.filter(a=>a.status==='soft_locked').map(a=>a.account_number).join(', ')} — frozen by Risk Management pending investigation. All trading is suspended. Contact <a href="mailto:risk@thefundeddiaries.com" style={{color:'#fff',fontWeight:700,textDecoration:'underline'}}>risk@thefundeddiaries.com</a>
+                    </div>
+                  </div>
+                  <span style={{background:'rgba(255,255,255,.2)',color:'#fff',fontSize:'10px',fontWeight:700,padding:'4px 10px',borderRadius:'20px',letterSpacing:'1px',whiteSpace:'nowrap'}}>UNDER INVESTIGATION</span>
+                </div>
+              )}
+
               {/* Account selector */}
               <div style={{ display:'flex', gap:'8px', marginBottom:'16px', overflowX:'auto', paddingBottom:'4px' }}>
                 {accounts.map(a => (
@@ -227,7 +311,7 @@ export function DashboardPage() {
                   <div style={{ flexShrink:0, background:'#DC2626', color:'#fff', fontSize:'8px', fontWeight:700, padding:'3px 8px', borderRadius:'20px', letterSpacing:'1px', textTransform:'uppercase' }}>FROZEN</div>
                 </div>
               ))}
-              {isLocked && !isFrozen && (
+              {isLocked && !isFrozen && account?.status !== 'passed' && (
                 <div style={{ background: account?.status==='breached'?'rgba(220,38,38,.08)':'rgba(34,85,204,.08)', border:`1px solid ${account?.status==='breached'?'rgba(220,38,38,.3)':'rgba(34,85,204,.3)'}`, borderRadius:'12px', padding:'12px 16px', marginBottom:'16px' }}>
                   <div style={{ fontWeight:600, fontSize:'13px', color: account?.status==='breached'?'#DC2626':'#2255CC', marginBottom:'4px' }}>
                     {account?.status==='breached' ? '🚨 Account Breached' : '🎯 Target Reached'}
@@ -379,7 +463,7 @@ export function DashboardPage() {
               </div>
             )}
 
-            {isFrozen && (
+            {isFrozen ? (
               <div className="flex items-center gap-3 px-5 py-3 border border-[rgba(220,38,38,.35)] bg-[rgba(220,38,38,.07)] text-[#DC2626]">
                 <span className="text-[18px]">🔒</span>
                 <div className="flex-1">
@@ -388,9 +472,7 @@ export function DashboardPage() {
                 </div>
                 <span className="text-[8px] font-bold uppercase tracking-wider bg-[rgba(220,38,38,.15)] border border-[rgba(220,38,38,.3)] text-[#DC2626] px-2 py-1 rounded animate-pulse">FROZEN</span>
               </div>
-            )}
-
-            {isLocked && (
+            ) : (isLocked && (
               <div className={`flex items-center gap-3 px-5 py-3 border ${account?.status==='breached' ? 'border-[rgba(220,38,38,.3)] bg-[rgba(220,38,38,.06)] text-[#DC2626]' : 'border-[rgba(34,85,204,.3)] bg-[rgba(34,85,204,.06)] text-[#2255CC]'}`}>
                 <span className="text-[16px]">{account?.status==='breached' ? '🚨' : '🎯'}</span>
                 <div>
@@ -398,7 +480,7 @@ export function DashboardPage() {
                   <div className="text-[10px] opacity-80">{account?.status==='breached' ? 'Your drawdown limit was exceeded.' : 'Admin will review and advance you to the next phase.'}</div>
                 </div>
               </div>
-            )}
+            ))}
 
             <div className="grid grid-cols-5 gap-[11px]">
               <KPICard label="Balance"       value={fmt(account!.balance)}  sub={`${profit>=0?'+':''}${fmt(profit)}`}      subColor={profit>=0?'text-[#16A34A]':'text-[#DC2626]'} />
