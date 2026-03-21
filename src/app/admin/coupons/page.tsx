@@ -37,6 +37,8 @@ const EMPTY_FORM: any = {
   bogo_trigger: 'immediate',
   bogo_discount_type: 'percent',
   bogo_discount_value: '100',
+  bogo_primary_discount_type: 'percent',
+  bogo_primary_discount_value: '0',
 }
 
 const BOGO_TRIGGERS = [
@@ -101,6 +103,8 @@ export function AdminCouponsPage() {
       bogo_trigger: c.bogo_trigger ?? 'immediate',
       bogo_discount_type: c.bogo_discount_type ?? 'percent',
       bogo_discount_value: String(c.bogo_discount_value ?? 100),
+      bogo_primary_discount_type: c.bogo_primary_discount_type ?? 'percent',
+      bogo_primary_discount_value: String(c.bogo_primary_discount_value ?? 0),
     })
     setEditId(c.id)
     setShowModal(true)
@@ -145,7 +149,11 @@ export function AdminCouponsPage() {
       payload.bogo_trigger       = form.bogo_trigger
       payload.bogo_discount_type = form.bogo_discount_type
       payload.bogo_discount_value= parseFloat(form.bogo_discount_value || '100')
-      payload.discount_value     = 0
+      payload.bogo_primary_discount_type  = form.bogo_primary_discount_type
+      payload.bogo_primary_discount_value = parseFloat(form.bogo_primary_discount_value || '0')
+      // discount_value on main coupon = primary discount (for validate_coupon RPC compatibility)
+      payload.discount_value     = parseFloat(form.bogo_primary_discount_value || '0')
+      payload.discount_type      = form.bogo_primary_discount_type
     }
 
     let error
@@ -506,6 +514,27 @@ export function AdminCouponsPage() {
                     <div>
                       <label className={lbl}>Discount Value (100 = free)</label>
                       <input type="number" value={form.bogo_discount_value} onChange={F('bogo_discount_value')} className={inp} placeholder="100"/>
+                    </div>
+                  </div>
+
+                  {/* Primary account discount */}
+                  <div className="mt-3 p-3 bg-[rgba(34,85,204,.04)] border border-[rgba(34,85,204,.2)] rounded-lg">
+                    <div className="text-[9px] uppercase tracking-[1.5px] font-bold text-[#2255CC] mb-2">Discount on Primary Account (optional)</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={lbl}>Type</label>
+                        <select value={form.bogo_primary_discount_type} onChange={F('bogo_primary_discount_type')} className={inp}>
+                          <option value="percent">Percentage (%)</option>
+                          <option value="fixed">Fixed ($)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={lbl}>Value (0 = no discount on primary)</label>
+                        <input type="number" value={form.bogo_primary_discount_value} onChange={F('bogo_primary_discount_value')} className={inp} placeholder="0"/>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-[9px] text-[#5C7A9E]">
+                      Ex: BOGO40 → 40% discount here + free second account. Trader pays 60% of primary price and gets a second account free.
                     </div>
                   </div>
 

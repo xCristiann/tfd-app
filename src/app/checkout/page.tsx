@@ -687,12 +687,32 @@ export function CheckoutPage() {
               <div className="mb-4">
                 <div className="text-[7px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold mb-2">Coupon Code</div>
                 {couponData ? (
-                  <div className="flex items-center justify-between p-2 bg-[rgba(22,163,74,.06)] border border-[rgba(22,163,74,.2)]">
-                    <div>
-                      <div className=" font-bold text-[#16A34A] text-[11px]">{couponData.code}</div>
-                      <div className="text-[9px] text-[#16A34A]">-{couponData.discount_type==='percent'?`${couponData.discount_value}%`:`$${couponData.discount_value}`} applied</div>
+                  <div>
+                    <div className="flex items-center justify-between p-2 bg-[rgba(22,163,74,.06)] border border-[rgba(22,163,74,.2)]">
+                      <div>
+                        <div className="font-bold text-[#16A34A] text-[11px]">{couponData.code}</div>
+                        <div className="text-[9px] text-[#16A34A]">
+                          {couponData.coupon_type === 'bogo'
+                            ? couponData.discount_value > 0
+                              ? `${couponData.discount_type==='percent'?couponData.discount_value+'% off primary':'$'+couponData.discount_value+' off primary'} + 🎁 free account`
+                              : '🎁 BOGO applied — free second account'
+                            : `-${couponData.discount_type==='percent'?couponData.discount_value+'%':'$'+couponData.discount_value} applied`}
+                        </div>
+                      </div>
+                      <button onClick={removeCoupon} className="text-[#8FA3BF] hover:text-[#DC2626] cursor-pointer bg-transparent border-none text-[14px]">✕</button>
                     </div>
-                    <button onClick={removeCoupon} className="text-[#8FA3BF] hover:text-[#DC2626] cursor-pointer bg-transparent border-none text-[14px]">✕</button>
+                    {couponData.coupon_type === 'bogo' && (
+                      <div className="p-2 bg-[rgba(217,119,6,.06)] border border-[rgba(217,119,6,.2)] border-t-0">
+                        <div className="text-[9px] font-bold text-[#D97706] mb-0.5">🎁 You will receive a second account!</div>
+                        <div className="text-[9px] text-[#D97706] opacity-80">
+                          {couponData.bogo_discount_value >= 100 ? 'Free second account' : `${couponData.bogo_discount_value}% off second account`}
+                          {' — '}
+                          {couponData.bogo_trigger === 'immediate' ? 'Created immediately after purchase'
+                            : couponData.bogo_trigger === 'on_funded' ? 'Created when you get funded'
+                            : 'Created after passing Phase 2'}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex gap-2">
