@@ -294,27 +294,69 @@ function usePriceFeed() {
 
 /* ── Risk monitor ────────────────────────────────────────────────── */
 function useRiskMonitor(tradesRef:any, refPrices:any, primaryRef:any, accountId:any, onBreach:any) {
-  const fired = useRef(false)
-  const cb    = useRef(onBreach); cb.current = onBreach
+  const fired    = useRef(false)
+  const cb       = useRef(onBreach); cb.current = onBreach
+  const peakEqRef = useRef(0)  // tracks highest equity this session for trailing DD
+
   useEffect(() => {
-    const iv = setInterval(() => {
+    const iv = setInterval(async () => {
       const pr=primaryRef.current, trades=tradesRef.current
-      if (!pr||!trades.length||fired.current) return
+      if (!pr||fired.current) return
       if (pr.status==='breached'||pr.status==='passed') return
       const bal=pr.balance??0, start=pr.starting_balance??bal
       if (bal<=0||start<=0) return
+
       const cp=(pr as any).challenge_products, ph=pr.phase??'phase1'
-      const maxDD  = ph==='funded'?(cp?.funded_max_dd??10):(ph==='phase2'?(cp?.ph2_max_dd??10):(cp?.ph1_max_dd??10))
-      const dailyDD= ph==='funded'?(cp?.funded_daily_dd??5):(ph==='phase2'?(cp?.ph2_daily_dd??5):(cp?.ph1_daily_dd??5))
-      const floor  = start-start*(maxDD/100)
-      const dFloor = (pr.daily_high_balance??start)-(pr.daily_high_balance??start)*(dailyDD/100)
-      const equity = bal+trades.reduce((s:number,t:any)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]),0)
-      if (equity<=floor)       { fired.current=true; cb.current(`Max DD breached`,trades) }
-      else if (equity<=dFloor) { fired.current=true; cb.current(`Daily DD breached`,trades) }
+      const dailyDD  = ph==='funded'?(cp?.funded_daily_dd??5):(ph==='phase2'?(cp?.ph2_daily_dd??5):(cp?.ph1_daily_dd??5))
+      const isTrailing = (cp?.drawdown_type ?? pr.drawdown_type ?? 'static') === 'trailing'
+      const trailingPct = cp?.trailing_drawdown ?? pr.trailing_drawdown ?? 8
+
+      // Current equity = balance + open P&L
+      const equity = bal + trades.reduce((s:number,t:any)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]),0)
+
+      // Update peak equity (only goes up, never down)
+      if (equity > peakEqRef.current) {
+        peakEqRef.current = equity
+        // Persist peak_balance to DB so it survives page refresh
+        if (pr.id && equity > (pr.peak_balance ?? 0)) {
+          supabase.from('accounts').update({ peak_balance: +equity.toFixed(2) }).eq('id', pr.id).then(() => {})
+        }
+      }
+
+      // Calculate drawdown floor
+      let floor: number
+      if (isTrailing) {
+        // Trailing DD: floor = highest equity ever − trailing%
+        // Uses peak_balance from DB (persisted) as source of truth
+        const peakFromDB = pr.peak_balance ?? bal
+        const sessionPeak = peakEqRef.current || peakFromDB
+        const truePeak = Math.max(sessionPeak, peakFromDB)
+        floor = truePeak * (1 - trailingPct / 100)
+      } else {
+        // Static DD: floor = starting_balance − max_dd%
+        const maxDD = ph==='funded'?(cp?.funded_max_dd??10):(ph==='phase2'?(cp?.ph2_max_dd??10):(cp?.ph1_max_dd??10))
+        floor = start - start * (maxDD / 100)
+      }
+
+      // Daily DD floor
+      const dFloor = (pr.daily_high_balance ?? bal) - (pr.daily_high_balance ?? bal) * (dailyDD / 100)
+
+      if (equity <= floor) {
+        fired.current = true
+        cb.current(`${isTrailing ? 'Trailing' : 'Max'} DD breached — equity $${equity.toFixed(2)} reached floor $${floor.toFixed(2)}`, trades)
+      } else if (equity <= dFloor) {
+        fired.current = true
+        cb.current(`Daily DD breached`, trades)
+      }
     }, 500)
     return () => clearInterval(iv)
   }, [])
-  useEffect(() => { fired.current = false }, [accountId])
+
+  useEffect(() => {
+    fired.current = false
+    // Reset peak tracking on account change — will re-sync from DB
+    peakEqRef.current = primaryRef.current?.peak_balance ?? 0
+  }, [accountId])
 }
 
 /* ── Platform Page ───────────────────────────────────────────────── */
