@@ -41,6 +41,7 @@ export function CheckoutPage() {
   const [email, setEmail] = useState('')
   const [country, setCountry] = useState('')
   const [agree, setAgree] = useState(false)
+  const [agreeRefund, setAgreeRefund] = useState(false)
   const [selectedPlatform] = useState('tfd')
 
   // Address fields
@@ -299,7 +300,7 @@ export function CheckoutPage() {
 
   async function proceedToPayment() {
     if (!product || !profile) return
-    if (!agree) { toast('warning','⚠️','Required','Please agree to the terms.'); return }
+    if (!agree || !agreeRefund) { toast('warning','⚠️','Required','Please agree to all terms including the no-refund policy.'); return }
     if (!firstName || !lastName) { toast('warning','⚠️','Required','Please fill in your name.'); return }
     setPlacing(true)
 
@@ -470,15 +471,64 @@ export function CheckoutPage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 mb-8">
-                  <input type="checkbox" id="agree" checked={agree} onChange={e => setAgree(e.target.checked)}
-                    className="mt-[2px] cursor-pointer accent-[#2255CC]"/>
-                  <label htmlFor="agree" className="text-[11px] text-[#5C7A9E] cursor-pointer leading-[1.6]">
-                    I agree to the <span className="text-[#2255CC]">Terms & Conditions</span>, <span className="text-[#2255CC]">Risk Disclosure</span>, and confirm I am 18+.
+                {/* No-refund policy notice */}
+                <div className="mb-5 p-4 bg-[rgba(220,38,38,.04)] border border-[rgba(220,38,38,.2)] rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <span className="text-[14px] flex-shrink-0 mt-0.5">⚠️</span>
+                    <div>
+                      <div className="text-[11px] font-bold text-[#DC2626] mb-1 uppercase tracking-wide">No-Refund Policy</div>
+                      <p className="text-[11px] text-[#5C7A9E] leading-[1.7] m-0">
+                        Challenge fees are <strong className="text-[#1A3A6B]">non-refundable</strong> once your trading account credentials have been issued.
+                        By proceeding, you acknowledge that no refund will be provided after account activation, regardless of trading performance or outcome.
+                        Refund requests before credential issuance may be considered — contact <a href="mailto:support@thefundeddiaries.com" className="text-[#2255CC]">support@thefundeddiaries.com</a> immediately.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* No-Refund Policy box */}
+                <div className="mb-5 p-4 bg-[rgba(220,38,38,.04)] border border-[rgba(220,38,38,.2)] rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[14px]">⚠️</span>
+                    <span className="text-[11px] font-bold text-[#DC2626] uppercase tracking-wide">No-Refund Policy</span>
+                  </div>
+                  <p className="text-[11px] text-[#5C7A9E] leading-[1.7] m-0">
+                    Challenge fees are <strong className="text-[#1A3A6B]">non-refundable</strong> once your trading account credentials have been issued. You are entitled to a full refund only if requested <strong className="text-[#1A3A6B]">before</strong> credentials are delivered. Chargebacks filed after credential delivery constitute fraud and will result in immediate account termination and referral to fraud prevention agencies.
+                  </p>
+                </div>
+
+                {/* Agreement checkboxes */}
+                <div className="flex flex-col gap-4 mb-8">
+
+                  {/* Checkbox 1 — T&C */}
+                  <label htmlFor="agree" className="flex items-start gap-3 p-3 border border-[#E8EEF8] rounded-lg cursor-pointer hover:border-[#C5D5EA] hover:bg-[rgba(34,85,204,.02)] transition-all">
+                    <input type="checkbox" id="agree" checked={agree} onChange={e => setAgree(e.target.checked)}
+                      className="mt-[2px] cursor-pointer accent-[#2255CC] flex-shrink-0 w-4 h-4"/>
+                    <span className="text-[11px] text-[#5C7A9E] leading-[1.7]">
+                      I have read and agree to the{' '}
+                      <a href="/terms" target="_blank" className="text-[#2255CC] hover:underline font-semibold">Terms & Conditions</a>
+                      {', '}
+                      <a href="/privacy" target="_blank" className="text-[#2255CC] hover:underline font-semibold">Privacy Policy</a>
+                      {' '}and{' '}
+                      <a href="/help" target="_blank" className="text-[#2255CC] hover:underline font-semibold">Risk Disclosure</a>
+                      . I confirm I am at least 18 years old, a natural person trading for my own account, and that participation in challenge programmes is legal in my country of residence.
+                    </span>
+                  </label>
+
+                  {/* Checkbox 2 — No-refund + prohibited practices */}
+                  <label htmlFor="agree-refund" className="flex items-start gap-3 p-3 border border-[rgba(220,38,38,.2)] rounded-lg cursor-pointer hover:bg-[rgba(220,38,38,.02)] transition-all">
+                    <input type="checkbox" id="agree-refund" checked={agreeRefund} onChange={e => setAgreeRefund(e.target.checked)}
+                      className="mt-[2px] cursor-pointer accent-[#DC2626] flex-shrink-0 w-4 h-4"/>
+                    <span className="text-[11px] text-[#5C7A9E] leading-[1.7]">
+                      I accept the <strong className="text-[#DC2626]">no-refund policy</strong> — once credentials are issued, no refund will be provided under any circumstances. I acknowledge that prohibited practices including cross-account hedging, copy trading, multi-accounting, and HFT abuse will result in{' '}
+                      <strong className="text-[#1A3A6B]">immediate account termination and forfeiture of all profits</strong>{' '}
+                      with no right of appeal beyond the 14-day window.{' '}
+                      <a href="/terms#prohibited" target="_blank" className="text-[#2255CC] hover:underline text-[10px]">Read full prohibited practices →</a>
+                    </span>
                   </label>
                 </div>
 
-                <button onClick={() => setStep(2)} disabled={!agree || !firstName || !lastName}
+                <button onClick={() => setStep(2)} disabled={!agree || !agreeRefund || !firstName || !lastName}
                   className="w-full py-[14px] text-[10px] tracking-[2px] uppercase font-bold bg-[#2255CC] text-[#F0F4FB] border-none cursor-pointer hover:bg-[#1A44B0] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                   Continue to Payment →
                 </button>

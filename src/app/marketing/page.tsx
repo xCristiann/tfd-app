@@ -410,9 +410,9 @@ export function MarketingPage() {
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',color:'rgba(255,255,255,.4)'}}>The Funded <span style={{color:'#60A5FA',fontStyle:'italic'}}>Diaries</span></div>
         <div style={{fontSize:'10px',color:'rgba(255,255,255,.2)'}}>© {new Date().getFullYear()} The Funded Diaries. All rights reserved.</div>
         <div style={{display:'flex',gap:'20px'}}>
-          {['Terms','Privacy','Support'].map(l=>(
-            <span key={l} style={{fontSize:'11px',color:'rgba(255,255,255,.3)',cursor:'pointer'}}>{l}</span>
-          ))}
+          <a href="/terms" style={{fontSize:'11px',color:'rgba(255,255,255,.35)',cursor:'pointer',textDecoration:'none'}}>Terms</a>
+            <a href="/privacy" style={{fontSize:'11px',color:'rgba(255,255,255,.35)',cursor:'pointer',textDecoration:'none'}}>Privacy</a>
+            <a href="mailto:support@thefundeddiaries.com" style={{fontSize:'11px',color:'rgba(255,255,255,.35)',cursor:'pointer',textDecoration:'none'}}>Support</a>
         </div>
       </div>
 
