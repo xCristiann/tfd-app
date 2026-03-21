@@ -366,8 +366,8 @@ export function PlatformPage() {
   const freeMgn   = Math.max(0, equity - usedMgn)
   const reqMgn    = calcMargin(sym, execPrice, lotsNum)
   const maxLots   = reqMgn > 0 ? Math.floor((freeMgn / reqMgn) * lotsNum * 100) / 100 : 0
-  // isLive = true only when Deriv WS has sent us a tick this session
-  const isLive    = wsLiveRef.current.has(sym)
+  // isLive = true only when market is open AND Deriv WS sent a tick this session
+  const isLive    = marketStatus === 'open' && wsLiveRef.current.has(sym)
 
   // Market hours check (UTC)
   const marketStatus = (() => {
@@ -445,6 +445,7 @@ export function PlatformPage() {
   }
 
   async function placeOrder() {
+    if (marketStatus === 'closed')  { toast('error','🔒','Market Closed','Trading is only available when the market is open.'); return }
     if (!primary?.id)              { toast('error','❌','No Account','Select an account'); return }
     if (primary.status==='breached'){ toast('error','❌','Breached','Account is breached'); return }
     if (reqMgn>freeMgn)            { toast('error','❌','Margin',`Max ${maxLots} lots`); return }
@@ -595,8 +596,16 @@ export function PlatformPage() {
           <div style={{padding:'10px',flex:1,overflowY:'auto'}}>
             <div style={{fontSize:'9px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>New Order — {sym}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5px',marginBottom:'8px'}}>
-              <button onClick={()=>setDir('buy')}  style={{padding:'9px',border:'none',borderRadius:'7px',cursor:'pointer',fontWeight:700,fontSize:'12px',background:dir==='buy'?'#16A34A':'#F4F7FD',color:dir==='buy'?'#fff':'#5C7A9E'}}>BUY</button>
-              <button onClick={()=>setDir('sell')} style={{padding:'9px',border:'none',borderRadius:'7px',cursor:'pointer',fontWeight:700,fontSize:'12px',background:dir==='sell'?'#DC2626':'#F4F7FD',color:dir==='sell'?'#fff':'#5C7A9E'}}>SELL</button>
+              <button onClick={()=>marketStatus!=='closed'&&setDir('buy')}
+                style={{padding:'9px',border:'none',borderRadius:'7px',cursor:marketStatus==='closed'?'not-allowed':'pointer',fontWeight:700,fontSize:'12px',
+                  background:marketStatus==='closed'?'#F4F7FD':dir==='buy'?'#16A34A':'#F4F7FD',
+                  color:marketStatus==='closed'?'#D1D5DB':dir==='buy'?'#fff':'#5C7A9E',
+                  opacity:marketStatus==='closed'?0.5:1}}>BUY</button>
+              <button onClick={()=>marketStatus!=='closed'&&setDir('sell')}
+                style={{padding:'9px',border:'none',borderRadius:'7px',cursor:marketStatus==='closed'?'not-allowed':'pointer',fontWeight:700,fontSize:'12px',
+                  background:marketStatus==='closed'?'#F4F7FD':dir==='sell'?'#DC2626':'#F4F7FD',
+                  color:marketStatus==='closed'?'#D1D5DB':dir==='sell'?'#fff':'#5C7A9E',
+                  opacity:marketStatus==='closed'?0.5:1}}>SELL</button>
             </div>
             <div style={{background:dir==='buy'?'rgba(22,163,74,.08)':'rgba(220,38,38,.08)',border:`1px solid ${dir==='buy'?'rgba(22,163,74,.2)':'rgba(220,38,38,.2)'}`,borderRadius:'8px',padding:'8px',marginBottom:'8px',textAlign:'center'}}>
               <div style={{fontSize:'8px',color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'2px'}}>{dir==='buy'?'Ask':'Bid'}</div>
@@ -637,10 +646,16 @@ export function PlatformPage() {
               ))}
               {lotsNum>maxLots && <div style={{marginTop:'4px',fontSize:'9px',color:'#DC2626',fontWeight:600}}>⚠ Max {maxLots} lots</div>}
             </div>
-            <button onClick={placeOrder} disabled={placing||!primary||primary.status==='breached'||lotsNum>maxLots}
-              style={{width:'100%',padding:'10px',fontSize:'12px',fontWeight:700,border:'none',borderRadius:'7px',cursor:lotsNum>maxLots?'not-allowed':'pointer',background:lotsNum>maxLots?'#9CA3AF':dir==='buy'?'#16A34A':'#DC2626',color:'#fff',opacity:placing||!primary?0.6:1,textTransform:'uppercase'}}>
-              {placing?'…':`${dir.toUpperCase()} ${lotsNum} ${sym}`}
-            </button>
+            {marketStatus === 'closed' ? (
+              <div style={{width:'100%',padding:'10px',fontSize:'11px',fontWeight:700,border:'none',borderRadius:'7px',background:'#F4F7FD',color:'#9CA3AF',textAlign:'center',border:'1px solid #E8EEF8'}}>
+                🔒 Market Closed
+              </div>
+            ) : (
+              <button onClick={placeOrder} disabled={placing||!primary||primary.status==='breached'||lotsNum>maxLots}
+                style={{width:'100%',padding:'10px',fontSize:'12px',fontWeight:700,border:'none',borderRadius:'7px',cursor:lotsNum>maxLots?'not-allowed':'pointer',background:lotsNum>maxLots?'#9CA3AF':dir==='buy'?'#16A34A':'#DC2626',color:'#fff',opacity:placing||!primary?0.6:1,textTransform:'uppercase'}}>
+                {placing?'…':`${dir.toUpperCase()} ${lotsNum} ${sym}`}
+              </button>
+            )}
           </div>
           <div style={{padding:'8px 10px',borderTop:'1px solid #E8EEF8',flexShrink:0}}>
             {[['Account',(primary as any)?.account_number??'—','#1A3A6B'],['Phase',primary?.phase??'—','#2255CC'],['Status',primary?.status??'—',primary?.status==='active'?'#16A34A':'#DC2626']].map(([l,v,c])=>(
