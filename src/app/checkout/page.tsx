@@ -208,7 +208,19 @@ export function CheckoutPage() {
 
               // Add BOGO creds to confirmation email
               const _bogoMsg = `\n\n🎁 BOGO BONUS ACCOUNT:\nAccount: ${bogoAccNum}\nLogin: ${bogoLogin}\nPassword: ${bogoPassword}\nServer: TFD-Live-01`
-              console.log('[BOGO] Second account created:', bogoAccNum, _bogoMsg)
+              console.log('[BOGO] Second account created:', bogoAccNum)
+                // Send BOGO confirmation email
+                await sendEmail('bogo_account', email || profile.email, {
+                  first_name:     firstName || profile.first_name || 'Trader',
+                  product_name:   bogoProd.name,
+                  account_size:   Number(bogoSize),
+                  account_number: bogoAccNum,
+                  login:          bogoLogin,
+                  password:       bogoPassword,
+                  server:         'TFD-Live-01',
+                  phase:          bogoProd.challenge_type === 'instant' ? 'Funded (BOGO)' : 'Phase 1 (BOGO)',
+                  promo_code:     couponCode,
+                })
             }
           }
         }
@@ -237,7 +249,7 @@ export function CheckoutPage() {
       first_name:     firstName || profile.first_name,
       order_number:   orderNum ?? accountNumber,
       product_name:   product.name,
-      account_size:   Number(product.account_size).toLocaleString(),
+      account_size:   Number(product.account_size),
       account_number: accountNumber,
       login,
       password,

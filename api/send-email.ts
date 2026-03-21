@@ -69,14 +69,15 @@ function wrap(content: string, from: string) {
 <div style="max-width:600px;margin:0 auto;padding:32px 16px">
 
   <!-- Header -->
-  <div style="text-align:center;padding-bottom:24px;margin-bottom:8px">
-    <div style="display:inline-block;padding:12px 28px;background:${C.navy}">
-      <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.3px">
-        The Funded <span style="color:#60A5FA;font-style:italic">Diaries</span>
+  <div style="text-align:center;padding-bottom:28px;margin-bottom:4px">
+    <div style="display:inline-block;padding:0">
+      <div style="font-size:26px;font-weight:800;color:${C.navy};letter-spacing:-0.5px;font-family:Georgia,'Times New Roman',serif">
+        The Funded <span style="color:${C.blue};font-style:italic">Diaries</span>
       </div>
-      <div style="font-size:8px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-top:3px">
-        Write Your Trading Story
+      <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:${C.muted};margin-top:4px">
+        Proprietary Trading Firm
       </div>
+      <div style="height:2px;background:linear-gradient(to right,transparent,${C.blue},transparent);margin-top:10px;opacity:0.3"></div>
     </div>
   </div>
 
@@ -180,7 +181,7 @@ function buildEmail(type: string, to: string, d: Record<string, any>, fn: string
         ${infoTable([
           ['Order Number', `#${d.order_number ?? '—'}`, C.blue],
           ['Product', d.product_name ?? '—'],
-          ['Account Size', `$${Number(d.account_size ?? 0).toLocaleString()}`, C.blue],
+          ['Account Size', `$${Number(String(d.account_size ?? '0').replace(/,/g,'')).toLocaleString()}`, C.blue],
           ['Amount Paid', `$${d.amount ?? '—'}`],
           ['Phase', d.phase ?? 'Phase 1', C.blue],
         ])}
@@ -193,6 +194,33 @@ function buildEmail(type: string, to: string, d: Record<string, any>, fn: string
         ])}
         ${p(`Log in to the platform using these credentials and begin trading. Hit your profit target while respecting the drawdown rules to advance to the funded phase.`)}
         ${cta('Open Trading Platform', `${SITE}/platform`)}
+      `, from),
+    }
+
+    case 'bogo_account': return {
+      from, to,
+      reply_to: 'accounts@thefundeddiaries.com',
+      subject: `🎁 Your BOGO Bonus Account is Ready — ${d.product_name ?? 'Challenge'}`,
+      html: wrap(`
+        ${badge('🎁 BOGO Bonus', '#D97706', 'rgba(217,119,6,.08)')}
+        ${h1(`Your Free Account is Ready, ${fn}!`)}
+        ${p(`Great news — your BOGO bonus has been activated. A second trading account has been created for you as part of your promotion. Your credentials are below.`)}
+        ${infoTable([
+          ['Account Type', 'BOGO Bonus Account'],
+          ['Product', d.product_name ?? '—'],
+          ['Account Size', `$${Number(String(d.account_size ?? '0').replace(/,/g,'')).toLocaleString()}`, C.blue],
+          ['Phase', d.phase ?? 'Phase 1', C.blue],
+          ['Promo Code', d.promo_code ?? '—', '#D97706'],
+        ])}
+        ${alertBox('⚠️ Your password is shown only once. Copy and store it securely before continuing.', C.amber, 'rgba(217,119,6,.06)')}
+        ${credBox([
+          ['Account Number', d.account_number ?? '—'],
+          ['Login ID', d.login ?? '—'],
+          ['Password', d.password ?? '—'],
+          ['Server', d.server ?? 'TFD-Live-01'],
+        ])}
+        ${p(`Log in to the platform using these credentials and start trading. Good luck!`)}
+        ${cta('Open Trading Platform', \`\${SITE}/platform\`)}
       `, from),
     }
 

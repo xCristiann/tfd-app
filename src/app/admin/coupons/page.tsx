@@ -205,15 +205,14 @@ export function AdminCouponsPage() {
     // Notify trader by email
     const { data: user } = await supabase.from('users').select('email, first_name').eq('id', reward.user_id).single()
     if (user?.email) {
-      await sendEmail('order_confirmation', user.email, {
+      await sendEmail('bogo_account', user.email, {
         first_name:     user.first_name ?? 'Trader',
-        order_number:   `BOGO-${reward.coupon_code}`,
+        promo_code:     reward.coupon_code,
         product_name:   bogoProduct.name,
-        account_size:   Number(size).toLocaleString(),
+        account_size:   Number(size),
         account_number: accountNumber,
         login, password,
         server:         'TFD-Live-01',
-        amount:         '0.00',
         phase:          bogoProduct.challenge_type === 'instant' ? 'Funded (BOGO)' : 'Phase 1 (BOGO)',
       })
     }
