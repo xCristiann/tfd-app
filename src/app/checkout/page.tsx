@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
@@ -26,6 +27,7 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { toasts, toast, dismiss } = useToast()
+  const isMobile = useIsMobile()
   const productId = searchParams.get('product')
   const paymentStatus = searchParams.get('payment')  // 'success' or 'cancel'
 
@@ -397,7 +399,7 @@ export function CheckoutPage() {
           <button onClick={() => navigate('/dashboard')} className="text-[10px] text-[#8FA3BF] hover:text-[#1A3A6B] cursor-pointer bg-transparent border-none">✕ Cancel</button>
         </div>
 
-        <div className="max-w-[1000px] mx-auto px-6 py-10 grid grid-cols-[1fr_320px] gap-8">
+        <div style={{maxWidth:'1000px',margin:'0 auto',padding:isMobile?'16px':'40px 24px',display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 320px',gap:'24px'}}>
           {/* Left */}
           <div>
             {/* Step 1: Account Info */}
@@ -407,7 +409,7 @@ export function CheckoutPage() {
                 <h2 className="font-sans text-[24px] font-bold mb-1">Your Information</h2>
                 <p className="text-[11px] text-[#5C7A9E] mb-8">Confirm your details for the trading account.</p>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:'12px',marginBottom:'16px'}}>
                   {[['First Name', firstName, setFirstName], ['Last Name', lastName, setLastName]].map(([l, v, s]) => (
                     <div key={String(l)}>
                       <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">{String(l)}</label>
@@ -432,7 +434,7 @@ export function CheckoutPage() {
                 </div>
 
                 {/* Address */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div style={{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(3,1fr)',gap:'10px',marginBottom:'16px'}}>
                   <div className="col-span-3">
                     <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Street Address</label>
                     <input value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main Street"
@@ -453,7 +455,7 @@ export function CheckoutPage() {
                 {/* Platform */}
                 <div className="mb-6">
                   <label className="text-[8px] uppercase tracking-[1.5px] text-[#8FA3BF] font-semibold block mb-2">Trading Platform</label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div style={{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(3,1fr)',gap:'10px'}}>
                     {[
                       { id:'tfd', label:'TFD Platform', sub:'Available now', available: true },
                       { id:'mt4', label:'MT4',       sub:'Coming soon',   available: false },
@@ -666,7 +668,7 @@ export function CheckoutPage() {
 
                 <div className="p-5 border border-[#2255CC] bg-[rgba(34,85,204,.03)] mb-6">
                   <div className="text-[8px] uppercase tracking-[2px] text-[#2255CC] font-semibold mb-4">TFD Platform Login Details</div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:'10px'}}>
                     {[
                       ['Login ID', createdAccount.login],
                       ['Password', createdAccount.password],

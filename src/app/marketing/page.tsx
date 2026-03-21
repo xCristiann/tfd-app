@@ -17,6 +17,7 @@ export function MarketingPage() {
 
   const isLoggedIn = !!session
   const isMobile = useIsMobile()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const S: Record<string, React.CSSProperties> = {
     page:    { fontFamily:"'Inter',system-ui,sans-serif", background:'#fff', color:'#1A3A6B', minHeight:'100vh' },
@@ -48,7 +49,22 @@ export function MarketingPage() {
               ))}
             </div>
           )}
-          {isMobile && <div/>}
+          {isMobile && (
+            <div style={{display:'flex',justifyContent:'center'}}>
+              <button onClick={()=>setMenuOpen(o=>!o)}
+                style={{background:'transparent',border:'none',cursor:'pointer',padding:'8px',display:'flex',flexDirection:'column',gap:'5px'}}>
+                {menuOpen ? (
+                  <span style={{color:'#fff',fontSize:'20px',lineHeight:1}}>&#x2715;</span>
+                ) : (
+                  <>
+                    <span style={{width:'22px',height:'2px',background:'#fff',display:'block',borderRadius:'2px'}}/>
+                    <span style={{width:'22px',height:'2px',background:'#fff',display:'block',borderRadius:'2px'}}/>
+                    <span style={{width:'22px',height:'2px',background:'#fff',display:'block',borderRadius:'2px'}}/>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
           <div style={{display:'flex',gap:'8px',justifyContent:'flex-end',alignItems:'center'}}>
             {isLoggedIn ? (
               <>
@@ -70,6 +86,28 @@ export function MarketingPage() {
           </div>
         </div>
       </nav>
+      {isMobile && menuOpen && (
+        <div style={{position:'fixed',top:'64px',left:0,right:0,bottom:0,zIndex:199,background:'rgba(0,0,0,.5)'}} onClick={()=>setMenuOpen(false)}>
+          <div style={{background:'linear-gradient(135deg,#1A3A8B 0%,#2255CC 100%)',padding:'8px 0 24px'}} onClick={e=>e.stopPropagation()}>
+            {[['How It Works','#how'],['Challenge Plans','#plans'],['Payouts','#payouts'],['Features','#features'],['Help Centre','/help'],['Terms','/terms'],['Privacy','/privacy']].map(([l,h])=>(
+              <a key={l} href={h} onClick={()=>setMenuOpen(false)}
+                style={{display:'block',padding:'14px 24px',fontSize:'15px',color:'rgba(255,255,255,.85)',textDecoration:'none',borderBottom:'1px solid rgba(255,255,255,.08)',fontWeight:500}}>
+                {l}
+              </a>
+            ))}
+            <div style={{padding:'16px 24px 0',display:'flex',gap:'10px'}}>
+              <button onClick={()=>{setMenuOpen(false);navigate('/login')}}
+                style={{flex:1,padding:'11px',fontSize:'13px',fontWeight:600,color:'rgba(255,255,255,.85)',background:'rgba(255,255,255,.1)',border:'1.5px solid rgba(255,255,255,.3)',borderRadius:'8px',cursor:'pointer'}}>
+                Log in
+              </button>
+              <button onClick={()=>{setMenuOpen(false);navigate('/login')}}
+                style={{flex:1,padding:'11px',fontSize:'13px',fontWeight:700,color:'#1A3A8B',background:'#fff',border:'none',borderRadius:'8px',cursor:'pointer'}}>
+                Get started
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <div style={{padding:isMobile?'40px 20px 48px':'96px 48px 80px', background:'#fff', borderBottom:'1px solid #E8EEF8', maxWidth:'960px', margin:'0 auto'}}>
@@ -219,7 +257,7 @@ export function MarketingPage() {
                           <div style={{display:'flex',gap:'16px',marginTop:'14px',flexWrap:'wrap'}}>
                             {['No time limit','Real-time risk monitor','Same-day payouts'].map((f:string) => (
                               <span key={f} style={{fontSize:'11px',color:g.color,display:'flex',alignItems:'center',gap:'4px'}}>
-                                <span style={{fontSize:'10px'}}>OK</span>{f}
+                                <span style={{fontSize:'12px',marginRight:'3px'}}>&#10003;</span>{f}
                               </span>
                             ))}
                           </div>
@@ -268,9 +306,9 @@ export function MarketingPage() {
                     {/* Footer */}
                     <div style={{padding:'16px 32px',background:'#F8F9FC',borderTop:'1px solid #F0F4FB',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px'}}>
                       <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
-                        {prod.news_trading&&<span style={{fontSize:'10px',padding:'3px 10px',borderRadius:'20px',background:'rgba(22,163,74,.06)',color:'#16A34A',border:'1px solid rgba(22,163,74,.15)'}}>OK News Trading</span>}
-                        {prod.weekend_holding&&<span style={{fontSize:'10px',padding:'3px 10px',borderRadius:'20px',background:'rgba(22,163,74,.06)',color:'#16A34A',border:'1px solid rgba(22,163,74,.15)'}}>OK Weekend Holding</span>}
-                        <span style={{fontSize:'10px',padding:'3px 10px',borderRadius:'20px',background:'rgba(34,85,204,.06)',color:'#2255CC',border:'1px solid rgba(34,85,204,.15)'}}>OK No time limit</span>
+                        {prod.news_trading&&<span style={{fontSize:'10px',padding:'3px 10px',borderRadius:'20px',background:'rgba(22,163,74,.06)',color:'#16A34A',border:'1px solid rgba(22,163,74,.15)'}}><span style={{marginRight:'4px'}}>&#10003;</span>News Trading</span>}
+                        {prod.weekend_holding&&<span style={{fontSize:'10px',padding:'3px 10px',borderRadius:'20px',background:'rgba(22,163,74,.06)',color:'#16A34A',border:'1px solid rgba(22,163,74,.15)'}}><span style={{marginRight:'4px'}}>&#10003;</span>Weekend Holding</span>}
+                        <span style={{fontSize:'10px',padding:'3px 10px',borderRadius:'20px',background:'rgba(34,85,204,.06)',color:'#2255CC',border:'1px solid rgba(34,85,204,.15)'}}><span style={{marginRight:'4px'}}>&#10003;</span>No time limit</span>
                       </div>
                       <button onClick={()=>navigate(`/checkout?product=${prod.id}`)}
                         style={{padding:'10px 24px',borderRadius:'8px',border:`1.5px solid ${g.color}`,cursor:'pointer',
