@@ -47,21 +47,29 @@ const BOGO_TRIGGERS = [
   { value: 'on_phase2',  label: 'When Phase 2 passed',   desc: 'Second account created after passing Phase 2' },
 ]
 
-function PrimaryAccountPhase({ accountId, triggerType }: { accountId: string, triggerType: string }) {
-  const [phase, setPhase] = useState<string|null>(null)
+function PrimaryAccountPhase({ userId, triggerType }: { userId: string, triggerType: string }) {
+  const [bestPhase, setBestPhase] = useState<string|null>(null)
   useEffect(() => {
-    if (!accountId) return
-    supabase.from('accounts').select('phase').eq('id', accountId).single()
-      .then(({ data }) => setPhase(data?.phase ?? null))
-  }, [accountId])
-  if (!phase) return null
+    if (!userId) return
+    // Check all accounts for this user — advancePhase creates new accounts per phase
+    supabase.from('accounts').select('phase')
+      .eq('user_id', userId).order('created_at', { ascending: false })
+      .then(({ data }) => {
+        const phases = data?.map((a:any) => a.phase) ?? []
+        // Find best phase achieved
+        const order = ['funded','passed','phase2','phase1']
+        const best = order.find(p => phases.includes(p)) ?? phases[0] ?? null
+        setBestPhase(best)
+      })
+  }, [userId])
+  if (!bestPhase) return null
   const needed = triggerType === 'on_funded' ? 'funded' : 'phase2'
   const ok = triggerType === 'on_funded'
-    ? phase === 'funded'
-    : (phase === 'phase2' || phase === 'funded' || phase === 'passed')
+    ? (bestPhase === 'funded' || bestPhase === 'passed')
+    : (bestPhase === 'phase2' || bestPhase === 'funded' || bestPhase === 'passed')
   return (
     <div className={`text-[9px] mt-0.5 font-semibold ${ok ? 'text-[#16A34A]' : 'text-[#D97706]'}`}>
-      {ok ? `✓ Primary is ${phase}` : `⏳ Primary: ${phase} (needs ${needed})`}
+      {ok ? `✓ Best phase: ${bestPhase}` : `⏳ Best phase: ${bestPhase} (needs ${needed})`}
     </div>
   )
 }
@@ -193,23 +201,28 @@ export function AdminCouponsPage() {
   async function triggerBogoReward(reward: any) {
     if (reward.status !== 'pending') return
 
-    // Validate trigger conditions before creating account
-    if (reward.trigger_type === 'on_funded' && reward.primary_account_id) {
-      const { data: primaryAcc } = await supabase
-        .from('accounts').select('phase, status').eq('id', reward.primary_account_id).single()
-      if (!primaryAcc || primaryAcc.phase !== 'funded') {
+    // Validate trigger conditions — look at ALL accounts for this user, not just the original
+    // because advancePhase creates new accounts at each phase transition
+    if (reward.trigger_type === 'on_funded' || reward.trigger_type === 'on_phase2') {
+      const { data: userAccounts } = await supabase
+        .from('accounts')
+        .select('phase, status, product_id')
+        .eq('user_id', reward.user_id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+
+      const phases = userAccounts?.map((a:any) => a.phase) ?? []
+      const hasFunded = phases.includes('funded') || phases.includes('passed')
+      const hasPhase2 = hasFunded || phases.includes('phase2')
+
+      if (reward.trigger_type === 'on_funded' && !hasFunded) {
         toast('warning','⚠️','Not Yet Funded',
-          `Primary account must be in "funded" phase before the BOGO reward can be triggered. Current phase: ${primaryAcc?.phase ?? 'unknown'}.`)
+          `Trader has not reached funded phase yet. Active phases: ${phases.join(', ') || 'none'}.`)
         return
       }
-    }
-
-    if (reward.trigger_type === 'on_phase2' && reward.primary_account_id) {
-      const { data: primaryAcc } = await supabase
-        .from('accounts').select('phase, status').eq('id', reward.primary_account_id).single()
-      if (!primaryAcc || (primaryAcc.phase !== 'phase2' && primaryAcc.phase !== 'funded' && primaryAcc.phase !== 'passed')) {
+      if (reward.trigger_type === 'on_phase2' && !hasPhase2) {
         toast('warning','⚠️','Phase 2 Not Reached',
-          `Primary account must have reached Phase 2 before the BOGO reward can be triggered. Current phase: ${primaryAcc?.phase ?? 'unknown'}.`)
+          `Trader has not reached Phase 2 yet. Active phases: ${phases.join(', ') || 'none'}.`)
         return
       }
     }
@@ -434,7 +447,7 @@ export function AdminCouponsPage() {
                       <td className="px-[10px] py-[8px]">
                         <div className="text-[#5C7A9E]">{BOGO_TRIGGERS.find(t=>t.value===r.trigger_type)?.label ?? r.trigger_type}</div>
                         {r.trigger_type !== 'immediate' && (
-                          <PrimaryAccountPhase accountId={r.primary_account_id} triggerType={r.trigger_type}/>
+                          <PrimaryAccountPhase userId={r.user_id} triggerType={r.trigger_type}/>
                         )}
                       </td>
                       <td className="px-[10px] py-[8px]">
