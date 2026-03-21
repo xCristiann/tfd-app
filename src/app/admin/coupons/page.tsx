@@ -403,10 +403,10 @@ export function AdminCouponsPage() {
                         </span>
                       </td>
                       <td className="px-[10px] py-[8px]">
-                        {r.status === 'pending' && r.trigger_type === 'immediate' && (
+                        {r.status === 'pending' && (
                           <button onClick={()=>triggerBogoReward(r)}
                             className="px-3 py-1 text-[8px] font-bold uppercase bg-[rgba(217,119,6,.08)] text-[#D97706] border border-[rgba(217,119,6,.2)] rounded cursor-pointer">
-                            Trigger Now
+                            🎁 Create Account Now
                           </button>
                         )}
                         {r.status === 'completed' && (
