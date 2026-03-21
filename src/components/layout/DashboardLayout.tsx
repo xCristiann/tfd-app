@@ -188,30 +188,28 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top nav — identical to marketing page navbar */}
-        <nav style={{height:'64px',display:'flex',alignItems:'center',padding:'0 32px',borderBottom:'1px solid #E8EEF8',backgroundColor:'#ffffff',flexShrink:0,zIndex:10,boxSizing:'border-box'}}>
+        {/* Top nav — royal blue matching help page */}
+        <nav style={{height:'64px',display:'flex',alignItems:'center',padding:'0 32px',borderBottom:'none',background:'linear-gradient(135deg, #1A3A8B 0%, #2255CC 100%)',flexShrink:0,zIndex:10,boxSizing:'border-box'}}>
           <div style={{width:'100%',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:'16px'}}>
-            {/* Logo */}
-            <a href="/" style={{fontFamily:"'Playfair Display',serif",fontSize:'18px',fontWeight:700,color:'#1A3A6B',textDecoration:'none',letterSpacing:'-0.3px',whiteSpace:'nowrap',justifySelf:'start'}}>
-              The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span>
-            </a>
+            {/* Empty left column to keep links centered */}
+            <div/>
             {/* Center links */}
             <div style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
               {[['How It Works','/#how'],['Challenge Plans','/#plans'],['Payouts','/#payouts'],['Features','/#features'],['Help Centre','/help']].map(([l,h])=>(
                 <a key={l} href={h}
-                  style={{fontSize:'13px',fontWeight:500,color:'#5C7A9E',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s',whiteSpace:'nowrap'}}
-                  onMouseEnter={e=>(e.currentTarget.style.color='#1A3A6B')}
-                  onMouseLeave={e=>(e.currentTarget.style.color='#5C7A9E')}>{l}</a>
+                  style={{fontSize:'13px',fontWeight:500,color:'rgba(255,255,255,0.75)',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s',whiteSpace:'nowrap'}}
+                  onMouseEnter={e=>(e.currentTarget.style.color='#ffffff')}
+                  onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,0.75)')}>{l}</a>
               ))}
             </div>
             {/* Right buttons */}
             <div style={{display:'flex',gap:'8px',alignItems:'center',justifyContent:'flex-end'}}>
               <button onClick={() => navigate('/dashboard')}
-                style={{fontSize:'13px',fontWeight:600,color:'#fff',padding:'9px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer',whiteSpace:'nowrap'}}>
+                style={{fontSize:'13px',fontWeight:600,color:'#1A3A8B',padding:'9px 20px',background:'#ffffff',border:'none',borderRadius:'8px',cursor:'pointer',whiteSpace:'nowrap'}}>
                 Dashboard
               </button>
               <button onClick={handleLogout}
-                style={{fontSize:'13px',fontWeight:500,color:'#5C7A9E',padding:'9px 18px',backgroundColor:'transparent',border:'1.5px solid #C5D5EA',borderRadius:'8px',cursor:'pointer',whiteSpace:'nowrap'}}>
+                style={{fontSize:'13px',fontWeight:500,color:'rgba(255,255,255,0.75)',padding:'9px 18px',backgroundColor:'rgba(255,255,255,0.1)',border:'1.5px solid rgba(255,255,255,0.3)',borderRadius:'8px',cursor:'pointer',whiteSpace:'nowrap'}}>
                 Log Out
               </button>
             </div>

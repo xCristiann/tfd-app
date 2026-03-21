@@ -20,7 +20,7 @@ export function MarketingPage() {
 
   const S: Record<string, React.CSSProperties> = {
     page:    { fontFamily:"'Inter',system-ui,sans-serif", background:'#fff', color:'#1A3A6B', minHeight:'100vh' },
-    nav:     { height:'64px', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 32px', borderBottom:'1px solid #E8EEF8', background:'#fff', position:'sticky' as const, top:0, zIndex:100 },
+    nav:     { height:'64px', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 32px', borderBottom:'none', background:'linear-gradient(135deg, #1A3A8B 0%, #2255CC 100%)', position:'sticky' as const, top:0, zIndex:100 },
     logo:    { fontFamily:"'Playfair Display',serif", fontSize:'18px', fontWeight:700, color:'#1A3A6B', marginRight:'32px', letterSpacing:'-0.3px', textDecoration:'none', flexShrink:0 },
     section: { padding:isMobile?'40px 20px':'72px 48px', borderBottom:'1px solid #E8EEF8' },
     eyebrow: { display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' },
@@ -40,8 +40,8 @@ export function MarketingPage() {
           {!isMobile && (
             <div style={{display:'flex'}}>
               {[['How It Works','#how'],['Challenge Plans','#plans'],['Payouts','#payouts'],['Features','#features'],['FAQ','/help']].map(([l,h])=>(
-                <a key={l} href={h} style={{fontSize:'12px',fontWeight:500,color:'#5C7A9E',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s'}}
-                  onMouseEnter={e=>(e.currentTarget.style.color='#1A3A6B')} onMouseLeave={e=>(e.currentTarget.style.color='#5C7A9E')}>{l}</a>
+                <a key={l} href={h} style={{fontSize:'12px',fontWeight:500,color:'rgba(255,255,255,0.75)',padding:'0 16px',height:'64px',display:'flex',alignItems:'center',textDecoration:'none',transition:'color .15s'}}
+                  onMouseEnter={e=>(e.currentTarget.style.color='#ffffff')} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,0.75)')}>{l}</a>
               ))}
             </div>
           )}
@@ -50,18 +50,18 @@ export function MarketingPage() {
             {isLoggedIn ? (
               <>
                 <button onClick={()=>navigate('/dashboard')}
-                  style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 18px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>
+                  style={{fontSize:'12px',fontWeight:600,color:'#1A3A8B',padding:'8px 18px',background:'#ffffff',border:'none',borderRadius:'8px',cursor:'pointer'}}>
                   Dashboard
                 </button>
                 <button onClick={async()=>{const{supabase}=await import('@/lib/supabase');await supabase.auth.signOut();navigate('/login')}}
-                  style={{fontSize:'12px',fontWeight:500,color:'#5C7A9E',padding:'8px 16px',background:'transparent',border:'1.5px solid #C5D5EA',borderRadius:'8px',cursor:'pointer'}}>
+                  style={{fontSize:'12px',fontWeight:500,color:'rgba(255,255,255,0.8)',padding:'8px 16px',background:'rgba(255,255,255,0.1)',border:'1.5px solid rgba(255,255,255,0.35)',borderRadius:'8px',cursor:'pointer'}}>
                   Log Out
                 </button>
               </>
             ) : (
               <>
-                {!isMobile && <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:500,color:'#1A3A6B',padding:'8px 18px',border:'1.5px solid #C5D5EA',background:'#fff',borderRadius:'8px',cursor:'pointer'}}>Log in</button>}
-                <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:600,color:'#fff',padding:'8px 20px',background:'#2255CC',border:'none',borderRadius:'8px',cursor:'pointer'}}>{isMobile ? 'Start' : 'Get started'}</button>
+                {!isMobile && <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:500,color:'rgba(255,255,255,0.8)',padding:'8px 18px',border:'1.5px solid rgba(255,255,255,0.35)',background:'rgba(255,255,255,0.1)',borderRadius:'8px',cursor:'pointer'}}>Log in</button>}
+                <button onClick={()=>navigate('/login')} style={{fontSize:'12px',fontWeight:600,color:'#1A3A8B',padding:'8px 20px',background:'#ffffff',border:'none',borderRadius:'8px',cursor:'pointer'}}>{isMobile ? 'Start' : 'Get started'}</button>
               </>
             )}
           </div>
