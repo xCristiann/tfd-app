@@ -47,6 +47,25 @@ const BOGO_TRIGGERS = [
   { value: 'on_phase2',  label: 'When Phase 2 passed',   desc: 'Second account created after passing Phase 2' },
 ]
 
+function PrimaryAccountPhase({ accountId, triggerType }: { accountId: string, triggerType: string }) {
+  const [phase, setPhase] = useState<string|null>(null)
+  useEffect(() => {
+    if (!accountId) return
+    supabase.from('accounts').select('phase').eq('id', accountId).single()
+      .then(({ data }) => setPhase(data?.phase ?? null))
+  }, [accountId])
+  if (!phase) return null
+  const needed = triggerType === 'on_funded' ? 'funded' : 'phase2'
+  const ok = triggerType === 'on_funded'
+    ? phase === 'funded'
+    : (phase === 'phase2' || phase === 'funded' || phase === 'passed')
+  return (
+    <div className={`text-[9px] mt-0.5 font-semibold ${ok ? 'text-[#16A34A]' : 'text-[#D97706]'}`}>
+      {ok ? `✓ Primary is ${phase}` : `⏳ Primary: ${phase} (needs ${needed})`}
+    </div>
+  )
+}
+
 export function AdminCouponsPage() {
   const { toasts, toast, dismiss } = useToast()
   const [coupons, setCoupons]     = useState<any[]>([])
@@ -173,6 +192,28 @@ export function AdminCouponsPage() {
 
   async function triggerBogoReward(reward: any) {
     if (reward.status !== 'pending') return
+
+    // Validate trigger conditions before creating account
+    if (reward.trigger_type === 'on_funded' && reward.primary_account_id) {
+      const { data: primaryAcc } = await supabase
+        .from('accounts').select('phase, status').eq('id', reward.primary_account_id).single()
+      if (!primaryAcc || primaryAcc.phase !== 'funded') {
+        toast('warning','⚠️','Not Yet Funded',
+          `Primary account must be in "funded" phase before the BOGO reward can be triggered. Current phase: ${primaryAcc?.phase ?? 'unknown'}.`)
+        return
+      }
+    }
+
+    if (reward.trigger_type === 'on_phase2' && reward.primary_account_id) {
+      const { data: primaryAcc } = await supabase
+        .from('accounts').select('phase, status').eq('id', reward.primary_account_id).single()
+      if (!primaryAcc || (primaryAcc.phase !== 'phase2' && primaryAcc.phase !== 'funded' && primaryAcc.phase !== 'passed')) {
+        toast('warning','⚠️','Phase 2 Not Reached',
+          `Primary account must have reached Phase 2 before the BOGO reward can be triggered. Current phase: ${primaryAcc?.phase ?? 'unknown'}.`)
+        return
+      }
+    }
+
     const { data: bogoProduct } = await supabase.from('challenge_products').select('*').eq('id', reward.bogo_product_id).single()
     if (!bogoProduct) { toast('error','❌','Error','BOGO product not found'); return }
 
@@ -390,8 +431,11 @@ export function AdminCouponsPage() {
                         <div>{r.bogo_product?.name ?? '—'}</div>
                         <div className="text-[9px] text-[#8FA3BF]">${Number(r.bogo_product?.account_size??0).toLocaleString()}</div>
                       </td>
-                      <td className="px-[10px] py-[8px] text-[#5C7A9E]">
-                        {BOGO_TRIGGERS.find(t=>t.value===r.trigger_type)?.label ?? r.trigger_type}
+                      <td className="px-[10px] py-[8px]">
+                        <div className="text-[#5C7A9E]">{BOGO_TRIGGERS.find(t=>t.value===r.trigger_type)?.label ?? r.trigger_type}</div>
+                        {r.trigger_type !== 'immediate' && (
+                          <PrimaryAccountPhase accountId={r.primary_account_id} triggerType={r.trigger_type}/>
+                        )}
                       </td>
                       <td className="px-[10px] py-[8px]">
                         <span className={`text-[8px] font-bold px-2 py-0.5 border ${
