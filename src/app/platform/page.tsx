@@ -152,7 +152,29 @@ function calcMargin(sym: string, price: number, lots: number): number {
 /* ── Price feed — Deriv WebSocket (free, no key, instant ticks) ────
    wss://ws.binaryws.com/websockets/v3?app_id=1089
    Subscribes to all symbols on mount. Reconnects automatically.
+   Last prices persisted in localStorage so market-close shows
+   real last price instead of stale SEED values.
    ─────────────────────────────────────────────────────────────── */
+
+const LS_PRICES_KEY = 'tfd_last_prices'
+
+function loadCachedPrices(): Record<string,number> {
+  try {
+    const raw = localStorage.getItem(LS_PRICES_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    // Only use if saved within last 72 hours (3 days)
+    if (Date.now() - (parsed._ts ?? 0) > 72 * 60 * 60 * 1000) return {}
+    const { _ts, ...prices } = parsed
+    return prices
+  } catch { return {} }
+}
+
+function saveCachedPrices(prices: Record<string,number>) {
+  try {
+    localStorage.setItem(LS_PRICES_KEY, JSON.stringify({ ...prices, _ts: Date.now() }))
+  } catch {}
+}
 const DERIV_SYM: Record<string,string> = {
   'EUR/USD':'frxEURUSD','GBP/USD':'frxGBPUSD','USD/JPY':'frxUSDJPY',
   'USD/CHF':'frxUSDCHF','AUD/USD':'frxAUDUSD','USD/CAD':'frxUSDCAD',
@@ -168,29 +190,64 @@ const DERIV_REV: Record<string,string> = Object.fromEntries(
 )
 
 function usePriceFeed() {
-  const [prices, setPrices] = useState<Record<string,number>>({...SEED})
-  const refPrev   = useRef<Record<string,number>>({...SEED})
-  const refPrices = useRef<Record<string,number>>({...SEED})
+  // Initialise from cache (last known prices) — falls back to SEED
+  const cached = useMemo(() => {
+    const c = loadCachedPrices()
+    return { ...SEED, ...c }
+  }, [])
+
+  const [prices, setPrices] = useState<Record<string,number>>(cached)
+  const refPrev   = useRef<Record<string,number>>({...cached})
+  const refPrices = useRef<Record<string,number>>({...cached})
   const wsRef     = useRef<WebSocket|null>(null)
+  const wsLive    = useRef<Set<string>>(new Set())  // symbols that got a live tick this session
   const deadRef   = useRef(false)
+  const saveTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
 
   const push = useCallback((sym:string, price:number) => {
     if (!price || isNaN(price) || price <= 0) return
     refPrev.current[sym]   = refPrices.current[sym] || price
     refPrices.current[sym] = price
     setPrices(p => p[sym] === price ? p : {...p, [sym]: price})
+
+    // Mark as live (received from WS this session)
+    wsLive.current.add(sym)
+
+    // Debounced save to localStorage (max once per 5s)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      saveCachedPrices(refPrices.current)
+    }, 5000)
   }, [])
 
   useEffect(() => {
     deadRef.current = false
+    let tickReceived = false
 
+    // ── Fallback: /api/prices poll (works market closed too) ─────
+    const pollApi = async () => {
+      if (deadRef.current) return
+      try {
+        const r = await fetch('/api/prices', { signal: AbortSignal.timeout(8000) })
+        if (!r.ok) return
+        const d = await r.json()
+        for (const [s, p] of Object.entries(d.prices ?? {})) {
+          if (typeof p === 'number' && p > 0) push(s, p)
+        }
+      } catch {}
+    }
+
+    // Poll immediately on mount, then every 5s as background
+    pollApi()
+    const pollIv = setInterval(pollApi, 5000)
+
+    // ── Primary: Deriv WebSocket (real-time ticks) ────────────────
     const connect = () => {
       if (deadRef.current) return
       const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089')
       wsRef.current = ws
 
       ws.onopen = () => {
-        // Subscribe to all symbols
         Object.values(DERIV_SYM).forEach(dsym => {
           ws.send(JSON.stringify({ ticks: dsym, subscribe: 1 }))
         })
@@ -201,13 +258,16 @@ function usePriceFeed() {
           const d = JSON.parse(e.data)
           if (d.msg_type === 'tick' && d.tick) {
             const sym = DERIV_REV[d.tick.symbol]
-            if (sym && d.tick.quote > 0) push(sym, d.tick.quote)
+            if (sym && d.tick.quote > 0) {
+              tickReceived = true
+              push(sym, d.tick.quote)
+            }
           }
         } catch {}
       }
 
       ws.onclose = () => {
-        if (!deadRef.current) setTimeout(connect, 2000)
+        if (!deadRef.current) setTimeout(connect, 3000)
       }
 
       ws.onerror = () => { try { ws.close() } catch {} }
@@ -217,6 +277,7 @@ function usePriceFeed() {
 
     return () => {
       deadRef.current = true
+      clearInterval(pollIv)
       try { wsRef.current?.close() } catch {}
     }
   }, [push])
@@ -227,7 +288,7 @@ function usePriceFeed() {
     return () => clearInterval(iv)
   }, [])
 
-  return { prices, refPrev, refPrices, push }
+  return { prices, refPrev, refPrices, push, wsLive }
 }
 
 
@@ -284,7 +345,7 @@ export function PlatformPage() {
   useEffect(() => { lsSet('tfd_sym',sym) }, [sym])
   useEffect(() => { lsSet('tfd_tf',tf)   }, [tf])
 
-  const { prices, refPrev, refPrices, push } = usePriceFeed()
+  const { prices, refPrev, refPrices, push, wsLive: wsLiveRef } = usePriceFeed()
   const tradesRef  = useRef(openTrades);  tradesRef.current  = openTrades
   const primaryRef = useRef(primary);     primaryRef.current = primary
   const closingRef = useRef<Set<string>>(new Set())
@@ -305,7 +366,20 @@ export function PlatformPage() {
   const freeMgn   = Math.max(0, equity - usedMgn)
   const reqMgn    = calcMargin(sym, execPrice, lotsNum)
   const maxLots   = reqMgn > 0 ? Math.floor((freeMgn / reqMgn) * lotsNum * 100) / 100 : 0
-  const isLive    = refPrices.current[sym] > 0 && refPrices.current[sym] !== SEED[sym]
+  // isLive = true only when Deriv WS has sent us a tick this session
+  const isLive    = wsLiveRef.current.has(sym)
+
+  // Market hours check (UTC)
+  const marketStatus = (() => {
+    const now = new Date()
+    const day = now.getUTCDay() // 0=Sun, 6=Sat
+    const h   = now.getUTCHours()
+    // Forex closed: Fri 22:00 UTC → Sun 22:00 UTC
+    if (day === 6) return 'closed'                          // Saturday all day
+    if (day === 0 && h < 22) return 'closed'               // Sunday before 22:00 UTC
+    if (day === 5 && h >= 22) return 'closed'              // Friday after 22:00 UTC
+    return 'open'
+  })()
 
   useEffect(() => {
     if (!primary?.id) return
@@ -437,8 +511,13 @@ export function PlatformPage() {
       <div style={{height:'48px',background:'#1A3A6B',display:'flex',alignItems:'center',padding:'0 12px',gap:'8px',flexShrink:0}}>
         <button onClick={()=>navigate('/dashboard')} style={{background:'rgba(255,255,255,.1)',border:'none',color:'#fff',padding:'5px 10px',borderRadius:'6px',cursor:'pointer',fontSize:'11px',fontWeight:600}}>← Dashboard</button>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',fontWeight:700,color:'#fff'}}>The Funded <span style={{color:'#60A5FA',fontStyle:'italic'}}>Diaries</span></div>
-        <div style={{width:'6px',height:'6px',borderRadius:'50%',background:isLive?'#4ADE80':'#F59E0B',boxShadow:isLive?'0 0 8px #4ADE80':'none'}}/>
-        <span style={{fontSize:'9px',color:isLive?'#4ADE80':'#F59E0B',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase'}}>{isLive?'Live':'Loading'}</span>
+        <div style={{width:'6px',height:'6px',borderRadius:'50%',
+          background: isLive?'#4ADE80': marketStatus==='closed'?'#9CA3AF':'#F59E0B',
+          boxShadow: isLive?'0 0 8px #4ADE80':'none'}}/>
+        <span style={{fontSize:'9px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',
+          color: isLive?'#4ADE80': marketStatus==='closed'?'#9CA3AF':'#F59E0B'}}>
+          {isLive?'Live': marketStatus==='closed'?'Closed':'Connecting'}
+        </span>
         <div style={{marginLeft:'auto',display:'flex',gap:'4px'}}>
           {accounts.map(a=>(
             <button key={a.id} onClick={()=>setSelAccId(a.id)} style={{padding:'3px 8px',background:a.id===primary?.id?'rgba(96,165,250,.2)':'rgba(255,255,255,.06)',border:a.id===primary?.id?'1px solid rgba(96,165,250,.4)':'1px solid rgba(255,255,255,.1)',borderRadius:'4px',color:a.id===primary?.id?'#60A5FA':'rgba(255,255,255,.4)',fontSize:'9px',...mono,cursor:'pointer'}}>
@@ -499,8 +578,11 @@ export function PlatformPage() {
                 <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 8px',fontSize:'9px',fontWeight:700,border:'none',borderRadius:'4px',cursor:'pointer',background:tf===t?'#2255CC':'#F4F7FD',color:tf===t?'#fff':'#5C7A9E'}}>{TF_LABEL[t]}</button>
               ))}
             </div>
-            <div style={{marginLeft:'auto',fontSize:'9px',color:isLive?'#16A34A':'#F59E0B',background:isLive?'rgba(22,163,74,.08)':'rgba(245,158,11,.08)',padding:'2px 8px',borderRadius:'20px',fontWeight:600}}>
-              {isLive?'● Live':'○ Loading…'}
+            <div style={{marginLeft:'auto',fontSize:'9px',
+              color: isLive?'#16A34A': marketStatus==='closed'?'#9CA3AF':'#F59E0B',
+              background: isLive?'rgba(22,163,74,.08)': marketStatus==='closed'?'rgba(156,163,175,.08)':'rgba(245,158,11,.08)',
+              padding:'2px 8px',borderRadius:'20px',fontWeight:600}}>
+              {isLive ? '● Live' : marketStatus==='closed' ? '○ Market Closed' : '○ Connecting…'}
             </div>
           </div>
           <div style={{flex:1}} key={`${sym}_${tf}`}>
