@@ -30,7 +30,8 @@ export function AdminRiskPage() {
   const [winRate, setWinRate]       = useState<any[]>([])
   const [flagged, setFlagged]       = useState<any[]>([])
   const [notes, setNotes]           = useState<Record<string,string>>({})
-  const [sameDevice, setSameDevice] = useState<any[]>([])  // Same name/email diff accounts
+  const [sameDevice, setSameDevice] = useState<any[]>([])
+  const [mirrorGroups, setMirrorGroups] = useState<any[]>([])  // Same name/email diff accounts
   const [newsViolations, setNewsViolations] = useState<any[]>([])  // Trades opened during news
   const [consistentProfit, setConsistentProfit] = useState<any[]>([]) // Suspiciously consistent daily P&L
 
@@ -97,7 +98,70 @@ export function AdminRiskPage() {
       for (const t of closed??[]) { const acc=t.accounts as any; if(!acc) continue; if(!wMap[t.account_id]) wMap[t.account_id]={wins:0,total:0,pnl:0,acc}; wMap[t.account_id].total++; if((t.net_pnl??0)>0) wMap[t.account_id].wins++; wMap[t.account_id].pnl+=t.net_pnl??0 }
       setWinRate(Object.values(wMap).filter((v:any)=>v.total>=20&&v.wins/v.total>=0.9).map((v:any)=>({account_number:v.acc.account_number,name:`${v.acc.users?.first_name} ${v.acc.users?.last_name}`,email:v.acc.users?.email,user_id:v.acc.user_id,win_rate:Math.round(v.wins/v.total*100),total:v.total,pnl:v.pnl})))
 
-      // ── 7. Same-name/email multi-accounting ──
+      // ── 7. Mirror Trading Detection ──────────────────────────────
+      // Fetches last 48h of closed trades, groups by symbol+direction+lots
+      // If 3+ different accounts have trades within 60s of each other — mirror detected
+      const { data: recentClosed } = await supabase
+        .from('trades')
+        .select('id,account_id,symbol,direction,lots,opened_at,close_price,net_pnl,accounts(account_number,user_id,users(first_name,last_name,email))')
+        .eq('status','closed')
+        .gte('opened_at', new Date(Date.now() - 48*3600000).toISOString())
+        .order('opened_at', { ascending: true })
+        .limit(3000)
+
+      // Group trades by symbol+direction, look for clusters within 60s
+      const MIRROR_WINDOW = 60 // seconds
+      const MIN_MIRROR_ACCOUNTS = 2
+      const closedArr = recentClosed ?? []
+
+      // For each trade, find other trades with same symbol+direction within window
+      const mirrorMap: Record<string, any> = {}
+      for (let i = 0; i < closedArr.length; i++) {
+        const a = closedArr[i]
+        if (!a.accounts) continue
+        for (let j = i + 1; j < closedArr.length; j++) {
+          const b = closedArr[j]
+          if (!b.accounts) continue
+          // Must be different users
+          if (a.accounts.user_id === b.accounts.user_id) continue
+          // Same symbol + same direction
+          if (a.symbol !== b.symbol || a.direction !== b.direction) continue
+          // Similar lots (within 10%)
+          const lotDiff = Math.abs(a.lots - b.lots) / Math.max(a.lots, b.lots, 0.01)
+          if (lotDiff > 0.1) continue
+          // Within time window
+          const diff = timeDiff(a.opened_at, b.opened_at)
+          if (diff > MIRROR_WINDOW) continue
+
+          // Group key: symbol+direction+time_bucket (per minute)
+          const bucket = Math.floor(new Date(a.opened_at).getTime() / (MIRROR_WINDOW * 1000))
+          const key = `${a.symbol}_${a.direction}_${bucket}`
+          if (!mirrorMap[key]) mirrorMap[key] = { symbol: a.symbol, direction: a.direction, bucket_time: a.opened_at, trades: [] }
+          // Add both traders to this group
+          for (const t of [a, b]) {
+            const acc = t.accounts as any
+            if (!mirrorMap[key].trades.find((x: any) => x.account === acc.account_number)) {
+              mirrorMap[key].trades.push({
+                account: acc.account_number,
+                user_id: acc.user_id,
+                name: `${acc.users?.first_name} ${acc.users?.last_name}`,
+                email: acc.users?.email,
+                lots: t.lots,
+                opened_at: t.opened_at,
+                pnl: t.net_pnl,
+              })
+            }
+          }
+        }
+      }
+
+      // Only keep groups with 2+ different accounts
+      const mirrorResults = Object.values(mirrorMap)
+        .filter((g: any) => g.trades.length >= MIN_MIRROR_ACCOUNTS)
+        .sort((a: any, b: any) => b.trades.length - a.trades.length)
+      setMirrorGroups(mirrorResults)
+
+      // ── 8. Same-name/email multi-accounting ──
       const { data: allUsers } = await supabase.from('users').select('id,first_name,last_name,email,created_at').order('created_at',{ascending:false}).limit(500)
       // Group by last name (simple heuristic) — same surname different email
       const nameMap: Record<string,any[]> = {}
@@ -245,6 +309,7 @@ export function AdminRiskPage() {
 
   const tabs = [
     {id:'hedging',   label:'🔄 Hedging',          count:hedgePairs.length},
+    {id:'mirror',    label:'🪞 Mirror Trading',    count:mirrorGroups.length},
     {id:'copyip',    label:'🔗 Duplicate IPs',     count:dupIps.length},
     {id:'tradeip',   label:'📡 Trade IP Match',    count:tradeIps.length},
     {id:'drawdown',  label:'📉 Drawdown',          count:ddAlerts.critical.length+ddAlerts.warning.length},
@@ -255,7 +320,7 @@ export function AdminRiskPage() {
     {id:'botprofit', label:'🤖 Bot Pattern',       count:consistentProfit.length},
     {id:'flagged',   label:'🚩 Flagged CRM',       count:flagged.filter(f=>f.status==='open').length},
   ]
-  const totalAlerts = hedgePairs.length+dupIps.length+tradeIps.length+ddAlerts.critical.length+velocity.length+winRate.length+sameDevice.length+newsViolations.length+consistentProfit.length
+  const totalAlerts = hedgePairs.length+dupIps.length+tradeIps.length+ddAlerts.critical.length+velocity.length+winRate.length+sameDevice.length+newsViolations.length+consistentProfit.length+mirrorGroups.length
 
   return (
     <>
@@ -322,6 +387,69 @@ export function AdminRiskPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            ))}
+          </Card>}
+
+          {/* ═══ MIRROR TRADING DETECTION ═══ */}
+          {activeTab==='mirror'&&<Card>
+            <CardHeader title={`Mirror Trading Detection (${mirrorGroups.length} groups)`}/>
+            <div className="text-[10px] text-[#8FA3BF] px-4 pb-3">
+              Detects clusters of 2+ different traders opening the <strong>same instrument, same direction, same lot size</strong> within 60 seconds of each other in the last 48h.
+              This is the strongest signal for copy-trading rings, signal groups, and coordinated account abuse.
+              A single coincidence is noise — repeated patterns across sessions = fraud.
+            </div>
+            {mirrorGroups.length===0?<div className="py-8 text-center text-[#16A34A] text-[12px]">✓ No mirror trading patterns detected in last 48h</div>:
+            mirrorGroups.map((g:any,i:number)=>(
+              <div key={i} className="border border-[rgba(220,38,38,.2)] bg-[rgba(220,38,38,.03)] rounded-lg p-4 mb-4">
+                {/* Group header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-[11px] font-bold px-3 py-1 bg-[#DC2626] text-white rounded" style={mono}>{g.symbol}</span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded text-white ${g.direction==='buy'?'bg-[#16A34A]':'bg-[#DC2626]'}`}>{g.direction.toUpperCase()}</span>
+                    <span className="text-[9px] text-[#DC2626] font-bold uppercase tracking-wider">🪞 MIRROR DETECTED</span>
+                    <span className="text-[9px] text-[#8FA3BF]">{g.trades.length} accounts · {timeAgo(g.bucket_time)}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {g.trades.map((t:any,ti:number)=>(
+                      <button key={ti} onClick={()=>flagAcc(t.user_id,t.account,'Mirror trading: '+g.symbol+' '+g.direction+' cluster')}
+                        className="px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(220,38,38,.08)] text-[#DC2626] border border-[rgba(220,38,38,.2)] rounded cursor-pointer">
+                        🚩 {t.name.split(' ')[0]}
+                      </button>
+                    ))}
+                    <button onClick={async()=>{for(const t of g.trades) await warnTrader(t.user_id,t.email,t.account,'Mirror trading pattern detected — possible copy trading ring')}}
+                      className="px-2 py-1 text-[8px] font-bold uppercase bg-[rgba(217,119,6,.08)] text-[#D97706] border border-[rgba(217,119,6,.2)] rounded cursor-pointer">
+                      📨 Warn All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Trader rows */}
+                <div className="grid gap-2" style={{gridTemplateColumns:`repeat(${Math.min(g.trades.length,3)},1fr)`}}>
+                  {g.trades.map((t:any,ti:number)=>(
+                    <div key={ti} className="bg-white border border-[#E8EEF8] rounded p-3">
+                      <div className="font-semibold text-[11px] mb-1">{t.name}</div>
+                      <div className="text-[9px] text-[#8FA3BF] mb-1">{t.email}</div>
+                      <div className="flex gap-2 flex-wrap">
+                        <span className="text-[9px] font-mono text-[#2255CC]">{t.account}</span>
+                        <span className="text-[9px] font-mono text-[#5C7A9E]">{t.lots} lots</span>
+                        <span className="text-[9px] text-[#8FA3BF]">{timeAgo(t.opened_at)}</span>
+                        {t.pnl!==null&&<span className={`text-[9px] font-bold font-mono ${t.pnl>=0?'text-[#16A34A]':'text-[#DC2626]'}`}>${(t.pnl||0).toFixed(2)}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Risk score */}
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-[9px] text-[#8FA3BF]">Risk score:</span>
+                  {[...Array(Math.min(g.trades.length,5))].map((_,ri)=>(
+                    <div key={ri} className="w-3 h-3 rounded-sm bg-[#DC2626]" style={{opacity:0.2+ri*0.2}}/>
+                  ))}
+                  <span className="text-[9px] font-bold text-[#DC2626]">
+                    {g.trades.length>=4?'CRITICAL':g.trades.length===3?'HIGH':'MEDIUM'}
+                  </span>
                 </div>
               </div>
             ))}
