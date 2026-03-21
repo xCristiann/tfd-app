@@ -375,12 +375,20 @@ export function PlatformPage() {
     if (primary.status==='breached'){ toast('error','❌','Breached','Account is breached'); return }
     if (reqMgn>freeMgn)            { toast('error','❌','Margin',`Max ${maxLots} lots`); return }
     setPlacing(true)
+    // Capture trader IP at moment of trade
+    let traderIp: string | null = null
+    try {
+      const ipRes = await fetch('https://api.ipify.org?format=json')
+      const ipData = await ipRes.json()
+      traderIp = ipData.ip ?? null
+    } catch {}
     const {data,error} = await supabase.from('trades').insert({
       account_id:primary.id, user_id:primary.user_id,
       symbol:sym, direction:dir, lots:lotsNum,
       open_price:execPrice, status:'open',
       sl:sl?parseFloat(sl):null, tp:tp?parseFloat(tp):null,
       opened_at:new Date().toISOString(),
+      ip_address: traderIp,
     }).select().single()
     setPlacing(false)
     if (error) { toast('error','❌','Error',error.message); return }
