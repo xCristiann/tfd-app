@@ -366,10 +366,7 @@ export function PlatformPage() {
   const freeMgn   = Math.max(0, equity - usedMgn)
   const reqMgn    = calcMargin(sym, execPrice, lotsNum)
   const maxLots   = reqMgn > 0 ? Math.floor((freeMgn / reqMgn) * lotsNum * 100) / 100 : 0
-  // isLive = true only when market is open AND Deriv WS sent a tick this session
-  const isLive    = marketStatus === 'open' && wsLiveRef.current.has(sym)
-
-  // Market hours check (UTC)
+  // Market hours check (UTC) — must be declared BEFORE isLive
   const marketStatus = (() => {
     const now = new Date()
     const day = now.getUTCDay() // 0=Sun, 6=Sat
@@ -380,6 +377,9 @@ export function PlatformPage() {
     if (day === 5 && h >= 22) return 'closed'              // Friday after 22:00 UTC
     return 'open'
   })()
+
+  // isLive = true only when market is open AND Deriv WS sent a tick this session
+  const isLive = marketStatus === 'open' && wsLiveRef.current.has(sym)
 
   useEffect(() => {
     if (!primary?.id) return
