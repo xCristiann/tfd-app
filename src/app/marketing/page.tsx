@@ -9,7 +9,7 @@ export function MarketingPage() {
   const { session } = useAuth()
   const [products, setProducts] = useState<any[]>([])
   const [promoBar, setPromoBar] = useState<any>(null)
-  const [discordUrl, setDiscordUrl] = useState<string>('https://discord.gg/thefundeddiaries')
+  const [discordUrl, setDiscordUrl] = useState<string>('https://discord.gg/tb7qp44e')
 
   useEffect(() => {
     supabase.from('challenge_products')
