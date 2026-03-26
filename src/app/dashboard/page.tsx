@@ -15,18 +15,18 @@ import type { TraderStats, DailySnapshot, Account } from '@/types/database'
    DESIGN TOKENS (dark theme)
 ───────────────────────────────────────── */
 const C = {
-  bg:       '#0d1117',
-  card:     '#161b22',
-  cardBrd:  'rgba(255,255,255,0.08)',
-  cardHov:  '#1c2130',
-  text:     '#e6edf3',
-  muted:    'rgba(230,237,243,0.45)',
-  dim:      'rgba(230,237,243,0.25)',
-  green:    '#3fb950',
-  red:      '#f85149',
-  cyan:     '#79c0ff',
-  purple:   '#bc8cff',
-  accent:   '#58a6ff',
+  bg:      '#F0F4FB',
+  card:    '#ffffff',
+  cardBrd: '#E8EEF8',
+  cardHov: '#F4F7FD',
+  text:    '#1A3A6B',
+  muted:   '#5C7A9E',
+  dim:     '#8FA3BF',
+  green:   '#16A34A',
+  red:     '#DC2626',
+  cyan:    '#2255CC',
+  purple:  '#7C3AED',
+  accent:  '#2255CC',
 }
 
 /* ─────────────────────────────────────────
@@ -42,7 +42,7 @@ function Sparkline({ data, color = C.cyan }: { data: number[]; color?: string })
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H }} preserveAspectRatio="none">
       <defs>
         <linearGradient id="spk" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
@@ -55,23 +55,23 @@ function Sparkline({ data, color = C.cyan }: { data: number[]; color?: string })
 /* ─────────────────────────────────────────
    DONUT GAUGE
 ───────────────────────────────────────── */
-function Gauge({ pct, color, label, value }: { pct: number; color: string; label: string; value: string }) {
+function Gauge({ pct, color, label, value, onDark }: { pct: number; color: string; label: string; value: string; onDark?: boolean }) {
   const r = 30, circ = 2 * Math.PI * r
   const fill = Math.min(Math.max(pct, 0), 100) / 100 * circ
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       <div style={{ position: 'relative', width: 76, height: 76 }}>
         <svg viewBox="0 0 68 68" width={76} height={76}>
-          <circle cx="34" cy="34" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
+          <circle cx="34" cy="34" r={r} fill="none" stroke={onDark ? 'rgba(255,255,255,0.12)' : 'rgba(26,58,107,0.1)'} strokeWidth="6" />
           <circle cx="34" cy="34" r={r} fill="none" stroke={color} strokeWidth="6"
             strokeDasharray={`${fill} ${circ}`} strokeLinecap="round"
             transform="rotate(-90 34 34)" style={{ transition: 'stroke-dasharray 1s ease' }} />
         </svg>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.text, fontFamily: 'monospace' }}>{Math.round(pct)}%</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: onDark ? '#fff' : C.text, fontFamily: 'monospace' }}>{Math.round(pct)}%</span>
         </div>
       </div>
-      <span style={{ fontSize: 9, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{label}</span>
+      <span style={{ fontSize: 9, color: onDark ? 'rgba(255,255,255,0.45)' : C.dim, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{label}</span>
       <span style={{ fontSize: 11, fontWeight: 600, color, fontFamily: 'monospace' }}>{value}</span>
     </div>
   )
@@ -93,14 +93,14 @@ function Objective({ label, usedPct, max, threshold, info, failed }: {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {failed && <span style={{ fontSize: 9, fontWeight: 700, color: C.red, background: 'rgba(248,81,73,0.15)', padding: '2px 7px', borderRadius: 4 }}>Failed</span>}
-          <span style={{ fontSize: 10, color: C.muted, fontFamily: 'monospace' }}>Remaining: {fmt(Math.max(threshold - (max * usedPct / 100), 0))}</span>
+          <span style={{ fontSize: 10, color: '#5C7A9E', fontFamily: 'monospace' }}>Remaining: {fmt(Math.max(threshold - (max * usedPct / 100), 0))}</span>
         </div>
       </div>
-      <div style={{ height: 8, background: 'rgba(255,255,255,0.07)', borderRadius: 6, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: failed ? C.red : C.accent, borderRadius: 6, transition: 'width 0.9s ease' }} />
+      <div style={{ height: 8, background: '#EEF3FF', borderRadius: 6, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: failed ? '#DC2626' : 'linear-gradient(90deg,#2255CC,#3B82F6)', borderRadius: 6, transition: 'width 0.9s ease' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-        <span style={{ fontSize: 9, color: C.dim }}>$0</span>
+        <span style={{ fontSize: 9, color: '#8FA3BF' }}>$0</span>
         <span style={{ fontSize: 9, color: C.dim, fontFamily: 'monospace' }}>Balance Threshold: {fmt(threshold)}</span>
       </div>
     </div>
@@ -155,12 +155,12 @@ function TradeCalendar({ trades }: { trades: any[] }) {
       {/* controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <button onClick={() => setMonth(new Date(year, mon - 1))}
-          style={{ background: 'rgba(255,255,255,0.07)', border: 'none', color: C.text, width: 28, height: 28, borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>‹</button>
-        <span style={{ fontSize: 13, fontWeight: 600, color: C.text, minWidth: 140 }}>{monthName}</span>
+          style={{ background: '#EEF3FF', border: '1px solid #E8EEF8', color: '#1A3A6B', width: 28, height: 28, borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>‹</button>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#1A3A6B', minWidth: 140 }}>{monthName}</span>
         <button onClick={() => setMonth(new Date(year, mon + 1))}
-          style={{ background: 'rgba(255,255,255,0.07)', border: 'none', color: C.text, width: 28, height: 28, borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>›</button>
+          style={{ background: '#EEF3FF', border: '1px solid #E8EEF8', color: '#1A3A6B', width: 28, height: 28, borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>›</button>
         <button onClick={() => setMonth(new Date())}
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: C.muted, padding: '3px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 10 }}>Today</button>
+          style={{ background: '#F4F7FD', border: '1px solid #E8EEF8', color: '#5C7A9E', padding: '3px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 10 }}>Today</button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 20 }}>
@@ -168,7 +168,7 @@ function TradeCalendar({ trades }: { trades: any[] }) {
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
             {DAYS.map(d => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 9, color: C.dim, padding: '4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{d}</div>
+              <div key={d} style={{ textAlign: 'center', fontSize: 9, color: '#8FA3BF', padding: '4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{d}</div>
             ))}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
@@ -185,11 +185,11 @@ function TradeCalendar({ trades }: { trades: any[] }) {
               return (
                 <div key={day} style={{
                   height: 64, borderRadius: 6, padding: '6px 7px',
-                  background: isToday ? 'rgba(88,166,255,0.12)' : isProfit ? 'rgba(63,185,80,0.1)' : isLoss ? 'rgba(248,81,73,0.1)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${isToday ? 'rgba(88,166,255,0.4)' : isProfit ? 'rgba(63,185,80,0.2)' : isLoss ? 'rgba(248,81,73,0.2)' : 'rgba(255,255,255,0.04)'}`,
+                  background: isToday ? '#EEF3FF' : isProfit ? 'rgba(22,163,74,0.08)' : isLoss ? 'rgba(220,38,38,0.07)' : '#F9FAFB',
+                  border: `1px solid ${isToday ? '#C5D5FA' : isProfit ? 'rgba(22,163,74,0.2)' : isLoss ? 'rgba(220,38,38,0.15)' : '#E8EEF8'}`,
                   display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
                 }}>
-                  <span style={{ fontSize: 10, color: isToday ? C.accent : C.muted, fontWeight: isToday ? 700 : 400 }}>{day}</span>
+                  <span style={{ fontSize: 10, color: isToday ? '#2255CC' : '#8FA3BF', fontWeight: isToday ? 700 : 400 }}>{day}</span>
                   {data && (
                     <div>
                       <div style={{ fontSize: 8, color: C.dim }}>{data.count} trade{data.count !== 1 ? 's' : ''}</div>
@@ -211,7 +211,7 @@ function TradeCalendar({ trades }: { trades: any[] }) {
             {weeksData.map((w, i) => {
               const wLabel = `${w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${w.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
               return (
-                <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '10px 12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div key={i} style={{ background: '#F4F7FD', borderRadius: 8, padding: '10px 12px', border: '1px solid #E8EEF8' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 11, color: C.text, fontWeight: 500 }}>Week {i + 1}</span>
                     <span style={{ fontSize: 9, color: C.dim }}>{wLabel}</span>
@@ -301,6 +301,7 @@ export function DashboardPage() {
     border: `1px solid ${C.cardBrd}`,
     borderRadius: 10,
     padding: 20,
+    boxShadow: '0 1px 4px rgba(26,58,107,0.06)',
   } as React.CSSProperties
 
   const label = { fontSize: 10, color: C.dim, textTransform: 'uppercase' as const, letterSpacing: '0.7px', fontWeight: 500, marginBottom: 4 }
@@ -325,17 +326,17 @@ export function DashboardPage() {
           const isAct = a.id === account?.id
           return (
             <button key={a.id} onClick={() => setSelectedId(a.id)} style={{
-              padding: '6px 14px', borderRadius: 8, border: `1px solid ${isAct ? 'rgba(88,166,255,0.5)' : 'rgba(255,255,255,0.1)'}`,
+              padding: '6px 14px', borderRadius: 8, border: `1px solid ${isAct ? '#C5D5FA' : '#E8EEF8'}`,
               cursor: 'pointer', fontSize: 11, fontWeight: 600,
-              background: isAct ? 'rgba(88,166,255,0.12)' : 'rgba(255,255,255,0.05)',
-              color: isAct ? C.accent : C.muted,
+              background: isAct ? 'rgba(34,85,204,0.08)' : '#fff',
+              color: isAct ? '#2255CC' : '#5C7A9E',
             }}>
               #{(a as any).account_number} · {accountBadgeLabel(a.phase, (a as any).challenge_products?.challenge_type)}
               {(a as any).status === 'soft_locked' && <span style={{ marginLeft: 6, fontSize: 9, color: C.red }}>🔒</span>}
             </button>
           )
         })}
-        <button onClick={() => navigate('/dashboard/challenges')} style={{ marginLeft: 'auto', background: 'rgba(88,166,255,0.15)', border: '1px solid rgba(88,166,255,0.3)', color: C.accent, padding: '6px 14px', borderRadius: 8, fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>+ New Challenge</button>
+        <button onClick={() => navigate('/dashboard/challenges')} style={{ marginLeft: 'auto', background: '#2255CC', border: 'none', color: '#fff', padding: '6px 14px', borderRadius: 8, fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>+ New Challenge</button>
       </div>
 
       {/* ── status banners ── */}
@@ -343,14 +344,14 @@ export function DashboardPage() {
         <div style={{ background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span>🔒</span>
           <div><div style={{ fontWeight: 700, fontSize: 13, color: C.red }}>Account Frozen — Under Investigation</div>
-            <div style={{ fontSize: 11, color: C.muted }}>Trading suspended pending risk review. Contact risk@thefundeddiaries.com</div></div>
+            <div style={{ fontSize: 11, color: '#5C7A9E' }}>Trading suspended pending risk review. Contact risk@thefundeddiaries.com</div></div>
         </div>
       )}
       {isBreached && (
         <div style={{ background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span>🚨</span>
           <div><div style={{ fontWeight: 700, fontSize: 13, color: C.red }}>Account Breached — Trading Locked</div>
-            <div style={{ fontSize: 11, color: C.muted }}>Drawdown limit exceeded. Your account has been locked.</div></div>
+            <div style={{ fontSize: 11, color: '#5C7A9E' }}>Drawdown limit exceeded. Your account has been locked.</div></div>
         </div>
       )}
 
@@ -373,23 +374,23 @@ export function DashboardPage() {
         {/* ── score + balance/equity ── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
           {/* Score */}
-          <div style={{ ...card, background: 'linear-gradient(135deg, #0d2137 0%, #0d1a2e 100%)' }}>
+          <div style={{ ...card, background: 'linear-gradient(135deg, #1A3A6B 0%, #2255CC 100%)' }}>
             <div style={label}>Performance Score</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: 52, fontWeight: 800, color: C.cyan, fontFamily: 'monospace', lineHeight: 1.1, marginTop: 8 }}>
+                <div style={{ fontSize: 52, fontWeight: 800, color: '#60A5FA', fontFamily: 'monospace', lineHeight: 1.1, marginTop: 8 }}>
                   {score || '—'}
                 </div>
-                <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>Based on your trading stats</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Based on your trading stats</div>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <Gauge pct={stats?.win_rate_pct ?? 0} color={C.green} label="Win Rate" value={`${stats?.win_rate_pct ?? 0}%`} />
                 <Gauge pct={Math.min((stats?.profit_factor ?? 0) / 3 * 100, 100)} color={C.cyan} label="Prof. Factor" value={String(stats?.profit_factor ?? '—')} />
-                <Gauge pct={isFunded ? 100 : Math.min((profitPct / targetPct) * 100, 100)} color={C.purple} label="Target" value={`${profitPct.toFixed(1)}%`} />
+                <Gauge pct={isFunded ? 100 : Math.min((profitPct / targetPct) * 100, 100)} color='#C084FC' label="Target" value={`${profitPct.toFixed(1)}%`} onDark />
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
-              <Sparkline data={curve.map(c => c.balance)} color={C.cyan} />
+              <Sparkline data={curve.map(c => c.balance)} color='#60A5FA' />
             </div>
           </div>
 
@@ -464,8 +465,8 @@ export function DashboardPage() {
                 <span style={{ fontSize: 12, color: C.text, fontWeight: 500 }}>Profit Target ({targetPct}%)</span>
                 <span style={{ fontSize: 10, color: C.cyan, fontFamily: 'monospace' }}>{profitPct.toFixed(2)}% / {targetPct}%</span>
               </div>
-              <div style={{ height: 8, background: 'rgba(255,255,255,0.07)', borderRadius: 6, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min((profitPct / targetPct) * 100, 100)}%`, background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`, borderRadius: 6, transition: 'width 0.9s ease' }} />
+              <div style={{ height: 8, background: '#EEF3FF', borderRadius: 6, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min((profitPct / targetPct) * 100, 100)}%`, background: 'linear-gradient(90deg, #2255CC, #16A34A)', borderRadius: 6, transition: 'width 0.9s ease' }} />
               </div>
             </div>
           )}
@@ -498,18 +499,18 @@ export function DashboardPage() {
         {instrBreakdown.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div style={card}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 16 }}>Instrument Profit Analysis</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#5C7A9E', marginBottom: 16 }}>Instrument Profit Analysis</div>
               {instrBreakdown.map(({ sym, pnl, count }) => {
                 const maxAbs = Math.max(...instrBreakdown.map(i => Math.abs(i.pnl)), 1)
                 return (
                   <div key={sym} style={{ marginBottom: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, color: C.muted }}>{sym}</span>
+                      <span style={{ fontSize: 11, color: '#5C7A9E' }}>{sym}</span>
                       <span style={{ fontSize: 11, fontWeight: 600, color: pnl >= 0 ? C.green : C.red, fontFamily: 'monospace' }}>
                         {pnl >= 0 ? '+' : ''}{fmt(pnl)}
                       </span>
                     </div>
-                    <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }}>
+                    <div style={{ height: 5, background: '#EEF3FF', borderRadius: 3 }}>
                       <div style={{ height: '100%', width: `${(Math.abs(pnl) / maxAbs) * 100}%`, background: pnl >= 0 ? C.green : C.red, borderRadius: 3 }} />
                     </div>
                   </div>
@@ -517,17 +518,17 @@ export function DashboardPage() {
               })}
             </div>
             <div style={card}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 16 }}>Instrument Volume Analysis</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#5C7A9E', marginBottom: 16 }}>Instrument Volume Analysis</div>
               {instrBreakdown.map(({ sym, count }) => {
                 const maxCount = Math.max(...instrBreakdown.map(i => i.count), 1)
                 return (
                   <div key={sym} style={{ marginBottom: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, color: C.muted }}>{sym}</span>
-                      <span style={{ fontSize: 11, color: C.dim }}>{count} trades</span>
+                      <span style={{ fontSize: 11, color: '#5C7A9E' }}>{sym}</span>
+                      <span style={{ fontSize: 11, color: '#8FA3BF' }}>{count} trades</span>
                     </div>
-                    <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }}>
-                      <div style={{ height: '100%', width: `${(count / maxCount) * 100}%`, background: C.cyan, borderRadius: 3 }} />
+                    <div style={{ height: 5, background: '#EEF3FF', borderRadius: 3 }}>
+                      <div style={{ height: '100%', width: `${(count / maxCount) * 100}%`, background: '#2255CC', borderRadius: 3 }} />
                     </div>
                   </div>
                 )
@@ -543,13 +544,13 @@ export function DashboardPage() {
               <button key={t} onClick={() => setActiveTab(t)} style={{
                 padding: '10px 18px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                 color: activeTab === t ? C.accent : C.dim,
-                borderBottom: activeTab === t ? `2px solid ${C.accent}` : '2px solid transparent',
-                marginBottom: -1,
+                borderBottom: activeTab === t ? '2px solid #2255CC' : '2px solid transparent',
+                marginBottom: -1, background: 'transparent',
               }}>
                 {t === 'history' ? `Trading History (${closedTrades.length})` : `Open Positions (${openTrades.length})`}
               </button>
             ))}
-            <button onClick={() => navigate('/platform')} style={{ marginLeft: 'auto', background: 'rgba(88,166,255,0.1)', border: `1px solid rgba(88,166,255,0.3)`, color: C.accent, padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 2 }}>
+            <button onClick={() => navigate('/platform')} style={{ marginLeft: 'auto', background: '#EEF3FF', border: '1px solid #C5D5FA', color: '#2255CC', padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 2 }}>
               ⚡ Open Platform
             </button>
           </div>
@@ -557,35 +558,35 @@ export function DashboardPage() {
           <div style={{ overflowX: 'auto', marginTop: 12 }}>
             {activeTab === 'history' ? (
               closedTrades.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: C.dim }}>No closed trades yet</div>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#8FA3BF' }}>No closed trades yet</div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                   <thead>
                     <tr>
                       {['Symbol', 'Type', 'Open Date', 'Open', 'Closed Date', 'Closed', 'TP', 'SL', 'Lots', 'Commission', 'P&L'].map(h => (
-                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.8px', color: C.dim, borderBottom: `1px solid ${C.cardBrd}`, whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.8px', color: C.dim, borderBottom: '1px solid #E8EEF8', background: 'rgba(34,85,204,0.02)', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {closedTrades.map(t => (
-                      <tr key={t.id} style={{ borderBottom: `1px solid rgba(255,255,255,0.03)` }}
+                      <tr key={t.id} style={{ borderBottom: '1px solid #F4F7FD' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                        <td style={{ padding: '10px 12px', fontWeight: 600, color: C.text }}>{t.symbol}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1A3A6B' }}>{t.symbol}</td>
                         <td style={{ padding: '10px 12px' }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: t.direction === 'buy' ? C.green : C.red, background: t.direction === 'buy' ? 'rgba(63,185,80,0.1)' : 'rgba(248,81,73,0.1)', padding: '2px 8px', borderRadius: 4 }}>
                             {t.direction === 'buy' ? 'Buy' : 'Sell'}
                           </span>
                         </td>
-                        <td style={{ padding: '10px 12px', color: C.dim, fontFamily: 'monospace', fontSize: 10 }}>{t.opened_at ? new Date(t.opened_at).toLocaleString() : '—'}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.muted }}>{(Number(t.open_price) || 0).toFixed(5)}</td>
-                        <td style={{ padding: '10px 12px', color: C.dim, fontFamily: 'monospace', fontSize: 10 }}>{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.muted }}>{(Number(t.close_price) || 0).toFixed(5)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.dim, fontSize: 10 }}>{t.tp ?? '—'}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.dim, fontSize: 10 }}>{t.sl ?? '—'}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.muted }}>{t.lots}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.dim }}>{fmt(t.commission ?? 0)}</td>
+                        <td style={{ padding: '10px 12px', color: '#8FA3BF', fontFamily: 'monospace', fontSize: 10 }}>{t.opened_at ? new Date(t.opened_at).toLocaleString() : '—'}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#5C7A9E' }}>{(Number(t.open_price) || 0).toFixed(5)}</td>
+                        <td style={{ padding: '10px 12px', color: '#8FA3BF', fontFamily: 'monospace', fontSize: 10 }}>{t.closed_at ? new Date(t.closed_at).toLocaleString() : '—'}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#5C7A9E' }}>{(Number(t.close_price) || 0).toFixed(5)}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#8FA3BF', fontSize: 10 }}>{t.tp ?? '—'}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#8FA3BF', fontSize: 10 }}>{t.sl ?? '—'}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#5C7A9E' }}>{t.lots}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#8FA3BF' }}>{fmt(t.commission ?? 0)}</td>
                         <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontWeight: 700, color: (t.net_pnl ?? 0) >= 0 ? C.green : C.red }}>
                           {(t.net_pnl ?? 0) >= 0 ? '+' : ''}{fmt(t.net_pnl ?? 0)}
                         </td>
@@ -596,30 +597,30 @@ export function DashboardPage() {
               )
             ) : (
               openTrades.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: C.dim }}>No open positions</div>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#8FA3BF' }}>No open positions</div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                   <thead>
                     <tr>
                       {['Symbol', 'Type', 'Open Date', 'Open Price', 'SL', 'TP', 'Lots'].map(h => (
-                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.8px', color: C.dim, borderBottom: `1px solid ${C.cardBrd}`, whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.8px', color: C.dim, borderBottom: '1px solid #E8EEF8', background: 'rgba(34,85,204,0.02)', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {openTrades.map(t => (
-                      <tr key={t.id} style={{ borderBottom: `1px solid rgba(255,255,255,0.03)` }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 600, color: C.text }}>{t.symbol}</td>
+                      <tr key={t.id} style={{ borderBottom: '1px solid #F4F7FD' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1A3A6B' }}>{t.symbol}</td>
                         <td style={{ padding: '10px 12px' }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: t.direction === 'buy' ? C.green : C.red, background: t.direction === 'buy' ? 'rgba(63,185,80,0.1)' : 'rgba(248,81,73,0.1)', padding: '2px 8px', borderRadius: 4 }}>
                             {t.direction === 'buy' ? 'Buy' : 'Sell'}
                           </span>
                         </td>
-                        <td style={{ padding: '10px 12px', color: C.dim, fontFamily: 'monospace', fontSize: 10 }}>{new Date(t.opened_at).toLocaleString()}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.muted }}>{(Number(t.open_price) || 0).toFixed(5)}</td>
+                        <td style={{ padding: '10px 12px', color: '#8FA3BF', fontFamily: 'monospace', fontSize: 10 }}>{new Date(t.opened_at).toLocaleString()}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#5C7A9E' }}>{(Number(t.open_price) || 0).toFixed(5)}</td>
                         <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.red, fontSize: 10 }}>{t.sl ?? '—'}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.green, fontSize: 10 }}>{t.tp ?? '—'}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: C.muted }}>{t.lots}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#16A34A', fontSize: 10 }}>{t.tp ?? '—'}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#5C7A9E' }}>{t.lots}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -636,6 +637,7 @@ export function DashboardPage() {
     <>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         .tfd-dash-main { background: #0d1117 !important; }
       `}</style>
       <DashboardLayout
@@ -645,14 +647,14 @@ export function DashboardPage() {
         accountBox={account ? { id: account.account_number, label: accountTypeLabel(account.phase, prod?.challenge_type) } : undefined}
         topbarRight={
           <>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#3fb950', display: 'inline-block', animation: 'spin 3s linear infinite' }} />
-            <span style={{ fontSize: 9, color: '#3fb950', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>Live</span>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16A34A', display: 'inline-block', animation: 'pulse 2s ease-in-out infinite' }} />
+            <span style={{ fontSize: 9, color: '#16A34A', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>Live</span>
             <button onClick={() => navigate('/platform')} style={{ background: 'linear-gradient(135deg,#58a6ff,#3fb950)', color: '#fff', border: 'none', padding: '6px 16px', borderRadius: 7, fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>⚡ Open Platform</button>
           </>
         }
       >
         {/* Override background via inline style on wrapper */}
-        <div style={{ background: C.bg, minHeight: '100%', margin: '-20px', padding: '24px', fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+        <div style={{ background: '#F0F4FB', minHeight: '100%', margin: '-20px', padding: '24px', fontFamily: "'DM Sans', system-ui, sans-serif" }}>
           {content}
         </div>
       </DashboardLayout>
