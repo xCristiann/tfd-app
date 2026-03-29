@@ -81,6 +81,78 @@ const TF_LABEL: Record<string,string> = {'1':'1m','5':'5m','15':'15m','30':'30m'
 
 function lsGet(k:string,fb:string){try{return localStorage.getItem(k)||fb}catch{return fb}}
 function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
+/* ── Bridge Live Chart ───────────────────────────────────────────── */
+function LiveBridgeChart({
+  sym,
+  price,
+  history,
+  dec,
+}: {
+  sym: string
+  price: number
+  history: number[]
+  dec: number
+}) {
+  const W = 1200
+  const H = 520
+  const PAD = 28
+
+  const points = history.length ? history.slice(-240) : [price]
+  const min = Math.min(...points)
+  const max = Math.max(...points)
+  const range = Math.max(max - min, Math.max(price * 0.0005, 0.00001))
+
+  const toX = (i: number) => {
+    if (points.length <= 1) return PAD
+    return PAD + (i / (points.length - 1)) * (W - PAD * 2)
+  }
+
+  const toY = (v: number) => {
+    const n = (v - min) / range
+    return H - PAD - n * (H - PAD * 2)
+  }
+
+  const polyline = points.map((p, i) => `${toX(i)},${toY(p)}`).join(' ')
+  const lastY = toY(points[points.length - 1] ?? price)
+
+  const computedLevels = Array.from({ length: 5 }, (_, i) => {
+    const v = min + (range * i) / 4
+    return { v, y: toY(v) }
+  })
+
+  return (
+    <div style={{width:'100%',height:'100%',background:'#fff',position:'relative'}}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:'100%',display:'block'}}>
+        <rect x="0" y="0" width={W} height={H} fill="#FFFFFF" />
+        {computedLevels.map((lvl, idx) => (
+          <g key={idx}>
+            <line x1={PAD} y1={lvl.y} x2={W - PAD} y2={lvl.y} stroke="#E8EEF8" strokeWidth="1" />
+            <text x={W - 6} y={lvl.y - 4} textAnchor="end" fontSize="11" fill="#8FA3BF">
+              {lvl.v.toFixed(dec)}
+            </text>
+          </g>
+        ))}
+        <line x1={PAD} y1={lastY} x2={W - PAD} y2={lastY} stroke="#2255CC" strokeWidth="1.2" strokeDasharray="6 5" />
+        <polyline
+          fill="none"
+          stroke="#2255CC"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          points={polyline}
+        />
+      </svg>
+
+      <div style={{position:'absolute',left:12,top:10,display:'flex',alignItems:'center',gap:'8px'}}>
+        <div style={{fontSize:'13px',fontWeight:700,color:'#1A3A6B'}}>{sym}</div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'13px',fontWeight:700,color:'#2255CC'}}>
+          {price.toFixed(dec)}
+        </div>
+        <div style={{fontSize:'10px',color:'#8FA3BF'}}>MT5 Bridge</div>
+      </div>
+    </div>
+  )
+}
 
 /* â”€â”€ TradingView Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function TVChart({ tvSym, interval }: { tvSym:string; interval:string }) {
@@ -906,6 +978,9 @@ export function PlatformPage() {
     </div>
   )
 }
+
+
+
 
 
 
