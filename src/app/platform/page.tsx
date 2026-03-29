@@ -151,21 +151,50 @@ function calcMargin(sym: string, price: number, lots: number): number {
   return (inst.lotUSD(price) * lots) / LEVERAGE
 }
 
-/* ── Price feed — Deriv WebSocket (free, no key, instant ticks) ────
-   wss://ws.binaryws.com/websockets/v3?app_id=1089
-   Subscribes to all symbols on mount. Reconnects automatically.
-   Last prices persisted in localStorage so market-close shows
-   real last price instead of stale SEED values.
+/* ── Price feed ─────────────────────────────────────────────────────
+   Priority 1: TFD MT5 Bridge (ws://VPS:8081) — real MT5 prices
+   Priority 2: Deriv WebSocket fallback (if bridge offline)
+   Priority 3: Cached localStorage prices (market closed / offline)
    ─────────────────────────────────────────────────────────────── */
 
+// MT5 bridge symbol map: our internal sym -> MT5 sym
+const MT5_SYM: Record<string,string> = {
+  'EUR/USD':'EURUSD','GBP/USD':'GBPUSD','USD/JPY':'USDJPY',
+  'USD/CHF':'USDCHF','AUD/USD':'AUDUSD','USD/CAD':'USDCAD',
+  'NZD/USD':'NZDUSD','GBP/JPY':'GBPJPY','EUR/JPY':'EURJPY',
+  'EUR/GBP':'EURGBP','AUD/JPY':'AUDJPY','CAD/JPY':'CADJPY',
+  'XAU/USD':'XAUUSD','XAG/USD':'XAGUSD',
+  'NAS100':'US100','US500':'US500','US30':'US30',
+  'GER40':'GER40','WTI':'USOIL',
+}
+const MT5_REV: Record<string,string> = Object.fromEntries(
+  Object.entries(MT5_SYM).map(([k,v])=>[v,k])
+)
+
+// Deriv fallback map
+const DERIV_SYM: Record<string,string> = {
+  'EUR/USD':'frxEURUSD','GBP/USD':'frxGBPUSD','USD/JPY':'frxUSDJPY',
+  'USD/CHF':'frxUSDCHF','AUD/USD':'frxAUDUSD','USD/CAD':'frxUSDCAD',
+  'NZD/USD':'frxNZDUSD','GBP/JPY':'frxGBPJPY','EUR/JPY':'frxEURJPY',
+  'EUR/GBP':'frxEURGBP','XAU/USD':'frxXAUUSD',
+  'NAS100':'OTC_NDX','US500':'OTC_SPX','US30':'OTC_DJI',
+}
+const DERIV_REV: Record<string,string> = Object.fromEntries(
+  Object.entries(DERIV_SYM).map(([k,v])=>[v,k])
+)
+
+// Bridge URL — set VITE_WS_BRIDGE in .env, e.g. ws://YOUR_VPS_IP:8081
+const BRIDGE_WS   = (import.meta as any).env?.VITE_WS_BRIDGE   || ''
+const BRIDGE_REST = (import.meta as any).env?.VITE_REST_BRIDGE  || ''
+
 const LS_PRICES_KEY = 'tfd_last_prices'
+const LS_BRIDGE_KEY = 'tfd_bridge_ok'
 
 function loadCachedPrices(): Record<string,number> {
   try {
     const raw = localStorage.getItem(LS_PRICES_KEY)
     if (!raw) return {}
     const parsed = JSON.parse(raw)
-    // Only use if saved within last 72 hours (3 days)
     if (Date.now() - (parsed._ts ?? 0) > 72 * 60 * 60 * 1000) return {}
     const { _ts, ...prices } = parsed
     return prices
@@ -177,120 +206,131 @@ function saveCachedPrices(prices: Record<string,number>) {
     localStorage.setItem(LS_PRICES_KEY, JSON.stringify({ ...prices, _ts: Date.now() }))
   } catch {}
 }
-const DERIV_SYM: Record<string,string> = {
-  'EUR/USD':'frxEURUSD','GBP/USD':'frxGBPUSD','USD/JPY':'frxUSDJPY',
-  'USD/CHF':'frxUSDCHF','AUD/USD':'frxAUDUSD','USD/CAD':'frxUSDCAD',
-  'NZD/USD':'frxNZDUSD','GBP/JPY':'frxGBPJPY','EUR/JPY':'frxEURJPY',
-  'EUR/GBP':'frxEURGBP','AUD/JPY':'frxAUDJPY','CAD/JPY':'frxCADJPY',
-  'XAU/USD':'frxXAUUSD','XAG/USD':'frxXAGUSD',
-  'NAS100':'OTC_NDX','US500':'OTC_SPX','US30':'OTC_DJI',
-  'GER40':'OTC_GDAX','WTI':'frxUSOIL',
-}
-// Reverse map: deriv symbol → our symbol
-const DERIV_REV: Record<string,string> = Object.fromEntries(
-  Object.entries(DERIV_SYM).map(([k,v])=>[v,k])
-)
 
 function usePriceFeed() {
-  // Initialise from cache (last known prices) — falls back to SEED
-  const cached = useMemo(() => {
-    const c = loadCachedPrices()
-    return { ...SEED, ...c }
-  }, [])
+  const cached = useMemo(() => ({ ...SEED, ...loadCachedPrices() }), [])
+  const [prices, setPrices]       = useState<Record<string,number>>(cached)
+  const [bridgeOnline, setBridge] = useState<boolean|null>(null) // null=unknown, true=live, false=offline
+  const refPrev    = useRef<Record<string,number>>({...cached})
+  const refPrices  = useRef<Record<string,number>>({...cached})
+  const wsRef      = useRef<WebSocket|null>(null)
+  const wsLive     = useRef<Set<string>>(new Set())
+  const deadRef    = useRef(false)
+  const saveTimer  = useRef<ReturnType<typeof setTimeout>|null>(null)
+  const usedBridge = useRef(false)
 
-  const [prices, setPrices] = useState<Record<string,number>>(cached)
-  const refPrev   = useRef<Record<string,number>>({...cached})
-  const refPrices = useRef<Record<string,number>>({...cached})
-  const wsRef     = useRef<WebSocket|null>(null)
-  const wsLive    = useRef<Set<string>>(new Set())  // symbols that got a live tick this session
-  const deadRef   = useRef(false)
-  const saveTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
-
-  const push = useCallback((sym:string, price:number) => {
+  const push = useCallback((sym: string, bid: number, ask?: number) => {
+    const price = ask ? (bid + ask) / 2 : bid
     if (!price || isNaN(price) || price <= 0) return
     refPrev.current[sym]   = refPrices.current[sym] || price
     refPrices.current[sym] = price
     setPrices(p => p[sym] === price ? p : {...p, [sym]: price})
-
-    // Mark as live (received from WS this session)
     wsLive.current.add(sym)
-
-    // Debounced save to localStorage (max once per 5s)
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      saveCachedPrices(refPrices.current)
-    }, 5000)
+    saveTimer.current = setTimeout(() => saveCachedPrices(refPrices.current), 5000)
   }, [])
 
   useEffect(() => {
     deadRef.current = false
-    let tickReceived = false
 
-    // ── Fallback: /api/prices poll (works market closed too) ─────
-    const pollApi = async () => {
-      if (deadRef.current) return
+    // ── 1. MT5 Bridge WebSocket (primary) ─────────────────────────
+    const connectBridge = () => {
+      if (!BRIDGE_WS || deadRef.current) return false
       try {
-        const r = await fetch('/api/prices', { signal: AbortSignal.timeout(8000) })
-        if (!r.ok) return
-        const d = await r.json()
-        for (const [s, p] of Object.entries(d.prices ?? {})) {
-          if (typeof p === 'number' && p > 0) push(s, p)
+        const ws = new WebSocket(BRIDGE_WS)
+        wsRef.current = ws
+        let timeout = setTimeout(() => {
+          ws.close() // if no message in 5s, bridge is offline
+        }, 5000)
+
+        ws.onopen = () => {
+          clearTimeout(timeout)
+          setBridge(true)
+          usedBridge.current = true
+          localStorage.setItem(LS_BRIDGE_KEY, '1')
         }
-      } catch {}
+
+        ws.onmessage = (e) => {
+          clearTimeout(timeout)
+          try {
+            const d = JSON.parse(e.data)
+            if (d.type === 'tick' && d.sym) {
+              const ourSym = MT5_REV[d.sym] || d.sym
+              push(ourSym, d.bid ?? d.mid, d.ask)
+            }
+            if (d.type === 'snapshot') {
+              // Initial price dump from bridge
+              for (const [mt5sym, tick] of Object.entries(d.prices ?? {})) {
+                const ourSym = MT5_REV[mt5sym] || mt5sym
+                const t = tick as any
+                push(ourSym, t.bid ?? t.mid, t.ask)
+              }
+            }
+          } catch {}
+        }
+
+        ws.onclose = () => {
+          if (!deadRef.current) {
+            setBridge(false)
+            connectDeriv() // fallback to Deriv
+            setTimeout(connectBridge, 10000) // retry bridge every 10s
+          }
+        }
+
+        ws.onerror = () => { try { ws.close() } catch {} }
+        return true
+      } catch { return false }
     }
 
-    // Poll immediately on mount, then every 5s as background
-    pollApi()
-    const pollIv = setInterval(pollApi, 5000)
-
-    // ── Primary: Deriv WebSocket (real-time ticks) ────────────────
-    const connect = () => {
-      if (deadRef.current) return
+    const derivWsRef: { current: WebSocket|null } = { current: null }
+    // ── 2. Deriv fallback WebSocket ────────────────────────────────
+    const connectDeriv = () => {
+      if (usedBridge.current || deadRef.current) return
       const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089')
-      wsRef.current = ws
-
+      derivWsRef.current = ws
       ws.onopen = () => {
-        Object.values(DERIV_SYM).forEach(dsym => {
+        Object.values(DERIV_SYM).forEach(dsym =>
           ws.send(JSON.stringify({ ticks: dsym, subscribe: 1 }))
-        })
+        )
       }
-
       ws.onmessage = (e) => {
         try {
           const d = JSON.parse(e.data)
           if (d.msg_type === 'tick' && d.tick) {
             const sym = DERIV_REV[d.tick.symbol]
-            if (sym && d.tick.quote > 0) {
-              tickReceived = true
-              push(sym, d.tick.quote)
-            }
+            if (sym && d.tick.quote > 0) push(sym, d.tick.quote)
           }
         } catch {}
       }
-
       ws.onclose = () => {
-        if (!deadRef.current) setTimeout(connect, 3000)
+        if (!deadRef.current && !usedBridge.current)
+          setTimeout(connectDeriv, 3000)
       }
-
       ws.onerror = () => { try { ws.close() } catch {} }
     }
 
-    connect()
+    // Start bridge if configured, otherwise Deriv
+    if (BRIDGE_WS) {
+      connectBridge()
+    } else {
+      setBridge(false)
+      connectDeriv()
+    }
 
     return () => {
       deadRef.current = true
-      clearInterval(pollIv)
       try { wsRef.current?.close() } catch {}
+      try { derivWsRef.current?.close() } catch {}
     }
   }, [push])
 
-  // Heartbeat 100ms — P&L re-renders from refPrices
+  // Heartbeat 100ms
   useEffect(() => {
     const iv = setInterval(() => setPrices(p => ({...p})), 100)
     return () => clearInterval(iv)
   }, [])
 
-  return { prices, refPrev, refPrices, push, wsLive }
+  return { prices, refPrev, refPrices, push, wsLive, bridgeOnline }
 }
 
 
@@ -559,6 +599,16 @@ export function PlatformPage() {
       <div style={{height:'48px',background:'#1A3A6B',display:'flex',alignItems:'center',padding:'0 12px',gap:'8px',flexShrink:0}}>
         <button onClick={()=>navigate('/dashboard')} style={{background:'rgba(255,255,255,.1)',border:'none',color:'#fff',padding:'5px 10px',borderRadius:'6px',cursor:'pointer',fontSize:'11px',fontWeight:600}}>← Dashboard</button>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',fontWeight:700,color:'#fff'}}>The Funded <span style={{color:'#60A5FA',fontStyle:'italic'}}>Diaries</span></div>
+        {/* Bridge source indicator */}
+        {bridgeOnline !== null && (
+          <div style={{fontSize:'8px',fontWeight:700,padding:'2px 6px',borderRadius:'4px',
+            background: bridgeOnline ? 'rgba(88,101,242,.3)' : 'rgba(255,255,255,.1)',
+            color: bridgeOnline ? '#A5B4FC' : 'rgba(255,255,255,.4)',
+            border: `1px solid ${bridgeOnline ? 'rgba(88,101,242,.5)' : 'rgba(255,255,255,.15)'}`,
+            letterSpacing:'0.5px'}}>
+            {bridgeOnline ? 'MT5 LIVE' : 'DERIV'}
+          </div>
+        )}
         <div style={{width:'6px',height:'6px',borderRadius:'50%',
           background: isLive?'#4ADE80': marketStatus==='closed'?'#9CA3AF':'#F59E0B',
           boxShadow: isLive?'0 0 8px #4ADE80':'none'}}/>
