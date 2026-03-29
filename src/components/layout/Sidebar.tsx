@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { ICONS } from '@/lib/nav'
 import type { NavItem } from '@/types/database'
 
 interface SidebarProps {
@@ -57,7 +58,7 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
                     'flex items-center gap-2.5 px-4 py-2 text-[12px] transition-all cursor-pointer border-l-[3px] mx-1 rounded-r-lg',
                     isActive ? 'bg-[#EEF3FF] text-[#2255CC] border-l-[#2255CC]' : 'text-[#5C7A9E] border-l-transparent hover:bg-[#F4F7FD] hover:text-[#1A3A6B]'
                   )}>
-                  <span className="text-[13px] w-4 text-center flex-shrink-0">{item.icon}</span>
+                  <span className="w-4 h-4 flex-shrink-0 flex items-center justify-center" style={{color:"inherit"}} dangerouslySetInnerHTML={{__html: ICONS[item.icon] || item.icon}}/>
                   <span className="flex-1">{item.label}</span>
                   {item.badge !== undefined && (
                     <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full', item.badgeType==='red'?'bg-red-100 text-red-600':item.badgeType==='blue'?'bg-blue-100 text-blue-700':'bg-[#EEF3FF] text-[#2255CC]')} style={{fontWeight:700}}>{item.badge}</span>
@@ -104,7 +105,7 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
               borderTop: `2px solid ${isActive(item.path) ? accent : 'transparent'}`,
               position:'relative',
             }}>
-            <span style={{fontSize:'20px',lineHeight:1}}>{item.icon}</span>
+            <span style={{width:20,height:20,display:'flex',alignItems:'center',justifyContent:'center'}} dangerouslySetInnerHTML={{__html: ICONS[item.icon] || item.icon}}/>
             <span style={{fontSize:'9px',fontWeight:600,marginTop:'3px',letterSpacing:'0.2px',whiteSpace:'nowrap'}}>
               {item.label.split(' ')[0]}
             </span>
@@ -126,7 +127,7 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
           color: open ? accent : '#8FA3BF',
           borderTop:`2px solid ${open ? accent : 'transparent'}`,
         }}>
-          <span style={{fontSize:'20px',lineHeight:1}}>{open ? '✕' : '☰'}</span>
+          <span style={{fontSize:'16px',lineHeight:1,fontWeight:600}}>{open ? '✕' : '☰'}</span>
           <span style={{fontSize:'9px',fontWeight:600,marginTop:'3px'}}>{open ? 'Close' : 'Menu'}</span>
         </button>
       </nav>
@@ -187,7 +188,7 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
                           borderLeft:`3px solid ${active ? accent : 'transparent'}`,
                           fontSize:'15px',fontWeight: active ? 600 : 400,
                         }}>
-                        <span style={{fontSize:'18px',width:'24px',textAlign:'center',flexShrink:0}}>{item.icon}</span>
+                        <span style={{width:18,height:18,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}} dangerouslySetInnerHTML={{__html: ICONS[item.icon] || item.icon}}/>
                         <span style={{flex:1}}>{item.label}</span>
                         {item.badge !== undefined && (
                           <span style={{

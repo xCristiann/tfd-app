@@ -1,3 +1,4 @@
+import { ICONS } from '@/lib/nav'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -9,19 +10,19 @@ interface MobileLayoutProps {
 }
 
 const TRADER_BOTTOM = [
-  { path: '/dashboard',          icon: '⊞', label: 'Overview' },
-  { path: '/platform',           icon: '📈', label: 'Trade'    },
-  { path: '/dashboard/payouts',  icon: '💰', label: 'Payouts'  },
-  { path: '/dashboard/kyc',      icon: '🪪', label: 'KYC'      },
-  { path: '/dashboard/settings', icon: '⚙️', label: 'Settings' },
+  { path: '/dashboard',          icon: 'dashboard', label: 'Overview' },
+  { path: '/platform',           icon: 'platform', label: 'Trade'    },
+  { path: '/dashboard/payouts',  icon: 'payouts', label: 'Payouts'  },
+  { path: '/dashboard/kyc',      icon: 'kyc', label: 'KYC'      },
+  { path: '/dashboard/settings', icon: 'settings', label: 'Settings' },
 ]
 
 const ADMIN_BOTTOM = [
-  { path: '/admin',          icon: '⊞', label: 'Dashboard' },
-  { path: '/admin/traders',  icon: '👥', label: 'Traders'   },
-  { path: '/admin/payouts',  icon: '💰', label: 'Payouts'   },
-  { path: '/admin/kyc',      icon: '🪪', label: 'KYC'       },
-  { path: '/admin/settings', icon: '⚙️', label: 'Settings'  },
+  { path: '/admin',          icon: 'dashboard', label: 'Dashboard' },
+  { path: '/admin/traders',  icon: 'traders', label: 'Traders'   },
+  { path: '/admin/payouts',  icon: 'payouts', label: 'Payouts'   },
+  { path: '/admin/kyc',      icon: 'kyc', label: 'KYC'       },
+  { path: '/admin/settings', icon: 'settings', label: 'Settings'  },
 ]
 
 export function MobileLayout({ children, title, showBack, nav }: MobileLayoutProps) {
