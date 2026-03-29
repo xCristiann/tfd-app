@@ -153,6 +153,68 @@ export function AdminFaqPage() {
     load()
   }
 
+  /* ── Quick-add hedging article to Challenge Rules category ── */
+  async function addHedgingArticle() {
+    if (!confirm('Add the "Hedging Rules" article to the Challenge Rules category?')) return
+    setSaving(true)
+    // Find or create Challenge Rules category
+    let catId: string | null = null
+    const existing = categories.find(c => c.title === 'Challenge Rules')
+    if (existing) {
+      catId = existing.id
+    } else {
+      const { data: newCat } = await supabase
+        .from('faq_categories')
+        .insert({ title: 'Challenge Rules', subtitle: 'Trading rules & evaluation criteria', icon: '📋', order_index: 2, is_active: true })
+        .select().single()
+      catId = newCat?.id ?? null
+    }
+    if (!catId) { toast('error','❌','Error','Could not find/create Challenge Rules category.'); setSaving(false); return }
+
+    const nextIndex = (existing?.articles?.length ?? 0) + 1
+    await supabase.from('faq_articles').insert({
+      category_id: catId,
+      is_published: true,
+      order_index: nextIndex,
+      title: 'Is hedging allowed on my account?',
+      body: `**Hedging is strictly prohibited on all TFD accounts.**
+
+Hedging means holding simultaneous BUY and SELL positions on the same instrument within the same trading account. This practice is not permitted under any circumstances and violates our challenge rules.
+
+**What counts as prohibited hedging:**
+
+- Opening a BUY and a SELL trade on the same currency pair or instrument at the same time on the same account
+- Partially hedging by holding opposite positions of different sizes on the same instrument
+- Using pending orders to create a net-zero or near-zero exposure on any single instrument
+
+**Why is hedging prohibited?**
+
+Hedging on the same account eliminates real market risk and does not demonstrate genuine trading skill. Our evaluation programme is designed to identify skilled, directional traders who can manage risk and generate consistent profits. Hedging bypasses this assessment entirely.
+
+**What happens if hedging is detected?**
+
+Our risk monitoring system checks all open positions in real time. If same-account hedging is detected:
+
+1. Your account will be immediately flagged for review
+2. Trading may be suspended pending investigation
+3. If confirmed, your account will be permanently breached and closed
+4. No profits from the hedged period will be paid out
+
+**Cross-account hedging is also prohibited.**
+
+Holding opposite positions across multiple TFD accounts — whether owned by you or coordinated with another trader — is also strictly forbidden. This is treated as coordinated fraud and results in a permanent ban.
+
+**What is allowed?**
+
+You may hold multiple positions on the same instrument in the same direction (e.g. two BUY trades on EUR/USD). You may also hold positions on different, uncorrelated instruments simultaneously. The key rule is: no simultaneous opposing positions on the same instrument within the same account.
+
+If you have any questions about whether a specific trading strategy is permitted, please contact our support team before placing the trade.`,
+    })
+    toast('success','✅','Article Added','Hedging rules article published to Challenge Rules.')
+    setSaving(false)
+    load()
+  }
+
   const openCreateCat = () => {
     setSelectedCat(null)
     setCatForm({ title:'', subtitle:'', icon:'📋', order_index:(categories.length+1), is_active:true })
@@ -189,9 +251,15 @@ export function AdminFaqPage() {
     <>
       <DashboardLayout title="FAQ / Help Centre" nav={ADMIN_NAV} accentColor="red"
         topbarRight={
-          <a href="/help" target="_blank" className="text-[10px] text-[#2255CC] bg-[rgba(34,85,204,.08)] border border-[#C5D5EA] px-3 py-1.5 rounded cursor-pointer hover:bg-[rgba(34,85,204,.15)] transition-colors no-underline">
-            🔗 View Help Page →
-          </a>
+          <div className="flex gap-2 items-center">
+            <button onClick={addHedgingArticle} disabled={saving}
+              className="text-[10px] text-[#DC2626] bg-[rgba(220,38,38,.06)] border border-[rgba(220,38,38,.2)] px-3 py-1.5 rounded cursor-pointer hover:bg-[rgba(220,38,38,.12)] transition-colors disabled:opacity-50">
+              🚫 Add Hedging Rule Article
+            </button>
+            <a href="/help" target="_blank" className="text-[10px] text-[#2255CC] bg-[rgba(34,85,204,.08)] border border-[#C5D5EA] px-3 py-1.5 rounded cursor-pointer hover:bg-[rgba(34,85,204,.15)] transition-colors no-underline">
+              🔗 View Help Page →
+            </a>
+          </div>
         }
       >
         {/* KPIs */}

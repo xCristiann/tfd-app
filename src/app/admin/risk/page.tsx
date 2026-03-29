@@ -21,7 +21,7 @@ function timeAgo(dt: string) {
 export function AdminRiskPage() {
   const { toasts, toast, dismiss } = useToast()
   const [loading, setLoading]       = useState(true)
-  const [activeTab, setActiveTab]   = useState('hedging')
+  const [activeTab, setActiveTab]   = useState('sameacchedge')
   const [hedgePairs, setHedgePairs] = useState<any[]>([])
   const [dupIps, setDupIps]         = useState<any[]>([])
   const [tradeIps, setTradeIps]     = useState<any[]>([])
@@ -33,7 +33,8 @@ export function AdminRiskPage() {
   const [sameDevice, setSameDevice] = useState<any[]>([])
   const [mirrorGroups, setMirrorGroups] = useState<any[]>([])  // Same name/email diff accounts
   const [newsViolations, setNewsViolations] = useState<any[]>([])  // Trades opened during news
-  const [consistentProfit, setConsistentProfit] = useState<any[]>([]) // Suspiciously consistent daily P&L
+  const [consistentProfit, setConsistentProfit] = useState<any[]>([])
+  const [sameAccHedge, setSameAccHedge] = useState<any[]>([])  // Same-account hedging (BUY+SELL same symbol) // Suspiciously consistent daily P&L
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -64,6 +65,40 @@ export function AdminRiskPage() {
       }
       const seen=new Set<string>()
       setHedgePairs(pairs.filter(p=>{const k=[p.symbol,p.t1.account_number,p.t2.account_number].sort().join('|');if(seen.has(k))return false;seen.add(k);return true}))
+
+      // ── 1b. Same-Account Hedging: BUY + SELL same symbol on the SAME account ──
+      // This is strictly prohibited — a trader cannot hold opposite positions on the same account
+      const sameAccMap: Record<string, any> = {}
+      for (const t of ot) {
+        const accId = t.account_id
+        const sym   = t.symbol
+        const key   = `${accId}__${sym}`
+        if (!sameAccMap[key]) sameAccMap[key] = { account_id: accId, symbol: sym, trades: [], acc: t.accounts }
+        sameAccMap[key].trades.push(t)
+      }
+      const sameAccResults: any[] = []
+      for (const [, v] of Object.entries(sameAccMap) as any) {
+        const hasBuy  = v.trades.some((t: any) => t.direction === 'buy')
+        const hasSell = v.trades.some((t: any) => t.direction === 'sell')
+        if (!hasBuy || !hasSell) continue
+        const buys  = v.trades.filter((t: any) => t.direction === 'buy')
+        const sells = v.trades.filter((t: any) => t.direction === 'sell')
+        const acc   = v.acc as any
+        sameAccResults.push({
+          account_id:     v.account_id,
+          account_number: acc?.account_number ?? '—',
+          user_id:        acc?.user_id,
+          name:           `${acc?.users?.first_name ?? ''} ${acc?.users?.last_name ?? ''}`.trim(),
+          email:          acc?.users?.email ?? '',
+          symbol:         v.symbol,
+          buys,
+          sells,
+          total_buy_lots:  buys.reduce((s: number, t: any)  => s + Number(t.lots), 0),
+          total_sell_lots: sells.reduce((s: number, t: any) => s + Number(t.lots), 0),
+          opened_at:       v.trades.sort((a: any, b: any) => new Date(a.opened_at).getTime() - new Date(b.opened_at).getTime())[0].opened_at,
+        })
+      }
+      setSameAccHedge(sameAccResults)
 
       // ── 2. Duplicate login IPs ──
       const ipMap: Record<string,any[]> = {}
@@ -308,7 +343,8 @@ export function AdminRiskPage() {
   }
 
   const tabs = [
-    {id:'hedging',   label:'🔄 Hedging',          count:hedgePairs.length},
+    {id:'sameacchedge',label:'🚨 Same-Acc Hedge',  count:sameAccHedge.length},
+    {id:'hedging',   label:'🔄 Cross-Acc Hedge',   count:hedgePairs.length},
     {id:'mirror',    label:'🪞 Mirror Trading',    count:mirrorGroups.length},
     {id:'copyip',    label:'🔗 Duplicate IPs',     count:dupIps.length},
     {id:'tradeip',   label:'📡 Trade IP Match',    count:tradeIps.length},
@@ -320,7 +356,7 @@ export function AdminRiskPage() {
     {id:'botprofit', label:'🤖 Bot Pattern',       count:consistentProfit.length},
     {id:'flagged',   label:'🚩 Flagged CRM',       count:flagged.filter(f=>f.status==='open').length},
   ]
-  const totalAlerts = hedgePairs.length+dupIps.length+tradeIps.length+ddAlerts.critical.length+velocity.length+winRate.length+sameDevice.length+newsViolations.length+consistentProfit.length+mirrorGroups.length
+  const totalAlerts = sameAccHedge.length+hedgePairs.length+dupIps.length+tradeIps.length+ddAlerts.critical.length+velocity.length+winRate.length+sameDevice.length+newsViolations.length+consistentProfit.length+mirrorGroups.length
 
   return (
     <>
@@ -328,10 +364,10 @@ export function AdminRiskPage() {
         {/* KPIs */}
         <div className="grid grid-cols-4 gap-[11px]">
           {[
-            {label:'Total Alerts',value:totalAlerts,color:totalAlerts>0?'#DC2626':'#16A34A'},
-            {label:'Hedge Pairs',value:hedgePairs.length,color:hedgePairs.length>0?'#DC2626':'#16A34A'},
-            {label:'DD Critical',value:ddAlerts.critical.length,color:ddAlerts.critical.length>0?'#DC2626':'#16A34A'},
-            {label:'Open Flags',value:flagged.filter(f=>f.status==='open').length,color:flagged.filter(f=>f.status==='open').length>0?'#DC2626':'#16A34A'},
+            {label:'Total Alerts',       value:totalAlerts,                                              color:totalAlerts>0?'#DC2626':'#16A34A'},
+            {label:'Same-Acc Hedging',   value:sameAccHedge.length,                                     color:sameAccHedge.length>0?'#DC2626':'#16A34A'},
+            {label:'DD Critical',        value:ddAlerts.critical.length,                                 color:ddAlerts.critical.length>0?'#DC2626':'#16A34A'},
+            {label:'Open Flags',         value:flagged.filter(f=>f.status==='open').length,              color:flagged.filter(f=>f.status==='open').length>0?'#DC2626':'#16A34A'},
           ].map(k=>(
             <div key={k.label} className="bg-white border border-[#E8EEF8] rounded-xl p-4">
               <div className="text-[8px] uppercase tracking-[2px] text-[#8FA3BF] font-semibold mb-1">{k.label}</div>
@@ -353,6 +389,102 @@ export function AdminRiskPage() {
         </div>
 
         {loading ? <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-[#DC2626] border-t-transparent rounded-full animate-spin"/></div> : <>
+
+          {/* ═══ SAME-ACCOUNT HEDGING ═══ */}
+          {activeTab==='sameacchedge'&&<Card>
+            <CardHeader title={`Same-Account Hedging (${sameAccHedge.length})`}/>
+            <div className="px-4 pb-3">
+              <div className="p-3 bg-[rgba(220,38,38,.05)] border border-[rgba(220,38,38,.2)] rounded-lg text-[11px] text-[#DC2626] leading-relaxed">
+                <strong>🚨 Strictly Prohibited Rule:</strong> A trader cannot hold simultaneous BUY and SELL positions on the same instrument within the same account. This is same-account hedging — it neutralises market risk, violates the challenge rules, and will result in immediate account breach.
+              </div>
+            </div>
+            {sameAccHedge.length===0
+              ? <div className="py-8 text-center text-[#16A34A] text-[12px]">✓ No same-account hedging detected</div>
+              : <div className="flex flex-col gap-3 px-1">
+                {sameAccHedge.map((s:any,i:number)=>(
+                  <div key={i} className="border border-[rgba(220,38,38,.3)] bg-[rgba(220,38,38,.04)] rounded-lg p-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[11px] font-bold px-3 py-1 bg-[#DC2626] text-white rounded">{s.symbol}</span>
+                        <span className="text-[10px] font-bold text-[#DC2626] uppercase tracking-wide">🚨 Same-Account Hedge</span>
+                        <span className="text-[9px] text-[#8FA3BF]" style={mono}>{s.account_number}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={()=>flagAcc(s.user_id,s.account_number,`Same-account hedging on ${s.symbol}: ${s.buys.length} BUY + ${s.sells.length} SELL open simultaneously`)}
+                          className="px-3 py-1.5 text-[8px] font-bold uppercase bg-[rgba(220,38,38,.08)] text-[#DC2626] border border-[rgba(220,38,38,.2)] rounded cursor-pointer">
+                          🚩 Flag Account
+                        </button>
+                        <button
+                          onClick={()=>warnTrader(s.user_id,s.email,s.account_number,`Same-account hedging detected on ${s.symbol}. Holding simultaneous BUY and SELL positions on the same instrument in the same account is strictly prohibited under our challenge rules.`)}
+                          className="px-3 py-1.5 text-[8px] font-bold uppercase bg-[rgba(217,119,6,.08)] text-[#D97706] border border-[rgba(217,119,6,.2)] rounded cursor-pointer">
+                          📨 Warn Trader
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Trader info */}
+                    <div className="mb-3 text-[10px] text-[#5C7A9E]">
+                      <span className="font-semibold text-[#1A3A6B]">{s.name}</span>
+                      <span className="mx-2 text-[#8FA3BF]">·</span>
+                      <span>{s.email}</span>
+                      <span className="mx-2 text-[#8FA3BF]">·</span>
+                      <span>First opened: {timeAgo(s.opened_at)}</span>
+                    </div>
+
+                    {/* BUY vs SELL breakdown */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* BUY side */}
+                      <div className="bg-[rgba(22,163,74,.04)] border border-[rgba(22,163,74,.2)] rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[9px] font-bold px-2 py-0.5 bg-[#16A34A] text-white rounded">BUY</span>
+                          <span className="text-[10px] font-semibold text-[#16A34A]">{s.buys.length} position{s.buys.length>1?'s':''}</span>
+                          <span className="text-[9px] text-[#8FA3BF] ml-auto" style={mono}>{s.total_buy_lots.toFixed(2)} lots total</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {s.buys.map((t:any,bi:number)=>(
+                            <div key={bi} className="flex items-center justify-between text-[9px] text-[#5C7A9E] py-0.5 border-b border-[rgba(22,163,74,.08)] last:border-0">
+                              <span style={mono}>{Number(t.lots).toFixed(2)} lots</span>
+                              <span style={mono}>@ {Number(t.open_price||0).toFixed(5)}</span>
+                              <span className="text-[#8FA3BF]">{timeAgo(t.opened_at)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* SELL side */}
+                      <div className="bg-[rgba(220,38,38,.04)] border border-[rgba(220,38,38,.2)] rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[9px] font-bold px-2 py-0.5 bg-[#DC2626] text-white rounded">SELL</span>
+                          <span className="text-[10px] font-semibold text-[#DC2626]">{s.sells.length} position{s.sells.length>1?'s':''}</span>
+                          <span className="text-[9px] text-[#8FA3BF] ml-auto" style={mono}>{s.total_sell_lots.toFixed(2)} lots total</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {s.sells.map((t:any,si:number)=>(
+                            <div key={si} className="flex items-center justify-between text-[9px] text-[#5C7A9E] py-0.5 border-b border-[rgba(220,38,38,.08)] last:border-0">
+                              <span style={mono}>{Number(t.lots).toFixed(2)} lots</span>
+                              <span style={mono}>@ {Number(t.open_price||0).toFixed(5)}</span>
+                              <span className="text-[#8FA3BF]">{timeAgo(t.opened_at)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Net exposure summary */}
+                    <div className="mt-3 flex items-center gap-3 p-2 bg-[rgba(220,38,38,.04)] border border-[rgba(220,38,38,.12)] rounded text-[10px]">
+                      <span className="text-[#8FA3BF]">Net exposure:</span>
+                      <span className="font-bold" style={{...mono, color: s.total_buy_lots > s.total_sell_lots ? '#16A34A' : '#DC2626'}}>
+                        {s.total_buy_lots > s.total_sell_lots ? 'NET LONG' : s.total_buy_lots < s.total_sell_lots ? 'NET SHORT' : 'FULLY HEDGED'}
+                      </span>
+                      <span style={mono} className="text-[#5C7A9E]">{Math.abs(s.total_buy_lots - s.total_sell_lots).toFixed(2)} lots</span>
+                      <span className="ml-auto text-[#8FA3BF]">Locked lots: <span className="font-bold text-[#DC2626]" style={mono}>{Math.min(s.total_buy_lots, s.total_sell_lots).toFixed(2)}</span></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            }
+          </Card>}
 
           {/* ═══ HEDGING ═══ */}
           {activeTab==='hedging'&&<Card>
