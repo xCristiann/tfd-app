@@ -429,7 +429,7 @@ export function PlatformPage() {
   useEffect(() => { lsSet('tfd_sym',sym) }, [sym])
   useEffect(() => { lsSet('tfd_tf',tf)   }, [tf])
 
-  const { prices, refPrev, refPrices, push, wsLive: wsLiveRef } = usePriceFeed()
+  const { prices, refPrev, refPrices, push, wsLive: wsLiveRef, bridgeOnline } = usePriceFeed()
   const tradesRef  = useRef(openTrades);  tradesRef.current  = openTrades
   const primaryRef = useRef(primary);     primaryRef.current = primary
   const closingRef = useRef<Set<string>>(new Set())
@@ -900,3 +900,4 @@ export function PlatformPage() {
     </div>
   )
 }
+
