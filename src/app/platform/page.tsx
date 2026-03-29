@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/useToast'
@@ -11,27 +11,27 @@ const LEVERAGE = 50
 const LOT_SIZE = 100_000
 
 const ALL_INSTRUMENTS = [
-  // lotUSD(price) = USD notional per 1 standard lot → margin = lotUSD(price)*lots/LEVERAGE
+  // lotUSD(price) = USD notional per 1 standard lot â†’ margin = lotUSD(price)*lots/LEVERAGE
   // pnlMult = profit multiplier per 1 lot per 1 unit price move in USD
   // Forex pairs: 1 lot = 100,000 base currency units
-  //   EUR/USD: diff * 100,000 → already in USD
-  //   USD/JPY: diff in JPY → convert: diff * 100,000 / price
-  //   Cross JPY (GBP/JPY): 1 lot = 100,000 GBP, P&L in JPY → convert: diff * 100,000 / jpyRate
-  //   For simplicity use approximate: diff * 100,000 / price (price ≈ JPY per USD)
+  //   EUR/USD: diff * 100,000 â†’ already in USD
+  //   USD/JPY: diff in JPY â†’ convert: diff * 100,000 / price
+  //   Cross JPY (GBP/JPY): 1 lot = 100,000 GBP, P&L in JPY â†’ convert: diff * 100,000 / jpyRate
+  //   For simplicity use approximate: diff * 100,000 / price (price â‰ˆ JPY per USD)
   { sym:'EUR/USD', tv:'OANDA:EURUSD',   spread:0.00010, dec:5, pip:0.0001, cat:'forex',
     // notional = price * 100k USD; P&L = diff * 100k
     lotUSD:(p:number)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
   { sym:'GBP/USD', tv:'OANDA:GBPUSD',   spread:0.00015, dec:5, pip:0.0001, cat:'forex',
     lotUSD:(p:number)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
   { sym:'USD/JPY', tv:'OANDA:USDJPY',   spread:0.010,   dec:3, pip:0.01,   cat:'forex',
-    // notional = 100k USD; P&L in JPY → /price to get USD
-    lotUSD:(_:number)=>LOT_SIZE, pnlMult:0 }, // pnlMult=0 → use JPY formula
+    // notional = 100k USD; P&L in JPY â†’ /price to get USD
+    lotUSD:(_:number)=>LOT_SIZE, pnlMult:0 }, // pnlMult=0 â†’ use JPY formula
   { sym:'USD/CHF', tv:'OANDA:USDCHF',   spread:0.00015, dec:5, pip:0.0001, cat:'forex',
     lotUSD:(_:number)=>LOT_SIZE, pnlMult:LOT_SIZE },
   { sym:'AUD/USD', tv:'OANDA:AUDUSD',   spread:0.00015, dec:5, pip:0.0001, cat:'forex',
     lotUSD:(p:number)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
   { sym:'USD/CAD', tv:'OANDA:USDCAD',   spread:0.00020, dec:5, pip:0.0001, cat:'forex',
-    // USD base: notional = 100k USD; P&L in CAD → /price
+    // USD base: notional = 100k USD; P&L in CAD â†’ /price
     lotUSD:(_:number)=>LOT_SIZE, pnlMult:0 }, // use CAD formula: diff*100k/price
   { sym:'NZD/USD', tv:'OANDA:NZDUSD',   spread:0.00020, dec:5, pip:0.0001, cat:'forex',
     lotUSD:(p:number)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
@@ -61,7 +61,7 @@ const ALL_INSTRUMENTS = [
     // 1 lot US30 = $5 per point
     lotUSD:(p:number)=>Math.max(p,1000)*5, pnlMult:5 },
   { sym:'GER40',   tv:'OANDA:DE30EUR',   spread:1.0,     dec:1, pip:1.0,    cat:'index',
-    // 1 lot GER40 = €25 per point ≈ $27
+    // 1 lot GER40 = â‚¬25 per point â‰ˆ $27
     lotUSD:(p:number)=>Math.max(p,100)*25, pnlMult:25 },
   { sym:'WTI',     tv:'OANDA:WTICOUSD',  spread:0.030,   dec:2, pip:0.01,   cat:'energy',
     // 1 lot WTI = 1000 barrels
@@ -82,7 +82,7 @@ const TF_LABEL: Record<string,string> = {'1':'1m','5':'5m','15':'15m','30':'30m'
 function lsGet(k:string,fb:string){try{return localStorage.getItem(k)||fb}catch{return fb}}
 function lsSet(k:string,v:string){try{localStorage.setItem(k,v)}catch{}}
 
-/* ── TradingView Chart ───────────────────────────────────────────── */
+/* â”€â”€ TradingView Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function TVChart({ tvSym, interval }: { tvSym:string; interval:string }) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -119,7 +119,7 @@ function TVChart({ tvSym, interval }: { tvSym:string; interval:string }) {
   return <div ref={ref} className="tradingview-widget-container" style={{width:'100%',height:'100%'}}/>
 }
 
-/* ── P&L ─────────────────────────────────────────────────────────── */
+/* â”€â”€ P&L â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function calcPnl(trade:any, price:number): number {
   const inst = ALL_INSTRUMENTS.find(i=>i.sym===trade.symbol) as any
   if (!inst || !price || price <= 0 || !trade.open_price || trade.open_price <= 0) return 0
@@ -129,7 +129,7 @@ function calcPnl(trade:any, price:number): number {
   // Cap diff sanity: never more than 30% of open price (catches stale/bad prices)
   if (Math.abs(diff) > trade.open_price * 0.30) return 0
   let pnl = 0
-  // JPY pairs: P&L in JPY → convert to USD
+  // JPY pairs: P&L in JPY â†’ convert to USD
   if (sym.endsWith('/JPY')) {
     pnl = diff * LOT_SIZE / price * lots
   } else if (sym === 'USD/CHF') {
@@ -144,18 +144,18 @@ function calcPnl(trade:any, price:number): number {
   return +pnl.toFixed(2)
 }
 
-/* ── Margin calc helper ──────────────────────────────────────────── */
+/* â”€â”€ Margin calc helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function calcMargin(sym: string, price: number, lots: number): number {
   const inst = ALL_INSTRUMENTS.find(i=>i.sym===sym) as any
   if (!inst || !price || price <= 0) return 0
   return (inst.lotUSD(price) * lots) / LEVERAGE
 }
 
-/* ── Price feed ─────────────────────────────────────────────────────
-   Priority 1: TFD MT5 Bridge (ws://VPS:8081) — real MT5 prices
+/* â”€â”€ Price feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Priority 1: TFD MT5 Bridge (ws://VPS:8081) â€” real MT5 prices
    Priority 2: Deriv WebSocket fallback (if bridge offline)
    Priority 3: Cached localStorage prices (market closed / offline)
-   ─────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 // MT5 bridge symbol map: our internal sym -> MT5 sym
 const MT5_SYM: Record<string,string> = {
@@ -183,7 +183,7 @@ const DERIV_REV: Record<string,string> = Object.fromEntries(
   Object.entries(DERIV_SYM).map(([k,v])=>[v,k])
 )
 
-// Bridge URL — set VITE_WS_BRIDGE in .env, e.g. ws://YOUR_VPS_IP:8081
+// Bridge URL â€” set VITE_WS_BRIDGE in .env, e.g. ws://YOUR_VPS_IP:8081
 const BRIDGE_WS   = (import.meta as any).env?.VITE_WS_BRIDGE   || ''
 const BRIDGE_REST = (import.meta as any).env?.VITE_REST_BRIDGE  || ''
 
@@ -211,6 +211,7 @@ function usePriceFeed() {
   const cached = useMemo(() => ({ ...SEED, ...loadCachedPrices() }), [])
   const [prices, setPrices]       = useState<Record<string,number>>(cached)
   const [bridgeOnline, setBridge] = useState<boolean|null>(null) // null=unknown, true=live, false=offline
+  const [history, setHistory]     = useState<Record<string, number[]>>({})
   const refPrev    = useRef<Record<string,number>>({...cached})
   const refPrices  = useRef<Record<string,number>>({...cached})
   const wsRef      = useRef<WebSocket|null>(null)
@@ -225,6 +226,11 @@ function usePriceFeed() {
     refPrev.current[sym]   = refPrices.current[sym] || price
     refPrices.current[sym] = price
     setPrices(p => p[sym] === price ? p : {...p, [sym]: price})
+    setHistory(prev => {
+      const arr = [...(prev[sym] ?? []), price]
+      const trimmed = arr.slice(-240)
+      return { ...prev, [sym]: trimmed }
+    })
     wsLive.current.add(sym)
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => saveCachedPrices(refPrices.current), 5000)
@@ -233,7 +239,7 @@ function usePriceFeed() {
   useEffect(() => {
     deadRef.current = false
 
-    // ── 1. MT5 Bridge WebSocket (primary) ─────────────────────────
+    // â”€â”€ 1. MT5 Bridge WebSocket (primary) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const connectBridge = () => {
       if (!BRIDGE_WS || deadRef.current) return false
       try {
@@ -283,7 +289,7 @@ function usePriceFeed() {
     }
 
     const derivWsRef: { current: WebSocket|null } = { current: null }
-    // ── 2. Deriv fallback WebSocket ────────────────────────────────
+    // â”€â”€ 2. Deriv fallback WebSocket â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const connectDeriv = () => {
       if (usedBridge.current || deadRef.current) return
       const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089')
@@ -330,11 +336,11 @@ function usePriceFeed() {
     return () => clearInterval(iv)
   }, [])
 
-  return { prices, refPrev, refPrices, push, wsLive, bridgeOnline }
+  return { prices, refPrev, refPrices, push, wsLive, bridgeOnline, history }
 }
 
 
-/* ── Risk monitor ────────────────────────────────────────────────── */
+/* â”€â”€ Risk monitor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function useRiskMonitor(tradesRef:any, refPrices:any, primaryRef:any, accountId:any, onBreach:any) {
   const fired    = useRef(false)
   const cb       = useRef(onBreach); cb.current = onBreach
@@ -368,14 +374,14 @@ function useRiskMonitor(tradesRef:any, refPrices:any, primaryRef:any, accountId:
       // Calculate drawdown floor
       let floor: number
       if (isTrailing) {
-        // Trailing DD: floor = highest equity ever − trailing%
+        // Trailing DD: floor = highest equity ever âˆ’ trailing%
         // Uses peak_balance from DB (persisted) as source of truth
         const peakFromDB = pr.peak_balance ?? bal
         const sessionPeak = peakEqRef.current || peakFromDB
         const truePeak = Math.max(sessionPeak, peakFromDB)
         floor = truePeak * (1 - trailingPct / 100)
       } else {
-        // Static DD: floor = starting_balance − max_dd%
+        // Static DD: floor = starting_balance âˆ’ max_dd%
         const maxDD = ph==='funded'?(cp?.funded_max_dd??10):(ph==='phase2'?(cp?.ph2_max_dd??10):(cp?.ph1_max_dd??10))
         floor = start - start * (maxDD / 100)
       }
@@ -385,7 +391,7 @@ function useRiskMonitor(tradesRef:any, refPrices:any, primaryRef:any, accountId:
 
       if (equity <= floor) {
         fired.current = true
-        cb.current(`${isTrailing ? 'Trailing' : 'Max'} DD breached — equity $${equity.toFixed(2)} reached floor $${floor.toFixed(2)}`, trades)
+        cb.current(`${isTrailing ? 'Trailing' : 'Max'} DD breached â€” equity $${equity.toFixed(2)} reached floor $${floor.toFixed(2)}`, trades)
       } else if (equity <= dFloor) {
         fired.current = true
         cb.current(`Daily DD breached`, trades)
@@ -396,12 +402,12 @@ function useRiskMonitor(tradesRef:any, refPrices:any, primaryRef:any, accountId:
 
   useEffect(() => {
     fired.current = false
-    // Reset peak tracking on account change — will re-sync from DB
+    // Reset peak tracking on account change â€” will re-sync from DB
     peakEqRef.current = primaryRef.current?.peak_balance ?? 0
   }, [accountId])
 }
 
-/* ── Platform Page ───────────────────────────────────────────────── */
+/* â”€â”€ Platform Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 export function PlatformPage() {
   const navigate = useNavigate()
   const { toasts, toast, dismiss } = useToast()
@@ -429,7 +435,7 @@ export function PlatformPage() {
   useEffect(() => { lsSet('tfd_sym',sym) }, [sym])
   useEffect(() => { lsSet('tfd_tf',tf)   }, [tf])
 
-  const { prices, refPrev, refPrices, push, wsLive: wsLiveRef, bridgeOnline } = usePriceFeed()
+  const { prices, refPrev, refPrices, push, wsLive: wsLiveRef, bridgeOnline, history } = usePriceFeed()
   const tradesRef  = useRef(openTrades);  tradesRef.current  = openTrades
   const primaryRef = useRef(primary);     primaryRef.current = primary
   const closingRef = useRef<Set<string>>(new Set())
@@ -450,12 +456,12 @@ export function PlatformPage() {
   const freeMgn   = Math.max(0, equity - usedMgn)
   const reqMgn    = calcMargin(sym, execPrice, lotsNum)
   const maxLots   = reqMgn > 0 ? Math.floor((freeMgn / reqMgn) * lotsNum * 100) / 100 : 0
-  // Market hours check (UTC) — must be declared BEFORE isLive
+  // Market hours check (UTC) â€” must be declared BEFORE isLive
   const marketStatus = (() => {
     const now = new Date()
     const day = now.getUTCDay() // 0=Sun, 6=Sat
     const h   = now.getUTCHours()
-    // Forex closed: Fri 22:00 UTC → Sun 22:00 UTC
+    // Forex closed: Fri 22:00 UTC â†’ Sun 22:00 UTC
     if (day === 6) return 'closed'                          // Saturday all day
     if (day === 0 && h < 22) return 'closed'               // Sunday before 22:00 UTC
     if (day === 5 && h >= 22) return 'closed'              // Friday after 22:00 UTC
@@ -474,7 +480,7 @@ export function PlatformPage() {
   }, [primary?.id])
 
   useRiskMonitor(tradesRef, refPrices, primaryRef, primary?.id, async(reason:string, trades:any[]) => {
-    toast('error','🚨','Account Breached',reason)
+    toast('error','ðŸš¨','Account Breached',reason)
     if (!primary?.id) return
     for (const t of trades) {
       const cur = refPrices.current[t.symbol] || SEED[t.symbol]
@@ -517,7 +523,7 @@ export function PlatformPage() {
           await supabase.from('accounts').update({balance:+((pr.balance??0)+netPnl).toFixed(2)}).eq('id',pr.id)
           setOpenTrades(p=>p.filter(x=>x.id!==t.id))
           setClosedTrades(p=>[{...t,status:'closed',close_price:cp,net_pnl:netPnl,pips,closed_at:now},...p])
-          toast(netPnl>=0?'success':'error',netPnl>=0?'🎯':'🛑',`${hit} — ${t.symbol}`,`${netPnl>=0?'+':''}$${netPnl.toFixed(2)}`)
+          toast(netPnl>=0?'success':'error',netPnl>=0?'ðŸŽ¯':'ðŸ›‘',`${hit} â€” ${t.symbol}`,`${netPnl>=0?'+':''}$${netPnl.toFixed(2)}`)
         } catch { closingRef.current.delete(t.id) }
       }
     }, 1000)
@@ -529,11 +535,11 @@ export function PlatformPage() {
   }
 
   async function placeOrder() {
-    if (marketStatus === 'closed')  { toast('error','🔒','Market Closed','Trading is only available when the market is open.'); return }
-    if (!primary?.id)              { toast('error','❌','No Account','Select an account'); return }
-    if (primary.status==='breached'){ toast('error','❌','Breached','Account is breached'); return }
-    if (primary.status==='soft_locked'){ toast('error','🔒','Frozen','Account is frozen pending risk investigation. Trading suspended.'); return }
-    if (reqMgn>freeMgn)            { toast('error','❌','Margin',`Max ${maxLots} lots`); return }
+    if (marketStatus === 'closed')  { toast('error','ðŸ”’','Market Closed','Trading is only available when the market is open.'); return }
+    if (!primary?.id)              { toast('error','âŒ','No Account','Select an account'); return }
+    if (primary.status==='breached'){ toast('error','âŒ','Breached','Account is breached'); return }
+    if (primary.status==='soft_locked'){ toast('error','ðŸ”’','Frozen','Account is frozen pending risk investigation. Trading suspended.'); return }
+    if (reqMgn>freeMgn)            { toast('error','âŒ','Margin',`Max ${maxLots} lots`); return }
     setPlacing(true)
     // Capture trader IP at moment of trade
     let traderIp: string | null = null
@@ -551,9 +557,9 @@ export function PlatformPage() {
       ip_address: traderIp,
     }).select().single()
     setPlacing(false)
-    if (error) { toast('error','❌','Error',error.message); return }
+    if (error) { toast('error','âŒ','Error',error.message); return }
     setOpenTrades(p=>[data,...p])
-    toast('success','✅',`${dir.toUpperCase()} ${sym}`,`${lotsNum} lots @ ${execPrice}`)
+    toast('success','âœ…',`${dir.toUpperCase()} ${sym}`,`${lotsNum} lots @ ${execPrice}`)
     setSl(''); setTp('')
   }
 
@@ -569,7 +575,7 @@ export function PlatformPage() {
     await supabase.from('accounts').update({balance:+(balance+netPnl).toFixed(2),equity:+(equity+netPnl-openPnl).toFixed(2)}).eq('id',primary!.id)
     setOpenTrades(p=>p.filter(x=>x.id!==t.id))
     setClosedTrades(p=>[{...t,status:'closed',close_price:cp,net_pnl:netPnl,pips,closed_at:now},...p])
-    toast(netPnl>=0?'success':'error',netPnl>=0?'💰':'📉',`Closed ${t.symbol}`,`${netPnl>=0?'+':''}$${netPnl.toFixed(2)}`)
+    toast(netPnl>=0?'success':'error',netPnl>=0?'ðŸ’°':'ðŸ“‰',`Closed ${t.symbol}`,`${netPnl>=0?'+':''}$${netPnl.toFixed(2)}`)
   }
 
   async function saveEditSLTP() {
@@ -579,7 +585,7 @@ export function PlatformPage() {
     await supabase.from('trades').update({sl:newSl,tp:newTp}).eq('id',editSLTP.id)
     setOpenTrades(t=>t.map(x=>x.id===editSLTP.id?{...x,sl:newSl,tp:newTp}:x))
     setEditSLTP(null)
-    toast('success','✅','SL/TP Updated','')
+    toast('success','âœ…','SL/TP Updated','')
   }
 
   const watchlist = useMemo(() => {
@@ -597,7 +603,7 @@ export function PlatformPage() {
 
       {/* TOPBAR */}
       <div style={{height:'48px',background:'#1A3A6B',display:'flex',alignItems:'center',padding:'0 12px',gap:'8px',flexShrink:0}}>
-        <button onClick={()=>navigate('/dashboard')} style={{background:'rgba(255,255,255,.1)',border:'none',color:'#fff',padding:'5px 10px',borderRadius:'6px',cursor:'pointer',fontSize:'11px',fontWeight:600}}>← Dashboard</button>
+        <button onClick={()=>navigate('/dashboard')} style={{background:'rgba(255,255,255,.1)',border:'none',color:'#fff',padding:'5px 10px',borderRadius:'6px',cursor:'pointer',fontSize:'11px',fontWeight:600}}>â† Dashboard</button>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',fontWeight:700,color:'#fff'}}>The Funded <span style={{color:'#60A5FA',fontStyle:'italic'}}>Diaries</span></div>
         {/* Bridge source indicator */}
         {bridgeOnline !== null && (
@@ -639,7 +645,7 @@ export function PlatformPage() {
         {/* WATCHLIST */}
         {!isMobile && <div style={{width:'180px',background:'#fff',borderRight:'1px solid #E8EEF8',display:'flex',flexDirection:'column',flexShrink:0}}>
           <div style={{padding:'7px',borderBottom:'1px solid #E8EEF8',flexShrink:0}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Searchâ€¦"
               style={{width:'100%',padding:'5px 8px',background:'#F4F7FD',border:'1px solid #E8EEF8',borderRadius:'6px',fontSize:'11px',color:'#1A3A6B',outline:'none',boxSizing:'border-box'}}/>
           </div>
           <div style={{flex:1,overflowY:'auto'}}>
@@ -652,14 +658,14 @@ export function PlatformPage() {
               return (
                 <div key={i.sym} onClick={()=>setSym(i.sym)}
                   style={{padding:'5px 7px',borderBottom:'1px solid #F0F4FB',display:'flex',alignItems:'center',background:active?'#EEF3FF':'transparent',borderLeft:active?'3px solid #2255CC':'3px solid transparent',cursor:'pointer'}}>
-                  <button onClick={e=>{e.stopPropagation();toggleFav(i.sym)}} style={{background:'none',border:'none',cursor:'pointer',fontSize:'11px',color:isFav?'#F59E0B':'#D1D5DB',padding:'0 3px 0 0',flexShrink:0}}>{isFav?'★':'☆'}</button>
+                  <button onClick={e=>{e.stopPropagation();toggleFav(i.sym)}} style={{background:'none',border:'none',cursor:'pointer',fontSize:'11px',color:isFav?'#F59E0B':'#D1D5DB',padding:'0 3px 0 0',flexShrink:0}}>{isFav?'â˜…':'â˜†'}</button>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:'10px',fontWeight:600,color:active?'#2255CC':'#1A3A6B'}}>{i.sym}</div>
                     <div style={{fontSize:'8px',color:'#8FA3BF',textTransform:'uppercase'}}>{i.cat}</div>
                   </div>
                   <div style={{textAlign:'right',flexShrink:0}}>
                     <div style={{...mono,fontSize:'10px',color:isUp?'#16A34A':'#DC2626'}}>{price.toFixed(i.dec)}</div>
-                    <div style={{fontSize:'8px',color:isUp?'#16A34A':'#DC2626'}}>{isUp?'▲':'▼'}{Math.abs(price-pv).toFixed(i.dec)}</div>
+                    <div style={{fontSize:'8px',color:isUp?'#16A34A':'#DC2626'}}>{isUp?'â–²':'â–¼'}{Math.abs(price-pv).toFixed(i.dec)}</div>
                   </div>
                 </div>
               )
@@ -671,9 +677,9 @@ export function PlatformPage() {
         <div style={{flex:1,display:isMobile&&mobilePanel!=='chart'?'none':'flex',flexDirection:'column',overflow:'hidden'}}>
           <div style={{height:'38px',background:'#fff',borderBottom:'1px solid #E8EEF8',display:'flex',alignItems:'center',padding:'0 12px',gap:'8px',flexShrink:0}}>
             <div style={{...mono,fontSize:'20px',fontWeight:700,color:up?'#16A34A':'#DC2626'}}>{livePrice.toFixed(inst.dec)}</div>
-            <div style={{fontSize:'10px',color:up?'#16A34A':'#DC2626'}}>{up?'▲':'▼'} {Math.abs(livePrice-prevPrice).toFixed(inst.dec)}</div>
+            <div style={{fontSize:'10px',color:up?'#16A34A':'#DC2626'}}>{up?'â–²':'â–¼'} {Math.abs(livePrice-prevPrice).toFixed(inst.dec)}</div>
             <div style={{fontSize:'13px',fontWeight:700,color:'#1A3A6B'}}>{sym}</div>
-            <button onClick={()=>toggleFav(sym)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'14px',color:favorites.has(sym)?'#F59E0B':'#D1D5DB'}}>{favorites.has(sym)?'★':'☆'}</button>
+            <button onClick={()=>toggleFav(sym)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'14px',color:favorites.has(sym)?'#F59E0B':'#D1D5DB'}}>{favorites.has(sym)?'â˜…':'â˜†'}</button>
             <div style={{display:'flex',gap:'2px',marginLeft:'8px'}}>
               {TF_LIST.map(t=>(
                 <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 8px',fontSize:'9px',fontWeight:700,border:'none',borderRadius:'4px',cursor:'pointer',background:tf===t?'#2255CC':'#F4F7FD',color:tf===t?'#fff':'#5C7A9E'}}>{TF_LABEL[t]}</button>
@@ -683,18 +689,18 @@ export function PlatformPage() {
               color: isLive?'#16A34A': marketStatus==='closed'?'#9CA3AF':'#F59E0B',
               background: isLive?'rgba(22,163,74,.08)': marketStatus==='closed'?'rgba(156,163,175,.08)':'rgba(245,158,11,.08)',
               padding:'2px 8px',borderRadius:'20px',fontWeight:600}}>
-              {isLive ? '● Live' : marketStatus==='closed' ? '○ Market Closed' : '○ Connecting…'}
+              {isLive ? 'â— Live' : marketStatus==='closed' ? 'â—‹ Market Closed' : 'â—‹ Connectingâ€¦'}
             </div>
           </div>
           <div style={{flex:1}} key={`${sym}_${tf}`}>
-            <TVChart tvSym={inst.tv} interval={tf}/>
+            <LiveBridgeChart sym={sym} price={livePrice} history={history[sym] ?? []} dec={inst.dec} />
           </div>
         </div>
 
         {/* ORDER PANEL */}
         <div style={{width:isMobile?'100%':'230px',background:'#fff',borderLeft:'1px solid #E8EEF8',display:isMobile&&mobilePanel!=='trade'?'none':'flex',flexDirection:'column',flexShrink:0}}>
           <div style={{padding:'10px',flex:1,overflowY:'auto'}}>
-            <div style={{fontSize:'9px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>New Order — {sym}</div>
+            <div style={{fontSize:'9px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>New Order â€” {sym}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5px',marginBottom:'8px'}}>
               <button onClick={()=>marketStatus!=='closed'&&setDir('buy')}
                 style={{padding:'9px',border:'none',borderRadius:'7px',cursor:marketStatus==='closed'?'not-allowed':'pointer',fontWeight:700,fontSize:'12px',
@@ -718,7 +724,7 @@ export function PlatformPage() {
                 <span style={{fontSize:'8px',color:'#8FA3BF'}}>Max: <span style={{color:lotsNum>maxLots?'#DC2626':'#16A34A',fontWeight:600}}>{maxLots}</span></span>
               </div>
               <div style={{display:'flex',border:'1px solid #E8EEF8',borderRadius:'7px',overflow:'hidden'}}>
-                <button onClick={()=>setLots(l=>String(Math.max(0.01,+l-0.01).toFixed(2)))} style={{padding:'0 12px',background:'#F4F7FD',border:'none',borderRight:'1px solid #E8EEF8',cursor:'pointer',color:'#5C7A9E',fontSize:'18px',lineHeight:1}}>−</button>
+                <button onClick={()=>setLots(l=>String(Math.max(0.01,+l-0.01).toFixed(2)))} style={{padding:'0 12px',background:'#F4F7FD',border:'none',borderRight:'1px solid #E8EEF8',cursor:'pointer',color:'#5C7A9E',fontSize:'18px',lineHeight:1}}>âˆ’</button>
                 <input value={lots} onChange={e=>setLots(e.target.value)} type="number" min="0.01" step="0.01"
                   style={{flex:1,padding:'7px',background:'#fff',border:'none',textAlign:'center',...mono,fontSize:'13px',fontWeight:600,color:lotsNum>maxLots?'#DC2626':'#1A3A6B',outline:'none'}}/>
                 <button onClick={()=>setLots(l=>String((+l+0.01).toFixed(2)))} style={{padding:'0 12px',background:'#F4F7FD',border:'none',borderLeft:'1px solid #E8EEF8',cursor:'pointer',color:'#5C7A9E',fontSize:'18px',lineHeight:1}}>+</button>
@@ -727,12 +733,12 @@ export function PlatformPage() {
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5px',marginBottom:'8px'}}>
               <div>
                 <div style={{fontSize:'8px',color:'#DC2626',fontWeight:600,textTransform:'uppercase',marginBottom:'2px'}}>Stop Loss</div>
-                <input value={sl} onChange={e=>setSl(e.target.value)} placeholder="—" type="number"
+                <input value={sl} onChange={e=>setSl(e.target.value)} placeholder="â€”" type="number"
                   style={{width:'100%',padding:'5px 7px',background:'#FEF2F2',border:'1px solid rgba(220,38,38,.2)',borderRadius:'5px',fontSize:'10px',color:'#1A3A6B',outline:'none',...mono,boxSizing:'border-box'}}/>
               </div>
               <div>
                 <div style={{fontSize:'8px',color:'#16A34A',fontWeight:600,textTransform:'uppercase',marginBottom:'2px'}}>Take Profit</div>
-                <input value={tp} onChange={e=>setTp(e.target.value)} placeholder="—" type="number"
+                <input value={tp} onChange={e=>setTp(e.target.value)} placeholder="â€”" type="number"
                   style={{width:'100%',padding:'5px 7px',background:'#F0FDF4',border:'1px solid rgba(22,163,74,.2)',borderRadius:'5px',fontSize:'10px',color:'#1A3A6B',outline:'none',...mono,boxSizing:'border-box'}}/>
               </div>
             </div>
@@ -744,24 +750,24 @@ export function PlatformPage() {
                   <span style={{...mono,color:String(c),fontWeight:500}}>{v}</span>
                 </div>
               ))}
-              {lotsNum>maxLots && <div style={{marginTop:'4px',fontSize:'9px',color:'#DC2626',fontWeight:600}}>⚠ Max {maxLots} lots</div>}
+              {lotsNum>maxLots && <div style={{marginTop:'4px',fontSize:'9px',color:'#DC2626',fontWeight:600}}>âš  Max {maxLots} lots</div>}
             </div>
             {marketStatus === 'closed' ? (
               <div style={{width:'100%',padding:'10px',fontSize:'11px',fontWeight:700,border:'none',borderRadius:'7px',background:'#F4F7FD',color:'#9CA3AF',textAlign:'center'}}>
-                🔒 Market Closed
+                ðŸ”’ Market Closed
               </div>
             ) : (
               <button onClick={placeOrder} disabled={placing||!primary||primary.status==='breached'||lotsNum>maxLots}
                 style={{width:'100%',padding:'10px',fontSize:'12px',fontWeight:700,border:'none',borderRadius:'7px',cursor:lotsNum>maxLots?'not-allowed':'pointer',background:lotsNum>maxLots?'#9CA3AF':dir==='buy'?'#16A34A':'#DC2626',color:'#fff',opacity:placing||!primary?0.6:1,textTransform:'uppercase'}}>
-                {placing?'…':`${dir.toUpperCase()} ${lotsNum} ${sym}`}
+                {placing?'â€¦':`${dir.toUpperCase()} ${lotsNum} ${sym}`}
               </button>
             )}
           </div>
           <div style={{padding:'8px 10px',borderTop:'1px solid #E8EEF8',flexShrink:0}}>
             {[
-                ['Account',(primary as any)?.account_number??'—','#1A3A6B'],
+                ['Account',(primary as any)?.account_number??'â€”','#1A3A6B'],
                 ['Type', accountTypeLabel(primary?.phase??'phase1', (primary as any)?.challenge_products?.challenge_type), '#2255CC'],
-                ['Status',primary?.status??'—',primary?.status==='active'?'#16A34A':'#DC2626']
+                ['Status',primary?.status??'â€”',primary?.status==='active'?'#16A34A':'#DC2626']
               ].map(([l,v,c])=>(
               <div key={String(l)} style={{display:'flex',justifyContent:'space-between',padding:'2px 0',fontSize:'9px'}}>
                 <span style={{color:'#8FA3BF'}}>{l}</span>
@@ -810,19 +816,19 @@ export function PlatformPage() {
                         <td style={{padding:'4px 7px'}}>
                           {isEdit
                             ? <input value={editSLTP.sl} onChange={e=>setEditSLTP((p:any)=>({...p,sl:e.target.value}))} type="number" style={{width:'65px',padding:'2px 4px',background:'#FEF2F2',border:'1px solid rgba(220,38,38,.3)',borderRadius:'4px',fontSize:'9px',...mono,outline:'none'}}/>
-                            : <span style={{...mono,color:'#DC2626',fontSize:'9px',cursor:'pointer',textDecoration:'underline dotted'}} onClick={()=>setEditSLTP({id:t.id,sl:t.sl?String(t.sl):'',tp:t.tp?String(t.tp):''})}>{t.sl??'—'}</span>}
+                            : <span style={{...mono,color:'#DC2626',fontSize:'9px',cursor:'pointer',textDecoration:'underline dotted'}} onClick={()=>setEditSLTP({id:t.id,sl:t.sl?String(t.sl):'',tp:t.tp?String(t.tp):''})}>{t.sl??'â€”'}</span>}
                         </td>
                         <td style={{padding:'4px 7px'}}>
                           {isEdit
                             ? <input value={editSLTP.tp} onChange={e=>setEditSLTP((p:any)=>({...p,tp:e.target.value}))} type="number" style={{width:'65px',padding:'2px 4px',background:'#F0FDF4',border:'1px solid rgba(22,163,74,.3)',borderRadius:'4px',fontSize:'9px',...mono,outline:'none'}}/>
-                            : <span style={{...mono,color:'#16A34A',fontSize:'9px',cursor:'pointer',textDecoration:'underline dotted'}} onClick={()=>setEditSLTP({id:t.id,sl:t.sl?String(t.sl):'',tp:t.tp?String(t.tp):''})}>{t.tp??'—'}</span>}
+                            : <span style={{...mono,color:'#16A34A',fontSize:'9px',cursor:'pointer',textDecoration:'underline dotted'}} onClick={()=>setEditSLTP({id:t.id,sl:t.sl?String(t.sl):'',tp:t.tp?String(t.tp):''})}>{t.tp??'â€”'}</span>}
                         </td>
                         <td style={{padding:'4px 7px',...mono,color:'#5C7A9E',fontSize:'9px'}}>${(tMgn||0).toFixed(2)}</td>
                         <td style={{padding:'4px 7px'}}>
                           <div style={{display:'flex',gap:'3px'}}>
                             {isEdit
-                              ? <><button onClick={saveEditSLTP} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#EEF3FF',border:'1px solid rgba(34,85,204,.2)',borderRadius:'4px',cursor:'pointer',color:'#2255CC'}}>✓</button>
-                                  <button onClick={()=>setEditSLTP(null)} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#F4F7FD',border:'1px solid #E8EEF8',borderRadius:'4px',cursor:'pointer',color:'#5C7A9E'}}>✕</button></>
+                              ? <><button onClick={saveEditSLTP} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#EEF3FF',border:'1px solid rgba(34,85,204,.2)',borderRadius:'4px',cursor:'pointer',color:'#2255CC'}}>âœ“</button>
+                                  <button onClick={()=>setEditSLTP(null)} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#F4F7FD',border:'1px solid #E8EEF8',borderRadius:'4px',cursor:'pointer',color:'#5C7A9E'}}>âœ•</button></>
                               : <><button onClick={()=>setEditSLTP({id:t.id,sl:t.sl?String(t.sl):'',tp:t.tp?String(t.tp):''})} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#EEF3FF',border:'1px solid rgba(34,85,204,.2)',borderRadius:'4px',cursor:'pointer',color:'#2255CC'}}>Edit</button>
                                   <button onClick={()=>closeTrade(t)} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#FEF2F2',border:'1px solid rgba(220,38,38,.2)',borderRadius:'4px',cursor:'pointer',color:'#DC2626'}}>Close</button></>}
                           </div>
@@ -849,7 +855,7 @@ export function PlatformPage() {
                         <td style={{padding:'4px 7px',...mono,color:'#5C7A9E'}}>{(Number(t.close_price)||0).toFixed(i?.dec??5)}</td>
                         <td style={{padding:'4px 7px',...mono,fontWeight:700,color:(t.net_pnl??0)>=0?'#16A34A':'#DC2626'}}>{(t.net_pnl??0)>=0?'+':''}${(Number(t.net_pnl)||0).toFixed(2)}</td>
                         <td style={{padding:'4px 7px',...mono,color:(t.pips??0)>=0?'#16A34A':'#DC2626'}}>{(t.pips??0)>=0?'+':''}{(Number(t.pips)||0).toFixed(1)}</td>
-                        <td style={{padding:'4px 7px',color:'#8FA3BF',fontSize:'9px'}}>{t.closed_at?new Date(t.closed_at).toLocaleString():'—'}</td>
+                        <td style={{padding:'4px 7px',color:'#8FA3BF',fontSize:'9px'}}>{t.closed_at?new Date(t.closed_at).toLocaleString():'â€”'}</td>
                       </tr>
                     )
                   })}</tbody>
@@ -865,12 +871,12 @@ export function PlatformPage() {
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'14px'}}>
               <div>
                 <div style={{fontSize:'9px',color:'#DC2626',fontWeight:700,textTransform:'uppercase',marginBottom:'3px'}}>Stop Loss</div>
-                <input value={editSLTP.sl} onChange={e=>setEditSLTP((p:any)=>({...p,sl:e.target.value}))} placeholder="—" type="number"
+                <input value={editSLTP.sl} onChange={e=>setEditSLTP((p:any)=>({...p,sl:e.target.value}))} placeholder="â€”" type="number"
                   style={{width:'100%',padding:'7px',background:'#FEF2F2',border:'1px solid rgba(220,38,38,.3)',borderRadius:'7px',fontSize:'12px',...mono,outline:'none',boxSizing:'border-box'}}/>
               </div>
               <div>
                 <div style={{fontSize:'9px',color:'#16A34A',fontWeight:700,textTransform:'uppercase',marginBottom:'3px'}}>Take Profit</div>
-                <input value={editSLTP.tp} onChange={e=>setEditSLTP((p:any)=>({...p,tp:e.target.value}))} placeholder="—" type="number"
+                <input value={editSLTP.tp} onChange={e=>setEditSLTP((p:any)=>({...p,tp:e.target.value}))} placeholder="â€”" type="number"
                   style={{width:'100%',padding:'7px',background:'#F0FDF4',border:'1px solid rgba(22,163,74,.3)',borderRadius:'7px',fontSize:'12px',...mono,outline:'none',boxSizing:'border-box'}}/>
               </div>
             </div>
@@ -886,7 +892,7 @@ export function PlatformPage() {
       {/* Mobile bottom tabs for platform */}
       {isMobile && (
         <div style={{display:'flex',background:'#1A3A6B',borderTop:'1px solid rgba(255,255,255,.1)',flexShrink:0}}>
-          {([['chart','📈','Chart'],['trade','🎯','Trade'],['positions','📋','Positions']] as const).map(([id,icon,label])=>(
+          {([['chart','ðŸ“ˆ','Chart'],['trade','ðŸŽ¯','Trade'],['positions','ðŸ“‹','Positions']] as const).map(([id,icon,label])=>(
             <button key={id} onClick={()=>setMobilePanel(id)}
               style={{flex:1,padding:'10px 4px',background:mobilePanel===id?'rgba(255,255,255,.15)':'transparent',
                 border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:'2px',
@@ -900,4 +906,5 @@ export function PlatformPage() {
     </div>
   )
 }
+
 
