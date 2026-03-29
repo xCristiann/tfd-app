@@ -212,6 +212,7 @@ function usePriceFeed() {
   const [prices, setPrices]       = useState<Record<string,number>>(cached)
   const [bridgeOnline, setBridge] = useState<boolean|null>(null) // null=unknown, true=live, false=offline
   const [history, setHistory]     = useState<Record<string, number[]>>({})
+  const [history, setHistory]     = useState<Record<string, number[]>>({})
   const refPrev    = useRef<Record<string,number>>({...cached})
   const refPrices  = useRef<Record<string,number>>({...cached})
   const wsRef      = useRef<WebSocket|null>(null)
@@ -906,5 +907,6 @@ export function PlatformPage() {
     </div>
   )
 }
+
 
 
