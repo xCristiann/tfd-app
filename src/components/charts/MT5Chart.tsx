@@ -53,7 +53,15 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
 
   const viewRef = useRef({ offset: 0, cw: 10 })
   const mouseRef = useRef<{ x: number; y: number } | null>(null)
-  const dragRef = useRef({ active: false, startX: 0, startY: 0, startOff: 0, startPricePan: 0 })
+  const dragRef = useRef({
+    active: false,
+    mode: 'pan' as 'pan' | 'scale',
+    startX: 0,
+    startY: 0,
+    startOff: 0,
+    startPricePan: 0,
+    startPriceZoom: 1,
+  })
   const pricePanRef = useRef(0)
   const priceZoomRef = useRef(1)
 
@@ -305,31 +313,40 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
     const y = e.clientY - r.top
     mouseRef.current = { x, y }
 
+    const W = canvas.width
     const cH = canvas.height - PAD.top - PAD.bottom
+    const rightAxisStart = W - PAD.right
 
     if (dragRef.current.active) {
       const dx = e.clientX - dragRef.current.startX
       const dy = e.clientY - dragRef.current.startY
 
-      viewRef.current.offset = Math.max(
-        0,
-        dragRef.current.startOff - Math.round(dx / (viewRef.current.cw + 2))
-      )
+      if (dragRef.current.mode === 'pan') {
+        viewRef.current.offset = Math.max(
+          0,
+          dragRef.current.startOff - Math.round(dx / (viewRef.current.cw + 2))
+        )
 
-      const { slice } = getVisibleMeta()
-      if (slice.length) {
-        const rawMin = Math.min(...slice.map(c => c.low))
-        const rawMax = Math.max(...slice.map(c => c.high))
-        const rawRange = Math.max(rawMax - rawMin, 0.0001)
-        const visibleRange = rawRange * 1.15 * priceZoomRef.current
-        pricePanRef.current = dragRef.current.startPricePan + (dy / cH) * visibleRange
+        const { slice } = getVisibleMeta()
+        if (slice.length) {
+          const rawMin = Math.min(...slice.map(c => c.low))
+          const rawMax = Math.max(...slice.map(c => c.high))
+          const rawRange = Math.max(rawMax - rawMin, 0.0001)
+          const visibleRange = rawRange * 1.15 * priceZoomRef.current
+          pricePanRef.current = dragRef.current.startPricePan + (dy / cH) * visibleRange
+        }
+      }
+
+      if (dragRef.current.mode === 'scale') {
+        const factor = 1 + dy * 0.01
+        priceZoomRef.current = Math.max(0.25, Math.min(6, dragRef.current.startPriceZoom * factor))
       }
     }
 
     const { slice, cw } = getVisibleMeta()
     const ci = Math.floor((x - PAD.left) / (cw + 2))
 
-    if (ci >= 0 && ci < slice.length) {
+    if (x < rightAxisStart && ci >= 0 && ci < slice.length) {
       setOhlc(prev => {
         const next = slice[ci]
         if (
@@ -359,12 +376,21 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
   }
 
   const onDown = (e: React.MouseEvent) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const r = canvas.getBoundingClientRect()
+    const x = e.clientX - r.left
+    const rightAxisStart = canvas.width - PAD.right
+
     dragRef.current = {
       active: true,
+      mode: x >= rightAxisStart ? 'scale' : 'pan',
       startX: e.clientX,
       startY: e.clientY,
       startOff: viewRef.current.offset,
       startPricePan: pricePanRef.current,
+      startPriceZoom: priceZoomRef.current,
     }
   }
 

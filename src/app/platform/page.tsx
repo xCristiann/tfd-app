@@ -13,33 +13,112 @@ const LEVERAGE = 50
 const LOT_SIZE = 100_000
 
 const ALL_INSTRUMENTS = [
+  // FOREX MAJORS
   { sym:'EUR/USD', spread:0.00010, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
   { sym:'GBP/USD', spread:0.00015, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
-  { sym:'USD/JPY', spread:0.010,   dec:3, pip:0.01,   cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'USD/JPY', spread:0.010, dec:3, pip:0.01, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
   { sym:'USD/CHF', spread:0.00015, dec:5, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:LOT_SIZE },
-  { sym:'AUD/USD', spread:0.00015, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
   { sym:'USD/CAD', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'AUD/USD', spread:0.00015, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
   { sym:'NZD/USD', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
-  { sym:'GBP/JPY', spread:0.030,   dec:3, pip:0.01,   cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
-  { sym:'EUR/JPY', spread:0.025,   dec:3, pip:0.01,   cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+
+  // FOREX CROSSES
   { sym:'EUR/GBP', spread:0.00015, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p*1.27,0.5)*LOT_SIZE, pnlMult:LOT_SIZE*1.27 },
-  { sym:'AUD/JPY', spread:0.030,   dec:3, pip:0.01,   cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
-  { sym:'CAD/JPY', spread:0.030,   dec:3, pip:0.01,   cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
-  { sym:'XAU/USD', spread:0.30,    dec:2, pip:0.10,   cat:'metals', lotUSD:(p)=>Math.max(p,100)*100, pnlMult:100 },
-  { sym:'XAG/USD', spread:0.030,   dec:4, pip:0.001,  cat:'metals', lotUSD:(p)=>Math.max(p,1)*5000, pnlMult:5000 },
-  { sym:'NAS100',  spread:1.5,     dec:1, pip:1.0,    cat:'index', lotUSD:(p)=>Math.max(p,100)*20, pnlMult:20 },
-  { sym:'US500',   spread:0.50,    dec:2, pip:0.10,   cat:'index', lotUSD:(p)=>Math.max(p,100)*50, pnlMult:50 },
-  { sym:'US30',    spread:2.0,     dec:1, pip:1.0,    cat:'index', lotUSD:(p)=>Math.max(p,1000)*5, pnlMult:5 },
-  { sym:'GER40',   spread:1.0,     dec:1, pip:1.0,    cat:'index', lotUSD:(p)=>Math.max(p,100)*25, pnlMult:25 },
-  { sym:'WTI',     spread:0.030,   dec:2, pip:0.01,   cat:'energy', lotUSD:(p)=>Math.max(p,10)*1000, pnlMult:1000 },
+  { sym:'EUR/JPY', spread:0.025, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'GBP/JPY', spread:0.030, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'AUD/JPY', spread:0.030, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'CAD/JPY', spread:0.030, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'CHF/JPY', spread:0.030, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+
+  { sym:'EUR/AUD', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'EUR/CAD', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'EUR/CHF', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'EUR/NZD', spread:0.00025, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/AUD', spread:0.00025, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/CAD', spread:0.00025, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/CHF', spread:0.00025, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/NZD', spread:0.00030, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'AUD/CAD', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'AUD/CHF', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'AUD/NZD', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'NZD/CAD', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'NZD/CHF', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'NZD/JPY', spread:0.030, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+
+  // EXOTICS / IMPORTANT EXTRA
+  { sym:'EUR/SGD', spread:0.00030, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/SGD', spread:0.00035, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'AUD/SGD', spread:0.00025, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'NZD/SGD', spread:0.00025, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'USD/SGD', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'EUR/HKD', spread:0.00040, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'USD/HKD', spread:0.00020, dec:5, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'EUR/NOK', spread:0.00050, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'EUR/SEK', spread:0.00050, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/NOK', spread:0.00060, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/SEK', spread:0.00060, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'USD/NOK', spread:0.00040, dec:5, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'USD/SEK', spread:0.00040, dec:5, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'EUR/PLN', spread:0.00100, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'GBP/PLN', spread:0.00120, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'USD/PLN', spread:0.00100, dec:5, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'EUR/HUF', spread:0.020, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/300,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'USD/HUF', spread:0.020, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/300,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'EUR/CZK', spread:0.0020, dec:4, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'USD/CZK', spread:0.0020, dec:4, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'USD/DKK', spread:0.00040, dec:5, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'CHF/DKK', spread:0.00050, dec:5, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'EUR/TRY', spread:0.0030, dec:4, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'USD/TRY', spread:0.0030, dec:4, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'TRY/JPY', spread:0.050, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'USD/MXN', spread:0.0030, dec:4, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'EUR/MXN', spread:0.0040, dec:4, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'MXN/JPY', spread:0.050, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+  { sym:'USD/ZAR', spread:0.0040, dec:4, pip:0.0001, cat:'forex', lotUSD:(_)=>LOT_SIZE, pnlMult:0 },
+  { sym:'GBP/ZAR', spread:0.0050, dec:4, pip:0.0001, cat:'forex', lotUSD:(p)=>Math.max(p,0.5)*LOT_SIZE, pnlMult:LOT_SIZE },
+  { sym:'ZAR/JPY', spread:0.050, dec:3, pip:0.01, cat:'forex', lotUSD:(p)=>Math.max(p/150,0.5)*LOT_SIZE, pnlMult:0 },
+
+  // METALS
+  { sym:'XAU/USD', spread:0.30, dec:2, pip:0.10, cat:'metals', lotUSD:(p)=>Math.max(p,100)*100, pnlMult:100 },
+  { sym:'XAG/USD', spread:0.030, dec:4, pip:0.001, cat:'metals', lotUSD:(p)=>Math.max(p,1)*5000, pnlMult:5000 },
+
+  // INDICES
+  { sym:'US30', spread:2.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,1000)*5, pnlMult:5 },
+  { sym:'NAS100', spread:1.5, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*20, pnlMult:20 },
+  { sym:'SPX500', spread:0.50, dec:1, pip:0.1, cat:'index', lotUSD:(p)=>Math.max(p,100)*50, pnlMult:50 },
+  { sym:'GER40', spread:1.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*25, pnlMult:25 },
+  { sym:'UK100', spread:1.2, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*10, pnlMult:10 },
+  { sym:'JPN225', spread:2.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,1000)*5, pnlMult:5 },
+  { sym:'HK50', spread:3.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*10, pnlMult:10 },
+  { sym:'AUS200', spread:1.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*10, pnlMult:10 },
+  { sym:'FRA40', spread:1.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*10, pnlMult:10 },
+  { sym:'ESP35', spread:2.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*10, pnlMult:10 },
+  { sym:'ESTX50', spread:1.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*10, pnlMult:10 },
+  { sym:'CHINAA50', spread:3.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*10, pnlMult:10 },
+  { sym:'USDX', spread:0.020, dec:3, pip:0.01, cat:'index', lotUSD:(p)=>Math.max(p,100)*100, pnlMult:100 },
+  { sym:'VIX', spread:0.10, dec:2, pip:0.01, cat:'index', lotUSD:(p)=>Math.max(p,10)*100, pnlMult:100 },
+  { sym:'FANG4', spread:1.0, dec:1, pip:1.0, cat:'index', lotUSD:(p)=>Math.max(p,100)*10, pnlMult:10 },
+
+  // ENERGY
+  { sym:'WTI', spread:0.030, dec:2, pip:0.01, cat:'energy', lotUSD:(p)=>Math.max(p,10)*1000, pnlMult:1000 },
+  { sym:'BRENT', spread:0.030, dec:2, pip:0.01, cat:'energy', lotUSD:(p)=>Math.max(p,10)*1000, pnlMult:1000 },
+  { sym:'NATGAS', spread:0.010, dec:3, pip:0.001, cat:'energy', lotUSD:(p)=>Math.max(p,10)*10000, pnlMult:10000 },
+  { sym:'Gasoline', spread:0.010, dec:3, pip:0.001, cat:'energy', lotUSD:(p)=>Math.max(p,10)*1000, pnlMult:1000 },
+  { sym:'HeatingOil', spread:0.010, dec:3, pip:0.001, cat:'energy', lotUSD:(p)=>Math.max(p,10)*1000, pnlMult:1000 },
 ]
 
 const SEED = {
-  'EUR/USD':1.0850,'GBP/USD':1.2940,'USD/JPY':149.50,'USD/CHF':0.8840,
-  'AUD/USD':0.6290,'USD/CAD':1.4390,'NZD/USD':0.5720,'GBP/JPY':193.50,
-  'EUR/JPY':162.20,'EUR/GBP':0.8380,'AUD/JPY':94.00,'CAD/JPY':104.20,
+  'EUR/USD':1.0850,'GBP/USD':1.2940,'USD/JPY':149.50,'USD/CHF':0.8840,'USD/CAD':1.4390,'AUD/USD':0.6290,'NZD/USD':0.5720,
+  'EUR/GBP':0.8380,'EUR/JPY':162.20,'GBP/JPY':193.50,'AUD/JPY':94.00,'CAD/JPY':104.20,'CHF/JPY':168.80,
+  'EUR/AUD':1.7250,'EUR/CAD':1.5610,'EUR/CHF':0.9590,'EUR/NZD':1.8900,'GBP/AUD':2.0550,'GBP/CAD':1.8600,'GBP/CHF':1.1450,'GBP/NZD':2.2500,
+  'AUD/CAD':0.9020,'AUD/CHF':0.5560,'AUD/NZD':1.0950,'NZD/CAD':0.8200,'NZD/CHF':0.5050,'NZD/JPY':85.40,
+  'EUR/SGD':1.4600,'GBP/SGD':1.7400,'AUD/SGD':0.8000,'NZD/SGD':0.7300,'USD/SGD':1.3450,'EUR/HKD':8.4800,'USD/HKD':7.8200,
+  'EUR/NOK':11.4500,'EUR/SEK':11.2500,'GBP/NOK':13.6500,'GBP/SEK':13.4000,'USD/NOK':10.5500,'USD/SEK':10.3600,
+  'EUR/PLN':4.3100,'GBP/PLN':5.1400,'USD/PLN':3.9700,'EUR/HUF':392.000,'USD/HUF':361.000,'EUR/CZK':25.1500,'USD/CZK':23.1700,'USD/DKK':6.9000,'CHF/DKK':7.2000,
+  'EUR/TRY':35.5000,'USD/TRY':32.7000,'TRY/JPY':4.580,'USD/MXN':16.8000,'EUR/MXN':18.2000,'MXN/JPY':8.850,'USD/ZAR':18.4000,'GBP/ZAR':23.7000,'ZAR/JPY':8.120,
   'XAU/USD':3300.0,'XAG/USD':34.00,
-  'NAS100':21800,'US500':5750,'US30':43500,'GER40':22800,'WTI':71.50,
+  'US30':43500,'NAS100':21800,'SPX500':5750,'GER40':22800,'UK100':8250,'JPN225':39000,'HK50':17000,'AUS200':7800,'FRA40':8050,'ESP35':10800,'ESTX50':5000,'CHINAA50':12500,'USDX':104.500,'VIX':15.20,'FANG4':9800,
+  'WTI':71.50,'BRENT':75.20,'NATGAS':2.100,'Gasoline':2.350,'HeatingOil':2.450,
 }
 
 const TF_LIST = ['1','5','15','30','60','240','D','W']
@@ -84,7 +163,7 @@ function useRiskMonitor(tradesRef, refPrices, primaryRef, accountId, onBreach) {
       const dailyDD=ph==='funded'?(cp?.funded_daily_dd??5):(ph==='phase2'?(cp?.ph2_daily_dd??5):(cp?.ph1_daily_dd??5))
       const isTrailing=(cp?.drawdown_type??pr.drawdown_type??'static')==='trailing'
       const trailingPct=cp?.trailing_drawdown??pr.trailing_drawdown??8
-      const equity=bal+trades.reduce((s,t)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]),0)
+      const equity=bal+trades.reduce((s,t)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price),0)
       if(equity>peakEqRef.current){
         peakEqRef.current=equity
         if(pr.id&&equity>(pr.peak_balance??0)){
@@ -150,15 +229,15 @@ export function PlatformPage() {
   const closingRef=useRef(new Set())
   const prices=mt5Prices
   const inst=(ALL_INSTRUMENTS.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0])
-  const livePrice=refPrices.current[sym]||SEED[sym]
+  const livePrice=refPrices.current[sym]||SEED[sym]||1
   const prevPrice=refPrev.current[sym]||livePrice
   const up=livePrice>=prevPrice
   const execPrice=+(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
   const lotsNum=Math.max(0.01,parseFloat(lots)||0.01)
   const balance=primary?.balance??0
-  const openPnl=openTrades.reduce((s,t)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]),0)
+  const openPnl=openTrades.reduce((s,t)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price),0)
   const equity=balance+openPnl
-  const usedMgn=openTrades.reduce((s,t)=>{const price=refPrices.current[t.symbol]||SEED[t.symbol];return s+calcMargin(t.symbol,price,Number(t.lots)||0)},0)
+  const usedMgn=openTrades.reduce((s,t)=>{const price=refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price;return s+calcMargin(t.symbol,price,Number(t.lots)||0)},0)
   const freeMgn=Math.max(0,equity-usedMgn)
   const reqMgn=calcMargin(sym,execPrice,lotsNum)
   const maxLots=reqMgn>0?Math.floor((freeMgn/reqMgn)*lotsNum*100)/100:0
@@ -181,13 +260,13 @@ export function PlatformPage() {
     toast('error','🚨','Account Breached',reason)
     if(!primary?.id) return
     for(const t of trades){
-      const cur=refPrices.current[t.symbol]||SEED[t.symbol]
+      const cur=refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price
       const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol)
       const cp=+(t.direction==='buy'?cur:cur+(i?.spread??0)).toFixed(i?.dec??5)
       const netPnl=calcPnl({...t,open_price:t.open_price},cp)
       await supabase.from('trades').update({status:'closed',close_price:cp,net_pnl:netPnl,closed_at:new Date().toISOString()}).eq('id',t.id)
     }
-    const nb=+(balance+trades.reduce((s,t)=>{const cur=refPrices.current[t.symbol]||t.open_price;return s+calcPnl(t,cur)},0)).toFixed(2)
+    const nb=+(balance+trades.reduce((s,t)=>{const cur=refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price;return s+calcPnl(t,cur)},0)).toFixed(2)
     await supabase.from('accounts').update({status:'breached',phase:'breached',balance:nb,equity:nb}).eq('id',primary.id)
     setOpenTrades([])
   })
@@ -243,7 +322,7 @@ export function PlatformPage() {
   }
 
   async function closeTrade(t){
-    const cur=refPrices.current[t.symbol]||SEED[t.symbol]
+    const cur=refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price
     const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol)
     const cp=+(t.direction==='buy'?cur:cur+(i?.spread??0)).toFixed(i?.dec??5)
     const diff=t.direction==='buy'?cp-t.open_price:t.open_price-cp
@@ -270,7 +349,7 @@ export function PlatformPage() {
   const watchlist=useMemo(()=>{
     const q=search.toLowerCase()
     const filtered=ALL_INSTRUMENTS.filter(i=>!q||i.sym.toLowerCase().includes(q))
-    return [...filtered].sort((a,b)=>(favorites.has(a.sym)?0:1)-(favorites.has(b.sym)?0:1))
+    return [...filtered].sort((a,b)=>(favorites.has(a.sym)?0:1)-(favorites.has(b.sym)?0:1) || a.sym.localeCompare(b.sym))
   },[search,favorites])
 
   const isMobile=useIsMobile()
@@ -308,7 +387,7 @@ export function PlatformPage() {
           </div>
           <div style={{flex:1,overflowY:'auto'}}>
             {watchlist.map(i=>{
-              const price=prices[i.sym]||refPrices.current[i.sym]||SEED[i.sym]
+              const price=prices[i.sym]||refPrices.current[i.sym]||SEED[i.sym]||0
               const pv=refPrev.current[i.sym]||price
               const isUp=price>=pv
               const active=sym===i.sym
@@ -442,7 +521,7 @@ export function PlatformPage() {
                   <th key={h} style={{padding:'3px 7px',fontSize:'8px',textTransform:'uppercase',letterSpacing:'1px',color:'#8FA3BF',fontWeight:600,textAlign:'left',background:'#FAFBFF',borderBottom:'1px solid #F0F4FB',whiteSpace:'nowrap'}}>{h}</th>
                 ))}</tr></thead>
                 <tbody>{openTrades.map(t=>{
-                  const cur=refPrices.current[t.symbol]||SEED[t.symbol]
+                  const cur=refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price
                   const pnl=calcPnl(t,cur)
                   const i=ALL_INSTRUMENTS.find(x=>x.sym===t.symbol)
                   const pipD=i?(t.direction==='buy'?cur-t.open_price:t.open_price-cur)/(i.pip??0.0001):0
@@ -542,4 +621,3 @@ export function PlatformPage() {
     </div>
   )
 }
-
