@@ -124,6 +124,7 @@ export function PlatformPage() {
   const [tab,setTab]=useState('positions')
   const [search,setSearch]=useState('')
   const [placing,setPlacing]=useState(false)
+  const [chartShift,setChartShift]=useState(()=>lsGet('tfd_chart_shift','1')==='1')
   const [editSLTP,setEditSLTP]=useState(null)
   const [openTrades,setOpenTrades]=useState([])
   const [closedTrades,setClosedTrades]=useState([])
@@ -133,6 +134,7 @@ export function PlatformPage() {
   })
   useEffect(()=>{lsSet('tfd_sym',sym)},[sym])
   useEffect(()=>{lsSet('tfd_tf',tf)},[tf])
+  useEffect(()=>{lsSet('tfd_chart_shift',chartShift?'1':'0')},[chartShift])
 
   const {prices:mt5Prices,requestCandles,wsStatus}=useMT5Bridge()
   const refPrices=useRef({...SEED})
@@ -142,10 +144,6 @@ export function PlatformPage() {
       if(p>0){refPrev.current[s]=refPrices.current[s]||p;refPrices.current[s]=p}
     }
   },[mt5Prices])
-  useEffect(()=>{
-    const iv=setInterval(()=>setOpenTrades(t=>t.length?[...t]:t),500)
-    return()=>clearInterval(iv)
-  },[])
 
   const tradesRef=useRef(openTrades); tradesRef.current=openTrades
   const primaryRef=useRef(primary); primaryRef.current=primary
@@ -286,7 +284,7 @@ export function PlatformPage() {
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',fontWeight:700,color:'#fff'}}>The Funded <span style={{color:'#60A5FA',fontStyle:'italic'}}>Diaries</span></div>
         <div style={{width:'6px',height:'6px',borderRadius:'50%',background:isLive?'#4ADE80':marketStatus==='closed'?'#9CA3AF':'#F59E0B',boxShadow:isLive?'0 0 8px #4ADE80':'none'}}/>
         <span style={{fontSize:'9px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:isLive?'#4ADE80':marketStatus==='closed'?'#9CA3AF':'#F59E0B'}}>
-          {isLive?'Live MT5':marketStatus==='closed'?'Closed':wsStatus==='connecting'?'Connecting…':'Bridge Off'}
+          {isLive?'Live':marketStatus==='closed'?'Closed':wsStatus==='connecting'?'Connecting…':'Offline'}
         </span>
         <div style={{marginLeft:'auto',display:'flex',gap:'4px'}}>
           {accounts.map(a=>(
@@ -342,13 +340,20 @@ export function PlatformPage() {
               {TF_LIST.map(t=>(
                 <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 8px',fontSize:'9px',fontWeight:700,border:'none',borderRadius:'4px',cursor:'pointer',background:tf===t?'#2255CC':'#F4F7FD',color:tf===t?'#fff':'#5C7A9E'}}>{TF_LABEL[t]}</button>
               ))}
+              <button onClick={()=>setChartShift(v=>!v)} style={{marginLeft:'6px',padding:'3px 8px',fontSize:'9px',fontWeight:700,border:'none',borderRadius:'4px',cursor:'pointer',background:chartShift?'#2255CC':'#F4F7FD',color:chartShift?'#fff':'#5C7A9E'}}>Shift</button>
             </div>
             <div style={{marginLeft:'auto',fontSize:'9px',color:isLive?'#16A34A':marketStatus==='closed'?'#9CA3AF':'#F59E0B',background:isLive?'rgba(22,163,74,.08)':marketStatus==='closed'?'rgba(156,163,175,.08)':'rgba(245,158,11,.08)',padding:'2px 8px',borderRadius:'20px',fontWeight:600}}>
-              {isLive?'● MT5 Live':marketStatus==='closed'?'○ Market Closed':'○ Connecting…'}
+              {isLive?'● Live':marketStatus==='closed'?'○ Market Closed':'○ Connecting…'}
             </div>
           </div>
           <div style={{flex:1,overflow:'hidden'}} key={`${sym}_${tf}`}>
-            <MT5Chart sym={sym} tf={tf} requestCandles={requestCandles} livePrice={livePrice}/>
+            <MT5Chart
+              sym={sym}
+              tf={tf}
+              requestCandles={requestCandles}
+              livePrice={livePrice}
+              shiftBars={chartShift ? 12 : 0}
+            />
           </div>
         </div>
 
@@ -408,7 +413,6 @@ export function PlatformPage() {
               ['Account',primary?.account_number??'—','#1A3A6B'],
               ['Type',accountTypeLabel(primary?.phase??'phase1',primary?.challenge_products?.challenge_type),'#2255CC'],
               ['Status',primary?.status??'—',primary?.status==='active'?'#16A34A':'#DC2626'],
-              ['MT5 Bridge',wsStatus==='connected'?'● Connected':'○ '+wsStatus,wsStatus==='connected'?'#16A34A':'#F59E0B'],
             ].map(([l,v,c])=>(
               <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'2px 0',fontSize:'9px'}}>
                 <span style={{color:'#8FA3BF'}}>{l}</span>
