@@ -13,6 +13,18 @@ export interface Candle {
   close: number
 }
 
+export interface Quote {
+  bid: number
+  ask: number
+}
+
+export interface BridgeSymbol {
+  sym: string
+  raw: string
+  cat: string
+  dec: number
+}
+
 type CandleCb = (candles: Candle[]) => void
 
 export function useMT5Bridge() {
@@ -21,13 +33,14 @@ export function useMT5Bridge() {
   const pendingRef = useRef<Map<string, CandleCb>>(new Map())
 
   const [prices, setPrices] = useState<Record<string, number>>({})
+  const [quotes, setQuotes] = useState<Record<string, Quote>>({})
+  const [bridgeSymbols, setBridgeSymbols] = useState<BridgeSymbol[]>([])
   const [wsStatus, setWsStatus] = useState<WsStatus>('connecting')
 
   const connect = useCallback(() => {
     if (deadRef.current || !BRIDGE_URL || !BRIDGE_SECRET) return
 
     setWsStatus('connecting')
-
     const ws = new WebSocket(BRIDGE_URL)
     wsRef.current = ws
 
@@ -41,12 +54,25 @@ export function useMT5Bridge() {
 
         if (msg.type === 'ok') {
           setWsStatus('connected')
-          console.log('[Bridge] conectat la MT5')
+          console.log('[Bridge] conectat')
           return
         }
 
-        if (msg.type === 'prices') {
-          setPrices(msg.data || {})
+        if (msg.type === 'symbols') {
+          setBridgeSymbols(Array.isArray(msg.data) ? msg.data : [])
+          return
+        }
+
+        if (msg.type === 'quotes') {
+          const nextQuotes = msg.data || {}
+          setQuotes(nextQuotes)
+
+          const nextPrices: Record<string, number> = {}
+          for (const [sym, q] of Object.entries(nextQuotes)) {
+            const qq = q as Quote
+            nextPrices[sym] = qq?.bid ?? 0
+          }
+          setPrices(nextPrices)
           return
         }
 
@@ -63,20 +89,15 @@ export function useMT5Bridge() {
 
     ws.onclose = () => {
       setWsStatus('disconnected')
-      if (!deadRef.current) {
-        setTimeout(connect, 3000)
-      }
+      if (!deadRef.current) setTimeout(connect, 3000)
     }
 
-    ws.onerror = () => {
-      ws.close()
-    }
+    ws.onerror = () => ws.close()
   }, [])
 
   useEffect(() => {
     deadRef.current = false
     connect()
-
     return () => {
       deadRef.current = true
       wsRef.current?.close()
@@ -89,21 +110,18 @@ export function useMT5Bridge() {
         wsRef.current.send(JSON.stringify({ type: 'ping' }))
       }
     }, 15000)
-
     return () => clearInterval(iv)
   }, [])
 
   const requestCandles = useCallback((sym: string, tf: string): Promise<Candle[]> => {
     return new Promise((resolve, reject) => {
       const ws = wsRef.current
-
       if (!ws || ws.readyState !== WebSocket.OPEN) {
         reject(new Error('Bridge deconectat'))
         return
       }
 
       const key = `${sym}_${tf}`
-
       const timeout = setTimeout(() => {
         pendingRef.current.delete(key)
         reject(new Error('Timeout'))
@@ -118,5 +136,5 @@ export function useMT5Bridge() {
     })
   }, [])
 
-  return { prices, requestCandles, wsStatus }
+  return { prices, quotes, bridgeSymbols, requestCandles, wsStatus }
 }
