@@ -124,6 +124,7 @@ export function PlatformPage() {
   const [tab,setTab]=useState('positions')
   const [search,setSearch]=useState('')
   const [placing,setPlacing]=useState(false)
+  const [chartShift,setChartShift]=useState(()=>lsGet('tfd_chart_shift','1')==='1')
   const [chartShift,setChartShift]=useState(()=>lsGet('tfd_chart_shift','1')==='1')
   const [chartShift,setChartShift]=useState(()=>lsGet('tfd_chart_shift','1')==='1')
   const [editSLTP,setEditSLTP]=useState(null)
@@ -139,7 +140,7 @@ export function PlatformPage() {
   useEffect(()=>{lsSet('tfd_chart_shift',chartShift?'1':'0')},[chartShift])
   useEffect(()=>{lsSet('tfd_chart_shift',chartShift?'1':'0')},[chartShift])
 
-  const {prices:mt5Prices,requestCandles,wsStatus}=useMT5Bridge()
+  const {prices:mt5Prices,quotes,bridgeSymbols,requestCandles,wsStatus}=useMT5Bridge()
   const refPrices=useRef({...SEED})
   const refPrev=useRef({...SEED})
   useEffect(()=>{
@@ -156,11 +157,25 @@ export function PlatformPage() {
   const primaryRef=useRef(primary); primaryRef.current=primary
   const closingRef=useRef(new Set())
   const prices=mt5Prices
-  const inst=(ALL_INSTRUMENTS.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0])
-  const livePrice=refPrices.current[sym]||SEED[sym]
+  const instrumentUniverse=useMemo(()=>{
+    const base=new Map(ALL_INSTRUMENTS.map(i=>[i.sym,i]))
+    for(const bs of bridgeSymbols){
+      if(base.has(bs.sym)) continue
+      const dec=typeof bs.dec==='number'?bs.dec:(bs.sym.includes('/JPY')?3:(bs.cat==='indices'?1:5))
+      const pip=bs.sym.includes('/JPY')?0.01:(bs.sym.startsWith('XAU')?0.10:(bs.sym.startsWith('XAG')?0.001:(bs.cat==='indices'?1.0:0.0001)))
+      const cat=bs.cat==='indices'?'index':(bs.cat==='metals'?'metals':(bs.cat==='forex'?'forex':'other'))
+      base.set(bs.sym,{sym:bs.sym,spread:0,dec,pip,cat,lotUSD:(p)=>Math.max(p,1)*LOT_SIZE,pnlMult:LOT_SIZE})
+    }
+    return [...base.values()]
+  },[bridgeSymbols])
+  const inst=(instrumentUniverse.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0])
+  const liveBid=(quotes[sym]?.bid??refPrices.current[sym]??SEED[sym])
+  const liveAsk=(quotes[sym]?.ask??(typeof liveBid==='number'?liveBid+(inst.spread??0):undefined))
+  const liveSpread=(typeof liveBid==='number'&&typeof liveAsk==='number')?Math.max(0,liveAsk-liveBid):(inst.spread??0)
+  const livePrice=liveBid
   const prevPrice=refPrev.current[sym]||livePrice
   const up=livePrice>=prevPrice
-  const execPrice=+(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
+  const execPrice=+(dir==='buy'?(liveAsk??(livePrice+(inst.spread??0))):livePrice).toFixed(inst.dec)
   const lotsNum=Math.max(0.01,parseFloat(lots)||0.01)
   const balance=primary?.balance??0
   const openPnl=openTrades.reduce((s,t)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]),0)
@@ -354,13 +369,7 @@ export function PlatformPage() {
             </div>
           </div>
           <div style={{flex:1,overflow:'hidden'}} key={`${sym}_${tf}`}>
-            <MT5Chart
-              sym={sym}
-              tf={tf}
-              requestCandles={requestCandles}
-              livePrice={livePrice}
-              shiftBars={chartShift ? 12 : 0}
-            />
+            <MT5Chart sym={sym} tf={tf} requestCandles={requestCandles} livePrice={livePrice} spread={inst.spread} shiftBars={chartShift ? 12 : 0}/>
           </div>
         </div>
 
@@ -374,7 +383,7 @@ export function PlatformPage() {
             <div style={{background:dir==='buy'?'rgba(22,163,74,.08)':'rgba(220,38,38,.08)',border:`1px solid ${dir==='buy'?'rgba(22,163,74,.2)':'rgba(220,38,38,.2)'}`,borderRadius:'8px',padding:'8px',marginBottom:'8px',textAlign:'center'}}>
               <div style={{fontSize:'8px',color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'2px'}}>{dir==='buy'?'Ask':'Bid'}</div>
               <div style={{...mono,fontSize:'22px',fontWeight:700,color:dir==='buy'?'#16A34A':'#DC2626'}}>{execPrice.toFixed(inst.dec)}</div>
-              <div style={{fontSize:'8px',color:'#8FA3BF'}}>spread {inst.spread.toFixed(inst.dec)}</div>
+              <div style={{fontSize:'8px',color:'#8FA3BF'}}>spread {liveSpread.toFixed(Math.min(inst.dec,3))}</div>
             </div>
             <div style={{marginBottom:'7px'}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'3px'}}>
