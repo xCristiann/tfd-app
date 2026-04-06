@@ -157,7 +157,7 @@ export function PlatformPage() {
   const closingRef=useRef(new Set())
   const prices=mt5Prices
   const inst=(ALL_INSTRUMENTS.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0])
-  const livePrice=refPrices.current[sym]||SEED[sym]
+  const livePrice = refPrices.current[sym] || SEED[sym]
   const prevPrice=refPrev.current[sym]||livePrice
   const up=livePrice>=prevPrice
   const execPrice=+(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
