@@ -352,6 +352,8 @@ export function PlatformPage() {
               tf={tf}
               requestCandles={requestCandles}
               livePrice={livePrice}
+              spread={inst.spread}
+              priceDecimals={inst.dec}
               shiftBars={chartShift ? 12 : 0}
             />
           </div>
@@ -540,3 +542,4 @@ export function PlatformPage() {
     </div>
   )
 }
+
