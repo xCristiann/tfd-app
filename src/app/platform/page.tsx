@@ -124,6 +124,7 @@ export function PlatformPage() {
   const [tab,setTab]=useState('positions')
   const [search,setSearch]=useState('')
   const [placing,setPlacing]=useState(false)
+  const [chartShift,setChartShift]=useState(()=>lsGet('tfd_chart_shift','1')==='1')
   const [editSLTP,setEditSLTP]=useState(null)
   const [openTrades,setOpenTrades]=useState([])
   const [closedTrades,setClosedTrades]=useState([])
@@ -133,6 +134,7 @@ export function PlatformPage() {
   })
   useEffect(()=>{lsSet('tfd_sym',sym)},[sym])
   useEffect(()=>{lsSet('tfd_tf',tf)},[tf])
+  useEffect(()=>{lsSet('tfd_chart_shift',chartShift?'1':'0')},[chartShift])
 
   const {prices:mt5Prices,requestCandles,wsStatus}=useMT5Bridge()
   const refPrices=useRef({...SEED})
@@ -342,13 +344,14 @@ export function PlatformPage() {
               {TF_LIST.map(t=>(
                 <button key={t} onClick={()=>setTf(t)} style={{padding:'3px 8px',fontSize:'9px',fontWeight:700,border:'none',borderRadius:'4px',cursor:'pointer',background:tf===t?'#2255CC':'#F4F7FD',color:tf===t?'#fff':'#5C7A9E'}}>{TF_LABEL[t]}</button>
               ))}
+              <button onClick={()=>setChartShift(v=>!v)} style={{marginLeft:'6px',padding:'3px 8px',fontSize:'9px',fontWeight:700,border:'none',borderRadius:'4px',cursor:'pointer',background:chartShift?'#2255CC':'#F4F7FD',color:chartShift?'#fff':'#5C7A9E'}}>Shift</button>
             </div>
             <div style={{marginLeft:'auto',fontSize:'9px',color:isLive?'#16A34A':marketStatus==='closed'?'#9CA3AF':'#F59E0B',background:isLive?'rgba(22,163,74,.08)':marketStatus==='closed'?'rgba(156,163,175,.08)':'rgba(245,158,11,.08)',padding:'2px 8px',borderRadius:'20px',fontWeight:600}}>
               {isLive?'? MT5 Live':marketStatus==='closed'?'? Market Closed':'? Connecting…'}
             </div>
           </div>
           <div style={{flex:1,overflow:'hidden'}} key={`${sym}_${tf}`}>
-            <MT5Chart sym={sym} tf={tf} requestCandles={requestCandles} livePrice={livePrice}/>
+            <MT5Chart sym={sym} tf={tf} requestCandles={requestCandles} livePrice={livePrice} shiftBars={chartShift ? 12 : 0}/>
           </div>
         </div>
 
@@ -536,4 +539,5 @@ export function PlatformPage() {
     </div>
   )
 }
+
 

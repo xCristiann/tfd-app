@@ -6,6 +6,7 @@ interface Props {
   tf: string
   requestCandles: (sym: string, tf: string) => Promise<Candle[]>
   livePrice?: number
+  shiftBars?: number
 }
 
 const COLORS = {
@@ -39,10 +40,14 @@ function fmtTime(ts: number, tf: string) {
   })
 }
 
-export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
+export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
+
   const candlesRef = useRef<Candle[]>([])
+  const livePriceRef = useRef<number | undefined>(livePrice)
+  const tfRef = useRef(tf)
+
   const viewRef = useRef({ offset: 0, cw: 10 })
   const mouseRef = useRef<{ x: number; y: number } | null>(null)
   const dragRef = useRef({ active: false, startX: 0, startOff: 0 })
@@ -51,18 +56,32 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [ohlc, setOhlc] = useState<Candle | null>(null)
 
-  const getVisibleSlice = useCallback(() => {
+  useEffect(() => {
+    livePriceRef.current = livePrice
+  }, [livePrice])
+
+  useEffect(() => {
+    tfRef.current = tf
+  }, [tf])
+
+  const getVisibleMeta = useCallback(() => {
     const canvas = canvasRef.current
-    if (!canvas) return []
+    if (!canvas) {
+      return { slice: [] as Candle[], cw: 10, cW: 0, off: 0, vis: 0, shiftPx: 0 }
+    }
 
     const W = canvas.width
     const cW = W - PAD.left - PAD.right
     const all = candlesRef.current
     const cw = viewRef.current.cw
+    const shiftPx = Math.max(0, shiftBars) * (cw + 2)
+    const usableW = Math.max(20, cW - shiftPx)
     const off = Math.max(0, Math.min(viewRef.current.offset, Math.max(0, all.length - 1)))
-    const vis = Math.floor(cW / (cw + 2))
-    return all.slice(off, off + vis + 1)
-  }, [])
+    const vis = Math.floor(usableW / (cw + 2))
+    const slice = all.slice(off, off + vis + 1)
+
+    return { slice, cw, cW, off, vis, shiftPx }
+  }, [shiftBars])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -80,12 +99,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
     ctx.fillStyle = COLORS.bg
     ctx.fillRect(0, 0, W, H)
 
-    const all = candlesRef.current
-    const cw = viewRef.current.cw
-    const off = Math.max(0, Math.min(viewRef.current.offset, Math.max(0, all.length - 1)))
-    const vis = Math.floor(cW / (cw + 2))
-    const slice = all.slice(off, off + vis + 1)
-
+    const { slice, cw, shiftPx } = getVisibleMeta()
     if (!slice.length) return
 
     const minP = Math.min(...slice.map(c => c.low))
@@ -120,7 +134,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
     slice.forEach((c, i) => {
       if (i % every === 0) {
         const x = PAD.left + i * (cw + 2) + cw / 2
-        ctx.fillText(fmtTime(c.time, tf), x, H - PAD.bottom + 12)
+        ctx.fillText(fmtTime(c.time, tfRef.current), x, H - PAD.bottom + 12)
       }
     })
 
@@ -144,8 +158,9 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
       ctx.fillRect(x, bTop, cw, bH)
     })
 
-    if (livePrice && livePrice >= minP && livePrice <= maxP) {
-      const ly = toY(livePrice)
+    const lp = livePriceRef.current
+    if (lp && lp >= minP && lp <= maxP) {
+      const ly = toY(lp)
 
       ctx.strokeStyle = COLORS.priceLine
       ctx.lineWidth = 1
@@ -162,7 +177,17 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
       ctx.fillStyle = '#fff'
       ctx.font = 'bold 9px "JetBrains Mono", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText(livePrice.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, ly + 3)
+      ctx.fillText(lp.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, ly + 3)
+    }
+
+    if (shiftPx > 0) {
+      ctx.fillStyle = 'rgba(34,85,204,0.04)'
+      ctx.fillRect(W - PAD.right - shiftPx, PAD.top, shiftPx, cH)
+      ctx.strokeStyle = 'rgba(34,85,204,0.12)'
+      ctx.beginPath()
+      ctx.moveTo(W - PAD.right - shiftPx, PAD.top)
+      ctx.lineTo(W - PAD.right - shiftPx, H - PAD.bottom)
+      ctx.stroke()
     }
 
     const m = mouseRef.current
@@ -184,7 +209,6 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
       ctx.setLineDash([])
 
       const cp = toP(m.y)
-
       ctx.fillStyle = '#1A3A6B'
       ctx.fillRect(W - PAD.right, m.y - 8, PAD.right - 2, 16)
 
@@ -193,7 +217,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
       ctx.textAlign = 'center'
       ctx.fillText(cp.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, m.y + 3)
     }
-  }, [livePrice, tf])
+  }, [getVisibleMeta])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -206,7 +230,10 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
       candlesRef.current = data
 
       const w = canvasRef.current?.parentElement?.clientWidth ?? 800
-      const vis = Math.floor((w - PAD.left - PAD.right) / (viewRef.current.cw + 2))
+      const cw = viewRef.current.cw
+      const shiftPx = Math.max(0, shiftBars) * (cw + 2)
+      const usableW = Math.max(20, (w - PAD.left - PAD.right) - shiftPx)
+      const vis = Math.floor(usableW / (cw + 2))
       viewRef.current.offset = Math.max(0, data.length - vis)
 
       draw()
@@ -215,7 +242,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
     }
 
     setLoading(false)
-  }, [sym, tf, requestCandles, draw])
+  }, [sym, tf, requestCandles, shiftBars, draw])
 
   useEffect(() => {
     load()
@@ -236,21 +263,17 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
     const el = wrapRef.current
     if (!el) return
 
-    const c = canvasRef.current
-    if (c) {
-      c.width = el.clientWidth
-      c.height = el.clientHeight
-      draw()
-    }
-
-    const ro = new ResizeObserver(() => {
+    const resize = () => {
       const canvas = canvasRef.current
       if (!canvas) return
       canvas.width = el.clientWidth
       canvas.height = el.clientHeight
       draw()
-    })
+    }
 
+    resize()
+
+    const ro = new ResizeObserver(resize)
     ro.observe(el)
     return () => ro.disconnect()
   }, [draw])
@@ -272,8 +295,8 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
       )
     }
 
-    const slice = getVisibleSlice()
-    const ci = Math.floor((mouseRef.current.x - PAD.left) / (viewRef.current.cw + 2))
+    const { slice, cw } = getVisibleMeta()
+    const ci = Math.floor((mouseRef.current.x - PAD.left) / (cw + 2))
 
     if (ci >= 0 && ci < slice.length) {
       setOhlc(prev => {
