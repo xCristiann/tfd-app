@@ -146,6 +146,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
 
     if (livePrice && livePrice >= minP && livePrice <= maxP) {
       const ly = toY(livePrice)
+
       ctx.strokeStyle = COLORS.priceLine
       ctx.lineWidth = 1
       ctx.setLineDash([4, 3])
@@ -183,6 +184,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
       ctx.setLineDash([])
 
       const cp = toP(m.y)
+
       ctx.fillStyle = '#1A3A6B'
       ctx.fillRect(W - PAD.right, m.y - 8, PAD.right - 2, 16)
 
@@ -272,6 +274,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
 
     const slice = getVisibleSlice()
     const ci = Math.floor((mouseRef.current.x - PAD.left) / (viewRef.current.cw + 2))
+
     if (ci >= 0 && ci < slice.length) {
       setOhlc(prev => {
         const next = slice[ci]
@@ -434,7 +437,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice }: Props) {
           fontFamily: 'Inter,sans-serif',
         }}
       >
-        MT5 · {sym}
+        {sym}
       </div>
     </div>
   )
