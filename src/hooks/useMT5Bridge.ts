@@ -23,6 +23,30 @@ export function useMT5Bridge() {
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [wsStatus, setWsStatus] = useState<WsStatus>('connecting')
 
+  const waitForOpen = useCallback((timeoutMs = 10000) => {
+    return new Promise<WebSocket>((resolve, reject) => {
+      const started = Date.now()
+
+      const check = () => {
+        const ws = wsRef.current
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          resolve(ws)
+          return
+        }
+
+        if (Date.now() - started >= timeoutMs) {
+          reject(new Error('Bridge deconectat'))
+          return
+        }
+
+        setTimeout(check, 150)
+      }
+
+      check()
+    })
+  }, [])
+
   const connect = useCallback(() => {
     if (deadRef.current || !BRIDGE_URL || !BRIDGE_SECRET) return
 
@@ -93,15 +117,10 @@ export function useMT5Bridge() {
     return () => clearInterval(iv)
   }, [])
 
-  const requestCandles = useCallback((sym: string, tf: string): Promise<Candle[]> => {
+  const requestCandles = useCallback(async (sym: string, tf: string): Promise<Candle[]> => {
+    const ws = await waitForOpen(10000)
+
     return new Promise((resolve, reject) => {
-      const ws = wsRef.current
-
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        reject(new Error('Bridge deconectat'))
-        return
-      }
-
       const key = `${sym}_${tf}`
 
       const timeout = setTimeout(() => {
@@ -116,7 +135,7 @@ export function useMT5Bridge() {
 
       ws.send(JSON.stringify({ type: 'candles', sym, tf }))
     })
-  }, [])
+  }, [waitForOpen])
 
   return { prices, requestCandles, wsStatus }
 }
