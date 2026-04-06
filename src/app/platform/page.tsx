@@ -351,7 +351,7 @@ export function PlatformPage() {
             </div>
           </div>
           <div style={{flex:1,overflow:'hidden'}} key={`${sym}_${tf}`}>
-            <MT5Chart sym={sym} tf={tf} requestCandles={requestCandles} livePrice={livePrice} shiftBars={chartShift ? 12 : 0}/>
+            <MT5Chart sym={sym} tf={tf} requestCandles={requestCandles} livePrice={livePrice} spread={inst.spread} shiftBars={chartShift ? 12 : 0}/>
           </div>
         </div>
 
@@ -539,5 +539,6 @@ export function PlatformPage() {
     </div>
   )
 }
+
 
 

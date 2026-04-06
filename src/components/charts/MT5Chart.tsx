@@ -6,6 +6,7 @@ interface Props {
   tf: string
   requestCandles: (sym: string, tf: string) => Promise<Candle[]>
   livePrice?: number
+  spread?: number
   shiftBars?: number
 }
 
@@ -16,7 +17,8 @@ const COLORS = {
   bull: '#16A34A',
   bear: '#DC2626',
   cross: 'rgba(34,85,204,0.35)',
-  priceLine: '#2255CC',
+  bidLine: '#2255CC',
+  askLine: '#0F766E',
 }
 
 const PAD = { top: 20, right: 72, bottom: 28, left: 4 }
@@ -40,17 +42,39 @@ function fmtTime(ts: number, tf: string) {
   })
 }
 
-export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: Props) {
+export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, shiftBars = 0 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const candlesRef = useRef<Candle[]>([])
   const livePriceRef = useRef<number | undefined>(livePrice)
   const tfRef = useRef(tf)
+  const spreadRef = useRef(spread)
+  const shiftBarsRef = useRef(shiftBars)
 
   const viewRef = useRef({ offset: 0, cw: 10 })
   const mouseRef = useRef<{ x: number; y: number } | null>(null)
-  const dragRef = useRef({ active: false, startX: 0, startOff: 0 })
+
+  const dragStateRef = useRef<{
+    active: boolean
+    mode: 'pan' | 'scale' | null
+    startX: number
+    startY: number
+    startOff: number
+    startPricePan: number
+    startPriceZoom: number
+  }>({
+    active: false,
+    mode: null,
+    startX: 0,
+    startY: 0,
+    startOff: 0,
+    startPricePan: 0,
+    startPriceZoom: 1,
+  })
+
+  const pricePanRef = useRef(0)
+  const priceZoomRef = useRef(1)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -64,24 +88,32 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
     tfRef.current = tf
   }, [tf])
 
+  useEffect(() => {
+    spreadRef.current = spread
+  }, [spread])
+
+  useEffect(() => {
+    shiftBarsRef.current = shiftBars
+  }, [shiftBars])
+
   const getVisibleMeta = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) {
-      return { slice: [] as Candle[], cw: 10, cW: 0, off: 0, vis: 0, shiftPx: 0 }
+      return { slice: [] as Candle[], cw: 10, shiftPx: 0 }
     }
 
     const W = canvas.width
     const cW = W - PAD.left - PAD.right
     const all = candlesRef.current
     const cw = viewRef.current.cw
-    const shiftPx = Math.max(0, shiftBars) * (cw + 2)
+    const shiftPx = Math.max(0, shiftBarsRef.current) * (cw + 2)
     const usableW = Math.max(20, cW - shiftPx)
     const off = Math.max(0, Math.min(viewRef.current.offset, Math.max(0, all.length - 1)))
     const vis = Math.floor(usableW / (cw + 2))
     const slice = all.slice(off, off + vis + 1)
 
-    return { slice, cw, cW, off, vis, shiftPx }
-  }, [shiftBars])
+    return { slice, cw, shiftPx }
+  }, [])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -99,12 +131,23 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
     ctx.fillStyle = COLORS.bg
     ctx.fillRect(0, 0, W, H)
 
-    const { slice, cw, shiftPx } = getVisibleMeta()
+    const { slice, cw } = getVisibleMeta()
     if (!slice.length) return
 
-    const minP = Math.min(...slice.map(c => c.low))
-    const maxP = Math.max(...slice.map(c => c.high))
-    const rng = maxP - minP || 0.0001
+    const rawMin = Math.min(...slice.map(c => c.low))
+    const rawMax = Math.max(...slice.map(c => c.high))
+    const rawRange = Math.max(rawMax - rawMin, 0.0001)
+
+    const paddedRange = rawRange * 1.15
+    const center = (rawMin + rawMax) / 2 + pricePanRef.current
+    const visibleRange = paddedRange * priceZoomRef.current
+
+    const minP = center - visibleRange / 2
+    const maxP = center + visibleRange / 2
+    const rng = Math.max(maxP - minP, 0.0001)
+
+    const bid = livePriceRef.current
+    const ask = typeof bid === 'number' ? bid + (spreadRef.current || 0) : undefined
     const dec = decimals(slice[0].close)
 
     const toY = (p: number) => PAD.top + cH - ((p - minP) / rng) * cH
@@ -158,37 +201,37 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
       ctx.fillRect(x, bTop, cw, bH)
     })
 
-    const lp = livePriceRef.current
-    if (lp && lp >= minP && lp <= maxP) {
-      const ly = toY(lp)
+    const drawPriceLine = (price: number | undefined, color: string, label: string) => {
+      if (typeof price !== 'number') return
+      if (price < minP || price > maxP) return
 
-      ctx.strokeStyle = COLORS.priceLine
+      const y = toY(price)
+
+      ctx.strokeStyle = color
       ctx.lineWidth = 1
-      ctx.setLineDash([4, 3])
+      ctx.setLineDash([3, 3])
       ctx.beginPath()
-      ctx.moveTo(PAD.left, ly)
-      ctx.lineTo(W - PAD.right, ly)
+      ctx.moveTo(PAD.left, y)
+      ctx.lineTo(W - PAD.right, y)
       ctx.stroke()
       ctx.setLineDash([])
 
-      ctx.fillStyle = COLORS.priceLine
-      ctx.fillRect(W - PAD.right, ly - 8, PAD.right - 2, 16)
+      ctx.fillStyle = color
+      ctx.fillRect(W - PAD.right, y - 8, PAD.right - 2, 16)
 
       ctx.fillStyle = '#fff'
       ctx.font = 'bold 9px "JetBrains Mono", monospace'
       ctx.textAlign = 'center'
-      ctx.fillText(lp.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, ly + 3)
+      ctx.fillText(price.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, y + 3)
+
+      ctx.fillStyle = color
+      ctx.font = 'bold 8px Inter, sans-serif'
+      ctx.textAlign = 'right'
+      ctx.fillText(label, W - PAD.right - 6, y - 4)
     }
 
-    if (shiftPx > 0) {
-      ctx.fillStyle = 'rgba(34,85,204,0.04)'
-      ctx.fillRect(W - PAD.right - shiftPx, PAD.top, shiftPx, cH)
-      ctx.strokeStyle = 'rgba(34,85,204,0.12)'
-      ctx.beginPath()
-      ctx.moveTo(W - PAD.right - shiftPx, PAD.top)
-      ctx.lineTo(W - PAD.right - shiftPx, H - PAD.bottom)
-      ctx.stroke()
-    }
+    drawPriceLine(ask, COLORS.askLine, 'ASK')
+    drawPriceLine(bid, COLORS.bidLine, 'BID')
 
     const m = mouseRef.current
     if (m && m.x > PAD.left && m.x < W - PAD.right && m.y > PAD.top && m.y < H - PAD.bottom) {
@@ -228,10 +271,12 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
       if (!data?.length) throw new Error('Fara date')
 
       candlesRef.current = data
+      pricePanRef.current = 0
+      priceZoomRef.current = 1
 
       const w = canvasRef.current?.parentElement?.clientWidth ?? 800
       const cw = viewRef.current.cw
-      const shiftPx = Math.max(0, shiftBars) * (cw + 2)
+      const shiftPx = Math.max(0, shiftBarsRef.current) * (cw + 2)
       const usableW = Math.max(20, (w - PAD.left - PAD.right) - shiftPx)
       const vis = Math.floor(usableW / (cw + 2))
       viewRef.current.offset = Math.max(0, data.length - vis)
@@ -242,7 +287,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
     }
 
     setLoading(false)
-  }, [sym, tf, requestCandles, shiftBars, draw])
+  }, [sym, tf, requestCandles, draw])
 
   useEffect(() => {
     load()
@@ -278,27 +323,54 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
     return () => ro.disconnect()
   }, [draw])
 
+  useEffect(() => {
+    draw()
+  }, [shiftBars, spread, draw])
+
   const onMove = (e: React.MouseEvent) => {
-    const r = canvasRef.current?.getBoundingClientRect()
-    if (!r) return
+    const canvas = canvasRef.current
+    if (!canvas) return
 
-    mouseRef.current = {
-      x: e.clientX - r.left,
-      y: e.clientY - r.top,
-    }
+    const r = canvas.getBoundingClientRect()
+    const x = e.clientX - r.left
+    const y = e.clientY - r.top
 
-    if (dragRef.current.active) {
-      const dx = e.clientX - dragRef.current.startX
-      viewRef.current.offset = Math.max(
-        0,
-        dragRef.current.startOff - Math.round(dx / (viewRef.current.cw + 2))
-      )
+    mouseRef.current = { x, y }
+
+    const W = canvas.width
+    const cH = canvas.height - PAD.top - PAD.bottom
+    const rightAxisStart = W - PAD.right
+
+    if (dragStateRef.current.active) {
+      const dx = e.clientX - dragStateRef.current.startX
+      const dy = e.clientY - dragStateRef.current.startY
+
+      if (dragStateRef.current.mode === 'pan') {
+        viewRef.current.offset = Math.max(
+          0,
+          dragStateRef.current.startOff - Math.round(dx / (viewRef.current.cw + 2))
+        )
+
+        const { slice } = getVisibleMeta()
+        if (slice.length) {
+          const rawMin = Math.min(...slice.map(c => c.low))
+          const rawMax = Math.max(...slice.map(c => c.high))
+          const rawRange = Math.max(rawMax - rawMin, 0.0001)
+          const visibleRange = rawRange * 1.15 * priceZoomRef.current
+          pricePanRef.current = dragStateRef.current.startPricePan + (dy / cH) * visibleRange
+        }
+      }
+
+      if (dragStateRef.current.mode === 'scale') {
+        const factor = 1 + dy * 0.01
+        priceZoomRef.current = Math.max(0.2, Math.min(8, dragStateRef.current.startPriceZoom * factor))
+      }
     }
 
     const { slice, cw } = getVisibleMeta()
-    const ci = Math.floor((mouseRef.current.x - PAD.left) / (cw + 2))
+    const ci = Math.floor((x - PAD.left) / (cw + 2))
 
-    if (ci >= 0 && ci < slice.length) {
+    if (x < rightAxisStart && ci >= 0 && ci < slice.length) {
       setOhlc(prev => {
         const next = slice[ci]
         if (
@@ -322,21 +394,32 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
 
   const onLeave = () => {
     mouseRef.current = null
-    dragRef.current.active = false
+    dragStateRef.current.active = false
+    dragStateRef.current.mode = null
     setOhlc(null)
     draw()
   }
 
   const onDown = (e: React.MouseEvent) => {
-    dragRef.current = {
-      active: true,
-      startX: e.clientX,
-      startOff: viewRef.current.offset,
-    }
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const r = canvas.getBoundingClientRect()
+    const x = e.clientX - r.left
+    const rightAxisStart = canvas.width - PAD.right
+
+    dragStateRef.current.active = true
+    dragStateRef.current.mode = x >= rightAxisStart ? 'scale' : 'pan'
+    dragStateRef.current.startX = e.clientX
+    dragStateRef.current.startY = e.clientY
+    dragStateRef.current.startOff = viewRef.current.offset
+    dragStateRef.current.startPricePan = pricePanRef.current
+    dragStateRef.current.startPriceZoom = priceZoomRef.current
   }
 
   const onUp = () => {
-    dragRef.current.active = false
+    dragStateRef.current.active = false
+    dragStateRef.current.mode = null
   }
 
   const onWheel = (e: React.WheelEvent) => {
@@ -351,7 +434,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
     <div ref={wrapRef} style={{ width: '100%', height: '100%', position: 'relative', background: '#fff' }}>
       <canvas
         ref={canvasRef}
-        style={{ display: 'block', width: '100%', height: '100%', cursor: dragRef.current.active ? 'grabbing' : 'crosshair' }}
+        style={{ display: 'block', width: '100%', height: '100%', cursor: dragStateRef.current.active ? 'grabbing' : 'crosshair' }}
         onMouseMove={onMove}
         onMouseLeave={onLeave}
         onMouseDown={onDown}
@@ -411,7 +494,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
               animation: 'spin .8s linear infinite',
             }}
           />
-          <div style={{ fontSize: 11, color: '#8FA3BF' }}>Se incarca {sym}…</div>
+          <div style={{ fontSize: 11, color: '#8FA3BF' }}>Se incarca {sym}�</div>
         </div>
       )}
 
@@ -428,7 +511,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, shiftBars = 0 }: 
             gap: 8,
           }}
         >
-          <div style={{ fontSize: 12, color: '#DC2626' }}>⚠ {error}</div>
+          <div style={{ fontSize: 12, color: '#DC2626' }}>? {error}</div>
           <button
             onClick={load}
             style={{
