@@ -1,6 +1,45 @@
 ﻿import { useEffect, useRef, useCallback, useState } from 'react'
 import type { Candle } from '@/hooks/useMT5Bridge'
 
+type ToolMode = 'cursor' | 'hline' | 'rectangle' | 'long' | 'short'
+
+interface ChartTrade {
+  id: string | number
+  symbol: string
+  direction: 'buy' | 'sell' | string
+  lots: number | string
+  open_price: number
+  sl?: number | null
+  tp?: number | null
+}
+
+type HLineDrawing = {
+  id: string
+  type: 'hline'
+  price: number
+}
+
+type RectDrawing = {
+  id: string
+  type: 'rectangle'
+  i1: number
+  i2: number
+  p1: number
+  p2: number
+}
+
+type PositionDrawing = {
+  id: string
+  type: 'long' | 'short'
+  i1: number
+  i2: number
+  entry: number
+  tp: number
+  sl: number
+}
+
+type Drawing = HLineDrawing | RectDrawing | PositionDrawing
+
 interface Props {
   sym: string
   tf: string
@@ -8,7 +47,10 @@ interface Props {
   livePrice?: number
   spread?: number
   priceDecimals?: number
+  priceStep?: number
   shiftBars?: number
+  openTrades?: ChartTrade[]
+  onTradeSLTPChange?: (tradeId: string | number, newSl: number | null, newTp: number | null) => void | Promise<void>
 }
 
 const COLORS = {
@@ -20,6 +62,15 @@ const COLORS = {
   cross: 'rgba(34,85,204,0.35)',
   bidLine: '#2255CC',
   askLine: '#0F766E',
+  entryLine: '#64748B',
+  slLine: '#DC2626',
+  tpLine: '#16A34A',
+  rectStroke: '#2255CC',
+  rectFill: 'rgba(34,85,204,0.08)',
+  longFill: 'rgba(22,163,74,0.12)',
+  longStop: 'rgba(220,38,38,0.12)',
+  shortFill: 'rgba(220,38,38,0.12)',
+  shortStop: 'rgba(22,163,74,0.12)',
 }
 
 const PAD = { top: 20, right: 72, bottom: 28, left: 4 }
@@ -43,31 +94,70 @@ function fmtTime(ts: number, tf: string) {
   })
 }
 
-export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, priceDecimals, shiftBars = 0 }: Props) {
+function makeId(prefix: string) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+export function MT5Chart({
+  sym,
+  tf,
+  requestCandles,
+  livePrice,
+  spread = 0,
+  priceDecimals,
+  priceStep,
+  shiftBars = 0,
+  openTrades = [],
+  onTradeSLTPChange,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const candlesRef = useRef<Candle[]>([])
   const livePriceRef = useRef<number | undefined>(livePrice)
   const tfRef = useRef(tf)
+  const drawingsRef = useRef<Drawing[]>([])
+  const openTradesRef = useRef<ChartTrade[]>(openTrades)
 
   const viewRef = useRef({ offset: 0, cw: 10 })
   const mouseRef = useRef<{ x: number; y: number } | null>(null)
-  const dragRef = useRef({
+
+  const dragRef = useRef<{
+    active: boolean
+    mode: 'pan' | 'scale' | 'trade-line' | 'draw'
+    startX: number
+    startY: number
+    startOff: number
+    startPricePan: number
+    startPriceZoom: number
+    tradeId: string | number | null
+    tradeField: 'sl' | 'tp' | null
+    draftPrice: number | null
+    drawStartIndex: number | null
+    drawStartPrice: number | null
+  }>({
     active: false,
-    mode: 'pan' as 'pan' | 'scale',
+    mode: 'pan',
     startX: 0,
     startY: 0,
     startOff: 0,
     startPricePan: 0,
     startPriceZoom: 1,
+    tradeId: null,
+    tradeField: null,
+    draftPrice: null,
+    drawStartIndex: null,
+    drawStartPrice: null,
   })
+
   const pricePanRef = useRef(0)
   const priceZoomRef = useRef(1)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [ohlc, setOhlc] = useState<Candle | null>(null)
+  const [tool, setTool] = useState<ToolMode>('cursor')
+  const [draftDrawing, setDraftDrawing] = useState<Drawing | null>(null)
 
   useEffect(() => {
     livePriceRef.current = livePrice
@@ -77,10 +167,20 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
     tfRef.current = tf
   }, [tf])
 
+  useEffect(() => {
+    openTradesRef.current = openTrades
+  }, [openTrades])
+
+  const snapPrice = useCallback((value: number) => {
+    const dec = typeof priceDecimals === 'number' ? priceDecimals : decimals(Math.abs(value || 1))
+    if (!priceStep || priceStep <= 0) return +value.toFixed(dec)
+    return +(Math.round(value / priceStep) * priceStep).toFixed(dec)
+  }, [priceDecimals, priceStep])
+
   const getVisibleMeta = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) {
-      return { slice: [] as Candle[], cw: 10, shiftPx: 0 }
+      return { slice: [] as Candle[], cw: 10, shiftPx: 0, off: 0 }
     }
 
     const W = canvas.width
@@ -93,27 +193,20 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
     const vis = Math.floor(usableW / (cw + 2))
     const slice = all.slice(off, off + vis + 1)
 
-    return { slice, cw, shiftPx }
+    return { slice, cw, shiftPx, off }
   }, [shiftBars])
 
-  const draw = useCallback(() => {
+  const getScaleState = useCallback(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas) return null
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const { slice, cw, off } = getVisibleMeta()
+    if (!slice.length) return null
 
     const W = canvas.width
     const H = canvas.height
-    const cW = W - PAD.left - PAD.right
     const cH = H - PAD.top - PAD.bottom
-
-    ctx.clearRect(0, 0, W, H)
-    ctx.fillStyle = COLORS.bg
-    ctx.fillRect(0, 0, W, H)
-
-    const { slice, cw } = getVisibleMeta()
-    if (!slice.length) return
+    const rightAxisStart = W - PAD.right
 
     const rawMin = Math.min(...slice.map(c => c.low))
     const rawMax = Math.max(...slice.map(c => c.high))
@@ -127,12 +220,67 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
     const maxP = center + visibleRange / 2
     const rng = Math.max(maxP - minP, 0.0001)
 
-    const bid = livePriceRef.current
-    const ask = typeof bid === 'number' ? bid + spread : undefined
+    const toY = (p: number) => PAD.top + cH - ((p - minP) / rng) * cH
+    const toPrice = (y: number) => minP + ((PAD.top + cH - y) / cH) * rng
+    const indexToX = (index: number) => PAD.left + (index - off) * (cw + 2) + cw / 2
+    const xToIndex = (x: number) => Math.round((x - PAD.left) / (cw + 2)) + off
     const dec = typeof priceDecimals === 'number' ? priceDecimals : decimals(slice[0].close)
 
-    const toY = (p: number) => PAD.top + cH - ((p - minP) / rng) * cH
-    const toP = (y: number) => minP + ((PAD.top + cH - y) / cH) * rng
+    return { canvas, W, H, cH, rightAxisStart, slice, cw, off, minP, maxP, rng, toY, toPrice, indexToX, xToIndex, dec }
+  }, [getVisibleMeta, priceDecimals])
+
+  const drawLineWithLabel = useCallback((
+    ctx: CanvasRenderingContext2D,
+    price: number | null | undefined,
+    color: string,
+    label: string,
+    dec: number,
+    toY: (p: number) => number,
+    minP: number,
+    maxP: number,
+    W: number
+  ) => {
+    if (typeof price !== 'number') return
+    if (price < minP || price > maxP) return
+
+    const y = toY(price)
+
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1
+    ctx.setLineDash([4, 4])
+    ctx.beginPath()
+    ctx.moveTo(PAD.left, y)
+    ctx.lineTo(W - PAD.right, y)
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    ctx.fillStyle = color
+    ctx.fillRect(W - PAD.right, y - 8, PAD.right - 2, 16)
+
+    ctx.fillStyle = '#fff'
+    ctx.font = 'bold 9px "JetBrains Mono", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(price.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, y + 3)
+
+    ctx.fillStyle = color
+    ctx.font = 'bold 8px Inter, sans-serif'
+    ctx.textAlign = 'left'
+    ctx.fillText(label, PAD.left + 8, y - 4)
+  }, [])
+
+  const draw = useCallback(() => {
+    const scale = getScaleState()
+    const canvas = canvasRef.current
+    if (!scale || !canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const { W, H, cH, rightAxisStart, slice, cw, minP, maxP, toY, toPrice, indexToX, dec } = scale
+
+    ctx.clearRect(0, 0, W, H)
+    ctx.fillStyle = COLORS.bg
+    ctx.fillRect(0, 0, W, H)
 
     ctx.strokeStyle = COLORS.grid
     ctx.lineWidth = 1
@@ -147,7 +295,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
       ctx.fillStyle = COLORS.axisText
       ctx.font = '9px "JetBrains Mono", monospace'
       ctx.textAlign = 'left'
-      ctx.fillText(toP(y).toFixed(dec), W - PAD.right + 3, y + 3)
+      ctx.fillText(toPrice(y).toFixed(dec), W - PAD.right + 3, y + 3)
     }
 
     ctx.fillStyle = COLORS.axisText
@@ -182,40 +330,99 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
       ctx.fillRect(x, bTop, cw, bH)
     })
 
-    const drawPriceLine = (price: number | undefined, color: string, label: string) => {
-      if (typeof price !== 'number') return
-      if (price < minP || price > maxP) return
+    const bid = livePriceRef.current
+    const ask = typeof bid === 'number' ? bid + spread : undefined
 
-      const y = toY(price)
+    drawLineWithLabel(ctx, ask, COLORS.askLine, 'ASK', dec, toY, minP, maxP, W)
+    drawLineWithLabel(ctx, bid, COLORS.bidLine, 'BID', dec, toY, minP, maxP, W)
 
-      ctx.strokeStyle = color
-      ctx.lineWidth = 1
-      ctx.setLineDash([4, 4])
-      ctx.beginPath()
-      ctx.moveTo(PAD.left, y)
-      ctx.lineTo(W - PAD.right, y)
-      ctx.stroke()
-      ctx.setLineDash([])
+    const tradeDraft = dragRef.current.active && dragRef.current.mode === 'trade-line'
+      ? dragRef.current
+      : null
 
-      ctx.fillStyle = color
-      ctx.fillRect(W - PAD.right, y - 8, PAD.right - 2, 16)
+    openTradesRef.current
+      .filter(t => t.symbol === sym)
+      .forEach(t => {
+        drawLineWithLabel(ctx, Number(t.open_price), COLORS.entryLine, 'ENTRY', dec, toY, minP, maxP, W)
 
-      ctx.fillStyle = '#fff'
-      ctx.font = 'bold 9px "JetBrains Mono", monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText(price.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, y + 3)
+        const slValue =
+          tradeDraft && tradeDraft.tradeId === t.id && tradeDraft.tradeField === 'sl'
+            ? tradeDraft.draftPrice
+            : (t.sl ?? null)
 
-      ctx.fillStyle = color
-      ctx.font = 'bold 8px Inter, sans-serif'
-      ctx.textAlign = 'right'
-      ctx.fillText(label, W - PAD.right - 6, y - 4)
-    }
+        const tpValue =
+          tradeDraft && tradeDraft.tradeId === t.id && tradeDraft.tradeField === 'tp'
+            ? tradeDraft.draftPrice
+            : (t.tp ?? null)
 
-    drawPriceLine(ask, COLORS.askLine, 'ASK')
-    drawPriceLine(bid, COLORS.bidLine, 'BID')
+        drawLineWithLabel(ctx, typeof slValue === 'number' ? slValue : null, COLORS.slLine, 'SL', dec, toY, minP, maxP, W)
+        drawLineWithLabel(ctx, typeof tpValue === 'number' ? tpValue : null, COLORS.tpLine, 'TP', dec, toY, minP, maxP, W)
+      })
+
+    const drawingsToRender = draftDrawing ? [...drawingsRef.current, draftDrawing] : drawingsRef.current
+
+    drawingsToRender.forEach(d => {
+      if (d.type === 'hline') {
+        drawLineWithLabel(ctx, d.price, COLORS.rectStroke, 'LINE', dec, toY, minP, maxP, W)
+      }
+
+      if (d.type === 'rectangle') {
+        const x1 = indexToX(d.i1)
+        const x2 = indexToX(d.i2)
+        const y1 = toY(d.p1)
+        const y2 = toY(d.p2)
+        const left = Math.min(x1, x2)
+        const top = Math.min(y1, y2)
+        const width = Math.max(1, Math.abs(x2 - x1))
+        const height = Math.max(1, Math.abs(y2 - y1))
+
+        ctx.fillStyle = COLORS.rectFill
+        ctx.fillRect(left, top, width, height)
+        ctx.strokeStyle = COLORS.rectStroke
+        ctx.lineWidth = 1
+        ctx.strokeRect(left, top, width, height)
+      }
+
+      if (d.type === 'long' || d.type === 'short') {
+        const x1 = indexToX(d.i1)
+        const x2 = indexToX(d.i2)
+        const left = Math.min(x1, x2)
+        const width = Math.max(1, Math.abs(x2 - x1))
+
+        const entryY = toY(d.entry)
+        const tpY = toY(d.tp)
+        const slY = toY(d.sl)
+
+        if (d.type === 'long') {
+          const topProfit = Math.min(entryY, tpY)
+          const hProfit = Math.max(1, Math.abs(entryY - tpY))
+          const topLoss = Math.min(entryY, slY)
+          const hLoss = Math.max(1, Math.abs(entryY - slY))
+
+          ctx.fillStyle = COLORS.longFill
+          ctx.fillRect(left, topProfit, width, hProfit)
+          ctx.fillStyle = COLORS.longStop
+          ctx.fillRect(left, topLoss, width, hLoss)
+        } else {
+          const topProfit = Math.min(entryY, tpY)
+          const hProfit = Math.max(1, Math.abs(entryY - tpY))
+          const topLoss = Math.min(entryY, slY)
+          const hLoss = Math.max(1, Math.abs(entryY - slY))
+
+          ctx.fillStyle = COLORS.shortFill
+          ctx.fillRect(left, topProfit, width, hProfit)
+          ctx.fillStyle = COLORS.shortStop
+          ctx.fillRect(left, topLoss, width, hLoss)
+        }
+
+        drawLineWithLabel(ctx, d.entry, COLORS.entryLine, 'ENTRY', dec, toY, minP, maxP, W)
+        drawLineWithLabel(ctx, d.tp, COLORS.tpLine, 'TP', dec, toY, minP, maxP, W)
+        drawLineWithLabel(ctx, d.sl, COLORS.slLine, 'SL', dec, toY, minP, maxP, W)
+      }
+    })
 
     const m = mouseRef.current
-    if (m && m.x > PAD.left && m.x < W - PAD.right && m.y > PAD.top && m.y < H - PAD.bottom) {
+    if (m && m.x > PAD.left && m.x < rightAxisStart && m.y > PAD.top && m.y < H - PAD.bottom) {
       ctx.strokeStyle = COLORS.cross
       ctx.lineWidth = 1
       ctx.setLineDash([3, 3])
@@ -232,7 +439,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
 
       ctx.setLineDash([])
 
-      const cp = toP(m.y)
+      const cp = toPrice(m.y)
       ctx.fillStyle = '#1A3A6B'
       ctx.fillRect(W - PAD.right, m.y - 8, PAD.right - 2, 16)
 
@@ -241,7 +448,7 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
       ctx.textAlign = 'center'
       ctx.fillText(cp.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, m.y + 3)
     }
-  }, [getVisibleMeta, spread, priceDecimals])
+  }, [getScaleState, spread, draftDrawing, drawLineWithLabel, sym])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -304,18 +511,41 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
     return () => ro.disconnect()
   }, [draw])
 
+  const getHitTradeLine = useCallback((mouseY: number) => {
+    const scale = getScaleState()
+    if (!scale) return null
+
+    const candidates: Array<{ tradeId: string | number, field: 'sl' | 'tp', price: number, dist: number }> = []
+
+    openTradesRef.current
+      .filter(t => t.symbol === sym)
+      .forEach(t => {
+        if (typeof t.sl === 'number') {
+          const dist = Math.abs(scale.toY(t.sl) - mouseY)
+          if (dist <= 6) candidates.push({ tradeId: t.id, field: 'sl', price: t.sl, dist })
+        }
+        if (typeof t.tp === 'number') {
+          const dist = Math.abs(scale.toY(t.tp) - mouseY)
+          if (dist <= 6) candidates.push({ tradeId: t.id, field: 'tp', price: t.tp, dist })
+        }
+      })
+
+    if (!candidates.length) return null
+    candidates.sort((a, b) => a.dist - b.dist)
+    return candidates[0]
+  }, [getScaleState, sym])
+
   const onMove = (e: React.MouseEvent) => {
+    const scale = getScaleState()
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || !scale) return
 
     const r = canvas.getBoundingClientRect()
     const x = e.clientX - r.left
     const y = e.clientY - r.top
     mouseRef.current = { x, y }
 
-    const W = canvas.width
     const cH = canvas.height - PAD.top - PAD.bottom
-    const rightAxisStart = W - PAD.right
 
     if (dragRef.current.active) {
       const dx = e.clientX - dragRef.current.startX
@@ -327,28 +557,57 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
           dragRef.current.startOff - Math.round(dx / (viewRef.current.cw + 2))
         )
 
-        const { slice } = getVisibleMeta()
-        if (slice.length) {
-          const rawMin = Math.min(...slice.map(c => c.low))
-          const rawMax = Math.max(...slice.map(c => c.high))
-          const rawRange = Math.max(rawMax - rawMin, 0.0001)
-          const visibleRange = rawRange * 1.15 * priceZoomRef.current
-          pricePanRef.current = dragRef.current.startPricePan + (dy / cH) * visibleRange
-        }
+        const visibleRange = scale.rng * priceZoomRef.current
+        pricePanRef.current = dragRef.current.startPricePan + (dy / cH) * visibleRange
       }
 
       if (dragRef.current.mode === 'scale') {
         const factor = 1 + dy * 0.01
         priceZoomRef.current = Math.max(0.25, Math.min(6, dragRef.current.startPriceZoom * factor))
       }
+
+      if (dragRef.current.mode === 'trade-line') {
+        dragRef.current.draftPrice = snapPrice(scale.toPrice(y))
+      }
+
+      if (dragRef.current.mode === 'draw') {
+        const idx2 = scale.xToIndex(x)
+        const p2 = snapPrice(scale.toPrice(y))
+
+        if (tool === 'rectangle' && dragRef.current.drawStartIndex !== null && dragRef.current.drawStartPrice !== null) {
+          setDraftDrawing({
+            id: 'draft_rect',
+            type: 'rectangle',
+            i1: dragRef.current.drawStartIndex,
+            i2: idx2,
+            p1: dragRef.current.drawStartPrice,
+            p2,
+          })
+        }
+
+        if ((tool === 'long' || tool === 'short') && dragRef.current.drawStartIndex !== null && dragRef.current.drawStartPrice !== null) {
+          const entry = dragRef.current.drawStartPrice
+          const distance = Math.abs(p2 - entry) || (priceStep || 0.0001) * 10
+          const tp = tool === 'long' ? entry + distance : entry - distance
+          const sl = tool === 'long' ? entry - distance : entry + distance
+
+          setDraftDrawing({
+            id: 'draft_pos',
+            type: tool,
+            i1: dragRef.current.drawStartIndex,
+            i2: idx2,
+            entry,
+            tp: snapPrice(tp),
+            sl: snapPrice(sl),
+          })
+        }
+      }
     }
 
-    const { slice, cw } = getVisibleMeta()
-    const ci = Math.floor((x - PAD.left) / (cw + 2))
-
-    if (x < rightAxisStart && ci >= 0 && ci < slice.length) {
+    const ci = Math.floor((x - PAD.left) / (scale.cw + 2))
+    if (x < scale.rightAxisStart && ci >= 0 && ci < scale.slice.length) {
       setOhlc(prev => {
-        const next = slice[ci]
+        const next = scale.slice[ci]
         if (
           prev &&
           prev.time === next.time &&
@@ -372,30 +631,78 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
     mouseRef.current = null
     dragRef.current.active = false
     setOhlc(null)
+    setDraftDrawing(null)
     draw()
   }
 
   const onDown = (e: React.MouseEvent) => {
+    const scale = getScaleState()
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || !scale) return
 
     const r = canvas.getBoundingClientRect()
     const x = e.clientX - r.left
-    const rightAxisStart = canvas.width - PAD.right
+    const y = e.clientY - r.top
 
-    dragRef.current = {
-      active: true,
-      mode: x >= rightAxisStart ? 'scale' : 'pan',
-      startX: e.clientX,
-      startY: e.clientY,
-      startOff: viewRef.current.offset,
-      startPricePan: pricePanRef.current,
-      startPriceZoom: priceZoomRef.current,
+    if (tool === 'hline') {
+      const price = snapPrice(scale.toPrice(y))
+      drawingsRef.current = [...drawingsRef.current, { id: makeId('hline'), type: 'hline', price }]
+      setTool('cursor')
+      draw()
+      return
     }
+
+    if (tool === 'rectangle' || tool === 'long' || tool === 'short') {
+      dragRef.current.active = true
+      dragRef.current.mode = 'draw'
+      dragRef.current.drawStartIndex = scale.xToIndex(x)
+      dragRef.current.drawStartPrice = snapPrice(scale.toPrice(y))
+      return
+    }
+
+    const hit = getHitTradeLine(y)
+    if (hit && x < scale.rightAxisStart) {
+      dragRef.current.active = true
+      dragRef.current.mode = 'trade-line'
+      dragRef.current.tradeId = hit.tradeId
+      dragRef.current.tradeField = hit.field
+      dragRef.current.draftPrice = hit.price
+      return
+    }
+
+    dragRef.current.active = true
+    dragRef.current.mode = x >= scale.rightAxisStart ? 'scale' : 'pan'
+    dragRef.current.startX = e.clientX
+    dragRef.current.startY = e.clientY
+    dragRef.current.startOff = viewRef.current.offset
+    dragRef.current.startPricePan = pricePanRef.current
+    dragRef.current.startPriceZoom = priceZoomRef.current
   }
 
-  const onUp = () => {
+  const onUp = async () => {
+    if (dragRef.current.active && dragRef.current.mode === 'trade-line' && dragRef.current.tradeId != null && dragRef.current.tradeField && onTradeSLTPChange) {
+      const t = openTradesRef.current.find(x => x.id === dragRef.current.tradeId)
+      if (t && typeof dragRef.current.draftPrice === 'number') {
+        const newSl = dragRef.current.tradeField === 'sl' ? dragRef.current.draftPrice : (t.sl ?? null)
+        const newTp = dragRef.current.tradeField === 'tp' ? dragRef.current.draftPrice : (t.tp ?? null)
+        await onTradeSLTPChange(dragRef.current.tradeId, newSl, newTp)
+      }
+    }
+
+    if (dragRef.current.active && dragRef.current.mode === 'draw' && draftDrawing) {
+      drawingsRef.current = [...drawingsRef.current, draftDrawing]
+      setDraftDrawing(null)
+      setTool('cursor')
+    }
+
     dragRef.current.active = false
+    dragRef.current.tradeId = null
+    dragRef.current.tradeField = null
+    dragRef.current.draftPrice = null
+    dragRef.current.drawStartIndex = null
+    dragRef.current.drawStartPrice = null
+
+    draw()
   }
 
   const onWheel = (e: React.WheelEvent) => {
@@ -405,6 +712,24 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
   }
 
   const dec = ohlc ? (typeof priceDecimals === 'number' ? priceDecimals : decimals(ohlc.close)) : (priceDecimals ?? 5)
+
+  const toolBtn = (id: ToolMode, label: string) => (
+    <button
+      onClick={() => setTool(id)}
+      style={{
+        padding: '3px 7px',
+        fontSize: '9px',
+        fontWeight: 700,
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        background: tool === id ? '#2255CC' : 'rgba(244,247,253,.95)',
+        color: tool === id ? '#fff' : '#5C7A9E',
+      }}
+    >
+      {label}
+    </button>
+  )
 
   return (
     <div ref={wrapRef} style={{ width: '100%', height: '100%', position: 'relative', background: '#fff' }}>
@@ -418,11 +743,48 @@ export function MT5Chart({ sym, tf, requestCandles, livePrice, spread = 0, price
         onWheel={onWheel}
       />
 
+      <div
+        style={{
+          position: 'absolute',
+          top: 8,
+          left: 10,
+          display: 'flex',
+          gap: 4,
+          zIndex: 3,
+          alignItems: 'center',
+        }}
+      >
+        {toolBtn('cursor', 'Cursor')}
+        {toolBtn('hline', 'HLine')}
+        {toolBtn('rectangle', 'Rect')}
+        {toolBtn('long', 'Long')}
+        {toolBtn('short', 'Short')}
+        <button
+          onClick={() => {
+            drawingsRef.current = []
+            setDraftDrawing(null)
+            draw()
+          }}
+          style={{
+            padding: '3px 7px',
+            fontSize: '9px',
+            fontWeight: 700,
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            background: 'rgba(244,247,253,.95)',
+            color: '#DC2626',
+          }}
+        >
+          Clear
+        </button>
+      </div>
+
       {ohlc && (
         <div
           style={{
             position: 'absolute',
-            top: 8,
+            top: 36,
             left: 10,
             background: 'rgba(26,58,107,.9)',
             color: '#fff',

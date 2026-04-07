@@ -433,7 +433,13 @@ export function PlatformPage() {
               livePrice={livePrice}
               spread={inst.spread}
               priceDecimals={inst.dec}
+              priceStep={inst.pip}
               shiftBars={chartShift ? 12 : 0}
+              openTrades={openTrades.filter(t=>t.symbol===sym)}
+              onTradeSLTPChange={async(tradeId,newSl,newTp)=>{
+                await supabase.from('trades').update({sl:newSl,tp:newTp}).eq('id',tradeId)
+                setOpenTrades(prev=>prev.map(t=>t.id===tradeId?{...t,sl:newSl,tp:newTp}:t))
+              }}
             />
           </div>
         </div>
@@ -621,3 +627,4 @@ export function PlatformPage() {
     </div>
   )
 }
+
