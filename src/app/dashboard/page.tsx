@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+﻿import { useEffect, useState, useMemo } from 'react'
 import { useAccount } from '@/hooks/useAccount'
 import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/hooks/useAuth'
@@ -545,7 +545,7 @@ export function DashboardPage() {
                 padding: '10px 18px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                 color: activeTab === t ? C.accent : C.dim,
                 borderBottom: activeTab === t ? '2px solid #2255CC' : '2px solid transparent',
-                marginBottom: -1, background: 'transparent',
+                marginBottom:-1,
               }}>
                 {t === 'history' ? `Trading History (${closedTrades.length})` : `Open Positions (${openTrades.length})`}
               </button>
@@ -662,3 +662,4 @@ export function DashboardPage() {
     </>
   )
 }
+
