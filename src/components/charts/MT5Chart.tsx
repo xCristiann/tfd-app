@@ -45,6 +45,25 @@ type Selection =
   | { kind: 'trade'; tradeId: string | number; field: 'sl' | 'tp' }
   | null
 
+type ChartSettings = {
+  bg: string
+  grid: string
+  axisText: string
+  bull: string
+  bear: string
+  bidLine: string
+  askLine: string
+  entryLine: string
+  slLine: string
+  tpLine: string
+  rectStroke: string
+  rectFill: string
+  longFill: string
+  longStop: string
+  shortFill: string
+  shortStop: string
+}
+
 interface Props {
   sym: string
   tf: string
@@ -58,13 +77,16 @@ interface Props {
   onTradeSLTPChange?: (tradeId: string | number, newSl: number | null, newTp: number | null) => void | Promise<void>
 }
 
-const COLORS = {
+const PAD = { top: 20, right: 72, bottom: 28, left: 4 }
+const HANDLE_R = 5
+const SETTINGS_KEY = 'tfd_chart_settings_v1'
+
+const DEFAULT_SETTINGS: ChartSettings = {
   bg: '#FFFFFF',
   grid: 'rgba(26,58,107,0.06)',
   axisText: '#8FA3BF',
   bull: '#16A34A',
   bear: '#DC2626',
-  cross: 'rgba(34,85,204,0.35)',
   bidLine: '#2255CC',
   askLine: '#0F766E',
   entryLine: '#64748B',
@@ -72,16 +94,27 @@ const COLORS = {
   tpLine: '#16A34A',
   rectStroke: '#2255CC',
   rectFill: 'rgba(34,85,204,0.08)',
-  longFill: 'rgba(22,163,74,0.14)',
-  longStop: 'rgba(220,38,38,0.12)',
-  shortFill: 'rgba(220,38,38,0.14)',
-  shortStop: 'rgba(22,163,74,0.12)',
-  selected: '#111827',
-  handle: '#2255CC',
+  longFill: 'rgba(22,163,74,0.16)',
+  longStop: 'rgba(220,38,38,0.18)',
+  shortFill: 'rgba(220,38,38,0.16)',
+  shortStop: 'rgba(22,163,74,0.18)',
 }
 
-const PAD = { top: 20, right: 72, bottom: 28, left: 4 }
-const HANDLE_R = 5
+function loadSettings(): ChartSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return DEFAULT_SETTINGS
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+  } catch {
+    return DEFAULT_SETTINGS
+  }
+}
+
+function saveSettings(v: ChartSettings) {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(v))
+  } catch {}
+}
 
 function decimals(p: number) {
   if (p >= 1000) return 2
@@ -106,12 +139,17 @@ function makeId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
-function clamp(v: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, v))
-}
-
 function dist(x1: number, y1: number, x2: number, y2: number) {
   return Math.hypot(x1 - x2, y1 - y2)
+}
+
+function rgbaSolid(hex: string, alpha: number) {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return hex
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
 }
 
 export function MT5Chart({
@@ -136,6 +174,7 @@ export function MT5Chart({
   const draftDrawingRef = useRef<Drawing | null>(null)
   const openTradesRef = useRef<ChartTrade[]>(openTrades)
   const selectionRef = useRef<Selection>(null)
+  const settingsRef = useRef<ChartSettings>(loadSettings())
 
   const viewRef = useRef({ offset: 0, cw: 10 })
   const mouseRef = useRef<{ x: number; y: number } | null>(null)
@@ -148,14 +187,11 @@ export function MT5Chart({
     startOff: number
     startPricePan: number
     startPriceZoom: number
-
     tradeId: string | number | null
     tradeField: 'sl' | 'tp' | null
     draftPrice: number | null
-
     drawStartIndex: number | null
     drawStartPrice: number | null
-
     drawingId: string | null
     handle: string | null
     snapshot: Drawing | null
@@ -188,11 +224,20 @@ export function MT5Chart({
   const [error, setError] = useState<string | null>(null)
   const [ohlc, setOhlc] = useState<Candle | null>(null)
   const [tool, setTool] = useState<ToolMode>('cursor')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsPos, setSettingsPos] = useState({ x: 20, y: 20 })
+  const [settings, setSettings] = useState<ChartSettings>(loadSettings())
   const [, forceTick] = useState(0)
 
   const redraw = useCallback(() => {
     forceTick(v => v + 1)
   }, [])
+
+  useEffect(() => {
+    settingsRef.current = settings
+    saveSettings(settings)
+    redraw()
+  }, [settings, redraw])
 
   useEffect(() => {
     livePriceRef.current = livePrice
@@ -262,22 +307,17 @@ export function MT5Chart({
     return { canvas, W, H, cH, rightAxisStart, slice, cw, off, minP, maxP, rng, toY, toPrice, indexToX, xToIndex, dec }
   }, [getVisibleMeta, priceDecimals])
 
-  const drawHandle = (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    selected: boolean
-  ) => {
+  const drawHandle = (ctx: CanvasRenderingContext2D, x: number, y: number, selected: boolean) => {
     ctx.beginPath()
     ctx.arc(x, y, HANDLE_R, 0, Math.PI * 2)
     ctx.fillStyle = '#fff'
     ctx.fill()
     ctx.lineWidth = 1.5
-    ctx.strokeStyle = selected ? COLORS.selected : COLORS.handle
+    ctx.strokeStyle = selected ? '#111827' : '#2255CC'
     ctx.stroke()
   }
 
-  const drawLineWithLabel = useCallback((
+  const drawExtendedLineWithLabel = useCallback((
     ctx: CanvasRenderingContext2D,
     price: number | null | undefined,
     color: string,
@@ -294,7 +334,7 @@ export function MT5Chart({
 
     const y = toY(price)
 
-    ctx.strokeStyle = selected ? COLORS.selected : color
+    ctx.strokeStyle = selected ? '#111827' : color
     ctx.lineWidth = selected ? 2 : 1
     ctx.setLineDash([4, 4])
     ctx.beginPath()
@@ -303,7 +343,7 @@ export function MT5Chart({
     ctx.stroke()
     ctx.setLineDash([])
 
-    ctx.fillStyle = selected ? COLORS.selected : color
+    ctx.fillStyle = selected ? '#111827' : color
     ctx.fillRect(W - PAD.right, y - 8, PAD.right - 2, 16)
 
     ctx.fillStyle = '#fff'
@@ -311,27 +351,75 @@ export function MT5Chart({
     ctx.textAlign = 'center'
     ctx.fillText(price.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, y + 3)
 
-    ctx.fillStyle = selected ? COLORS.selected : color
+    ctx.fillStyle = selected ? '#111827' : color
     ctx.font = 'bold 8px Inter, sans-serif'
     ctx.textAlign = 'left'
     ctx.fillText(label, PAD.left + 8, y - 4)
   }, [])
+
+  const drawPositionText = (
+    ctx: CanvasRenderingContext2D,
+    x1: number,
+    x2: number,
+    entryY: number,
+    tpY: number,
+    slY: number,
+    entry: number,
+    tp: number,
+    sl: number,
+    dec: number
+  ) => {
+    const left = Math.min(x1, x2)
+    const right = Math.max(x1, x2)
+    const cx = left + (right - left) / 2
+
+    const rrBase = Math.abs(entry - sl)
+    const rrGain = Math.abs(tp - entry)
+    const rr = rrBase > 0 ? (rrGain / rrBase) : 0
+
+    const drawLabel = (text: string, x: number, y: number, bg: string) => {
+      ctx.font = 'bold 10px Inter, sans-serif'
+      const padX = 6
+      const padY = 4
+      const w = ctx.measureText(text).width + padX * 2
+      const h = 18
+      ctx.fillStyle = bg
+      ctx.beginPath()
+      ctx.roundRect(x - w / 2, y - h / 2, w, h, 4)
+      ctx.fill()
+      ctx.fillStyle = '#fff'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(text, x, y + 1)
+    }
+
+    const tpText = `TP: ${tp.toFixed(dec)}`
+    const entryText = `ENTRY: ${entry.toFixed(dec)}`
+    const slText = `SL: ${sl.toFixed(dec)}`
+    const rrText = `RR: ${rr.toFixed(2)}`
+
+    drawLabel(tpText, cx, Math.min(tpY, entryY) + 14, '#16A34A')
+    drawLabel(entryText, cx, entryY + (tpY > entryY ? -14 : 14), '#64748B')
+    drawLabel(slText, cx, Math.max(slY, entryY) - 14, '#DC2626')
+    drawLabel(rrText, cx, entryY + (slY > entryY ? 18 : -18), '#1A3A6B')
+  }
 
   const draw = useCallback(() => {
     const scale = getScaleState()
     const canvas = canvasRef.current
     if (!scale || !canvas) return
 
+    const S = settingsRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     const { W, H, cH, rightAxisStart, slice, cw, minP, maxP, toY, toPrice, indexToX, dec } = scale
 
     ctx.clearRect(0, 0, W, H)
-    ctx.fillStyle = COLORS.bg
+    ctx.fillStyle = S.bg
     ctx.fillRect(0, 0, W, H)
 
-    ctx.strokeStyle = COLORS.grid
+    ctx.strokeStyle = S.grid
     ctx.lineWidth = 1
 
     for (let i = 0; i <= 5; i++) {
@@ -341,13 +429,13 @@ export function MT5Chart({
       ctx.lineTo(W - PAD.right, y)
       ctx.stroke()
 
-      ctx.fillStyle = COLORS.axisText
+      ctx.fillStyle = S.axisText
       ctx.font = '9px "JetBrains Mono", monospace'
       ctx.textAlign = 'left'
       ctx.fillText(toPrice(y).toFixed(dec), W - PAD.right + 3, y + 3)
     }
 
-    ctx.fillStyle = COLORS.axisText
+    ctx.fillStyle = S.axisText
     ctx.font = '9px Inter, sans-serif'
     ctx.textAlign = 'center'
 
@@ -363,7 +451,7 @@ export function MT5Chart({
       const x = PAD.left + i * (cw + 2)
       const cx = x + cw / 2
       const bull = c.close >= c.open
-      const col = bull ? COLORS.bull : COLORS.bear
+      const col = bull ? S.bull : S.bear
       const bTop = toY(Math.max(c.open, c.close))
       const bBot = toY(Math.min(c.open, c.close))
       const bH = Math.max(1, bBot - bTop)
@@ -382,15 +470,15 @@ export function MT5Chart({
     const bid = livePriceRef.current
     const ask = typeof bid === 'number' ? bid + spread : undefined
 
-    drawLineWithLabel(ctx, ask, COLORS.askLine, 'ASK', dec, toY, minP, maxP, W)
-    drawLineWithLabel(ctx, bid, COLORS.bidLine, 'BID', dec, toY, minP, maxP, W)
+    drawExtendedLineWithLabel(ctx, ask, S.askLine, 'ASK', dec, toY, minP, maxP, W)
+    drawExtendedLineWithLabel(ctx, bid, S.bidLine, 'BID', dec, toY, minP, maxP, W)
 
     const tradeDraft = dragRef.current.active && dragRef.current.mode === 'trade-line' ? dragRef.current : null
 
     openTradesRef.current
       .filter(t => t.symbol === sym)
       .forEach(t => {
-        drawLineWithLabel(ctx, Number(t.open_price), COLORS.entryLine, 'ENTRY', dec, toY, minP, maxP, W)
+        drawExtendedLineWithLabel(ctx, Number(t.open_price), S.entryLine, 'ENTRY', dec, toY, minP, maxP, W)
 
         const slValue =
           tradeDraft && tradeDraft.tradeId === t.id && tradeDraft.tradeField === 'sl'
@@ -403,8 +491,8 @@ export function MT5Chart({
             : (t.tp ?? null)
 
         const sel = selectionRef.current?.kind === 'trade' && selectionRef.current.tradeId === t.id
-        drawLineWithLabel(ctx, typeof slValue === 'number' ? slValue : null, COLORS.slLine, 'SL', dec, toY, minP, maxP, W, !!sel && selectionRef.current?.field === 'sl')
-        drawLineWithLabel(ctx, typeof tpValue === 'number' ? tpValue : null, COLORS.tpLine, 'TP', dec, toY, minP, maxP, W, !!sel && selectionRef.current?.field === 'tp')
+        drawExtendedLineWithLabel(ctx, typeof slValue === 'number' ? slValue : null, S.slLine, 'SL', dec, toY, minP, maxP, W, !!sel && selectionRef.current?.field === 'sl')
+        drawExtendedLineWithLabel(ctx, typeof tpValue === 'number' ? tpValue : null, S.tpLine, 'TP', dec, toY, minP, maxP, W, !!sel && selectionRef.current?.field === 'tp')
       })
 
     const drawingsToRender = draftDrawingRef.current ? [...drawingsRef.current, draftDrawingRef.current] : drawingsRef.current
@@ -413,10 +501,8 @@ export function MT5Chart({
       const isSelected = selectionRef.current?.kind === 'drawing' && selectionRef.current.id === d.id
 
       if (d.type === 'hline') {
-        drawLineWithLabel(ctx, d.price, COLORS.rectStroke, 'LINE', dec, toY, minP, maxP, W, isSelected)
-        if (isSelected) {
-          drawHandle(ctx, W - PAD.right - 22, toY(d.price), true)
-        }
+        drawExtendedLineWithLabel(ctx, d.price, S.rectStroke, 'LINE', dec, toY, minP, maxP, W, isSelected)
+        if (isSelected) drawHandle(ctx, W - PAD.right - 22, toY(d.price), true)
       }
 
       if (d.type === 'rectangle') {
@@ -425,21 +511,21 @@ export function MT5Chart({
         const y1 = toY(d.p1)
         const y2 = toY(d.p2)
         const left = Math.min(x1, x2)
+        const right = Math.max(x1, x2)
         const top = Math.min(y1, y2)
-        const width = Math.max(1, Math.abs(x2 - x1))
-        const height = Math.max(1, Math.abs(y2 - y1))
+        const bottom = Math.max(y1, y2)
 
-        ctx.fillStyle = COLORS.rectFill
-        ctx.fillRect(left, top, width, height)
-        ctx.strokeStyle = isSelected ? COLORS.selected : COLORS.rectStroke
+        ctx.fillStyle = S.rectFill
+        ctx.fillRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top))
+        ctx.strokeStyle = isSelected ? '#111827' : S.rectStroke
         ctx.lineWidth = isSelected ? 2 : 1
-        ctx.strokeRect(left, top, width, height)
+        ctx.strokeRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top))
 
         if (isSelected) {
           drawHandle(ctx, left, top, true)
-          drawHandle(ctx, left + width, top, true)
-          drawHandle(ctx, left, top + height, true)
-          drawHandle(ctx, left + width, top + height, true)
+          drawHandle(ctx, right, top, true)
+          drawHandle(ctx, left, bottom, true)
+          drawHandle(ctx, right, bottom, true)
         }
       }
 
@@ -455,24 +541,22 @@ export function MT5Chart({
         const slY = toY(d.sl)
 
         if (d.type === 'long') {
-          ctx.fillStyle = COLORS.longFill
+          ctx.fillStyle = S.longFill
           ctx.fillRect(left, Math.min(entryY, tpY), width, Math.max(1, Math.abs(entryY - tpY)))
-          ctx.fillStyle = COLORS.longStop
+          ctx.fillStyle = S.longStop
           ctx.fillRect(left, Math.min(entryY, slY), width, Math.max(1, Math.abs(entryY - slY)))
         } else {
-          ctx.fillStyle = COLORS.shortFill
+          ctx.fillStyle = S.shortFill
           ctx.fillRect(left, Math.min(entryY, tpY), width, Math.max(1, Math.abs(entryY - tpY)))
-          ctx.fillStyle = COLORS.shortStop
+          ctx.fillStyle = S.shortStop
           ctx.fillRect(left, Math.min(entryY, slY), width, Math.max(1, Math.abs(entryY - slY)))
         }
 
-        ctx.strokeStyle = isSelected ? COLORS.selected : COLORS.rectStroke
+        ctx.strokeStyle = isSelected ? '#111827' : rgbaSolid(S.rectStroke.startsWith('#') ? S.rectStroke : '#2255CC', 1)
         ctx.lineWidth = isSelected ? 2 : 1
         ctx.strokeRect(left, Math.min(tpY, slY), width, Math.max(1, Math.abs(tpY - slY)))
 
-        drawLineWithLabel(ctx, d.entry, COLORS.entryLine, 'ENTRY', dec, toY, minP, maxP, W, isSelected && selectionRef.current?.handle === 'entry')
-        drawLineWithLabel(ctx, d.tp, COLORS.tpLine, 'TP', dec, toY, minP, maxP, W, isSelected && selectionRef.current?.handle === 'tp')
-        drawLineWithLabel(ctx, d.sl, COLORS.slLine, 'SL', dec, toY, minP, maxP, W, isSelected && selectionRef.current?.handle === 'sl')
+        drawPositionText(ctx, x1, x2, entryY, tpY, slY, d.entry, d.tp, d.sl, dec)
 
         if (isSelected) {
           drawHandle(ctx, right, entryY, selectionRef.current?.handle === 'right')
@@ -485,7 +569,7 @@ export function MT5Chart({
 
     const m = mouseRef.current
     if (m && m.x > PAD.left && m.x < rightAxisStart && m.y > PAD.top && m.y < H - PAD.bottom) {
-      ctx.strokeStyle = COLORS.cross
+      ctx.strokeStyle = 'rgba(34,85,204,0.35)'
       ctx.lineWidth = 1
       ctx.setLineDash([3, 3])
 
@@ -510,11 +594,11 @@ export function MT5Chart({
       ctx.textAlign = 'center'
       ctx.fillText(cp.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, m.y + 3)
     }
-  }, [getScaleState, spread, drawLineWithLabel, sym])
+  }, [getScaleState, spread, drawExtendedLineWithLabel, sym])
 
   useEffect(() => {
     draw()
-  }, [draw, tool])
+  }, [draw, tool, settings])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -552,12 +636,10 @@ export function MT5Chart({
 
   useEffect(() => {
     if (!livePrice || !candlesRef.current.length) return
-
     const last = candlesRef.current[candlesRef.current.length - 1]
     last.close = livePrice
     if (livePrice > last.high) last.high = livePrice
     if (livePrice < last.low) last.low = livePrice
-
     draw()
   }, [livePrice, draw])
 
@@ -577,6 +659,18 @@ export function MT5Chart({
     const ro = new ResizeObserver(resize)
     ro.observe(el)
     return () => ro.disconnect()
+  }, [draw])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectionRef.current?.kind === 'drawing') {
+        drawingsRef.current = drawingsRef.current.filter(d => d.id !== selectionRef.current?.id)
+        selectionRef.current = null
+        draw()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [draw])
 
   const getHitTradeLine = useCallback((mouseY: number) => {
@@ -636,9 +730,7 @@ export function MT5Chart({
           if (dist(mx, my, c.x, c.y) <= 8) return { id: d.id, handle: c.name }
         }
 
-        if (mx >= left && mx <= right && my >= top && my <= bottom) {
-          return { id: d.id, handle: 'move' }
-        }
+        if (mx >= left && mx <= right && my >= top && my <= bottom) return { id: d.id, handle: 'move' }
       }
 
       if (d.type === 'long' || d.type === 'short') {
@@ -663,9 +755,7 @@ export function MT5Chart({
 
         const top = Math.min(tpY, slY)
         const bottom = Math.max(tpY, slY)
-        if (mx >= left && mx <= right && my >= top && my <= bottom) {
-          return { id: d.id, handle: 'move' }
-        }
+        if (mx >= left && mx <= right && my >= top && my <= bottom) return { id: d.id, handle: 'move' }
       }
     }
 
@@ -794,9 +884,7 @@ export function MT5Chart({
               next.sl = snapPrice(snap.sl + dPrice)
             }
 
-            if (handle === 'right') {
-              next.i2 = scale.xToIndex(x)
-            }
+            if (handle === 'right') next.i2 = scale.xToIndex(x)
 
             if (handle === 'entry') {
               const newEntry = snapPrice(scale.toPrice(y))
@@ -954,6 +1042,25 @@ export function MT5Chart({
     draw()
   }
 
+  const onContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setSettingsPos({ x: e.clientX, y: e.clientY })
+    setSettingsOpen(true)
+  }
+
+  const deleteSelected = () => {
+    if (selectionRef.current?.kind === 'drawing') {
+      drawingsRef.current = drawingsRef.current.filter(d => d.id !== selectionRef.current?.id)
+      selectionRef.current = null
+      setSettingsOpen(false)
+      draw()
+    }
+  }
+
+  const resetSettings = () => {
+    setSettings(DEFAULT_SETTINGS)
+  }
+
   const dec = ohlc ? (typeof priceDecimals === 'number' ? priceDecimals : decimals(ohlc.close)) : (priceDecimals ?? 5)
 
   const toolBtn = (id: ToolMode, label: string) => (
@@ -974,8 +1081,20 @@ export function MT5Chart({
     </button>
   )
 
+  const colorInput = (label: string, key: keyof ChartSettings) => (
+    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11, marginBottom: 6 }}>
+      <span>{label}</span>
+      <input
+        type="color"
+        value={(settings[key] || '#000000').startsWith('#') ? settings[key] as string : '#2255CC'}
+        onChange={e => setSettings(prev => ({ ...prev, [key]: e.target.value }))}
+        style={{ width: 34, height: 22, border: 'none', background: 'transparent', cursor: 'pointer' }}
+      />
+    </label>
+  )
+
   return (
-    <div ref={wrapRef} style={{ width: '100%', height: '100%', position: 'relative', background: '#fff' }}>
+    <div ref={wrapRef} style={{ width: '100%', height: '100%', position: 'relative', background: settings.bg }}>
       <canvas
         ref={canvasRef}
         style={{ display: 'block', width: '100%', height: '100%', cursor: dragRef.current.active ? 'grabbing' : 'crosshair' }}
@@ -984,6 +1103,7 @@ export function MT5Chart({
         onMouseDown={onDown}
         onMouseUp={onUp}
         onWheel={onWheel}
+        onContextMenu={onContextMenu}
       />
 
       <div style={{ position: 'absolute', top: 8, left: 10, display: 'flex', gap: 4, zIndex: 3, alignItems: 'center' }}>
@@ -1013,6 +1133,69 @@ export function MT5Chart({
           Clear
         </button>
       </div>
+
+      {settingsOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            left: settingsPos.x,
+            top: settingsPos.y,
+            zIndex: 50,
+            width: 260,
+            maxHeight: '70vh',
+            overflow: 'auto',
+            background: '#fff',
+            border: '1px solid #E5E7EB',
+            borderRadius: 10,
+            boxShadow: '0 16px 40px rgba(0,0,0,.15)',
+            padding: 12,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>Setări chart</div>
+            <button onClick={() => setSettingsOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14 }}>✕</button>
+          </div>
+
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', marginBottom: 6 }}>Chart</div>
+          {colorInput('Background', 'bg')}
+          {colorInput('Grid', 'grid')}
+          {colorInput('Axis text', 'axisText')}
+          {colorInput('Bull candle', 'bull')}
+          {colorInput('Bear candle', 'bear')}
+
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', margin:'10px 0 6px' }}>Lines</div>
+          {colorInput('Bid line', 'bidLine')}
+          {colorInput('Ask line', 'askLine')}
+          {colorInput('Entry line', 'entryLine')}
+          {colorInput('SL line', 'slLine')}
+          {colorInput('TP line', 'tpLine')}
+
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', margin:'10px 0 6px' }}>Tools</div>
+          {colorInput('Rect border', 'rectStroke')}
+          {colorInput('Long profit', 'longFill')}
+          {colorInput('Long stop', 'longStop')}
+          {colorInput('Short profit', 'shortFill')}
+          {colorInput('Short stop', 'shortStop')}
+
+          <div style={{ display:'flex', gap:8, marginTop:12, flexWrap:'wrap' }}>
+            <button
+              onClick={resetSettings}
+              style={{ padding:'6px 10px', border:'none', borderRadius:6, background:'#F3F4F6', cursor:'pointer', fontSize:11, fontWeight:600 }}
+            >
+              Reset culori
+            </button>
+
+            {selectionRef.current?.kind === 'drawing' && (
+              <button
+                onClick={deleteSelected}
+                style={{ padding:'6px 10px', border:'none', borderRadius:6, background:'#FEE2E2', color:'#B91C1C', cursor:'pointer', fontSize:11, fontWeight:700 }}
+              >
+                Șterge tool selectat
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {ohlc && (
         <div
@@ -1060,7 +1243,7 @@ export function MT5Chart({
           top: 8,
           right: 80,
           fontSize: 9,
-          color: '#8FA3BF',
+          color: settings.axisText,
           background: 'rgba(244,247,253,.9)',
           padding: '2px 7px',
           borderRadius: 10,
