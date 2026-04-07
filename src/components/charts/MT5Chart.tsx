@@ -40,6 +40,11 @@ type PositionDrawing = {
 
 type Drawing = HLineDrawing | RectDrawing | PositionDrawing
 
+type Selection =
+  | { kind: 'drawing'; id: string; handle?: string | null }
+  | { kind: 'trade'; tradeId: string | number; field: 'sl' | 'tp' }
+  | null
+
 interface Props {
   sym: string
   tf: string
@@ -67,13 +72,16 @@ const COLORS = {
   tpLine: '#16A34A',
   rectStroke: '#2255CC',
   rectFill: 'rgba(34,85,204,0.08)',
-  longFill: 'rgba(22,163,74,0.12)',
+  longFill: 'rgba(22,163,74,0.14)',
   longStop: 'rgba(220,38,38,0.12)',
-  shortFill: 'rgba(220,38,38,0.12)',
+  shortFill: 'rgba(220,38,38,0.14)',
   shortStop: 'rgba(22,163,74,0.12)',
+  selected: '#111827',
+  handle: '#2255CC',
 }
 
 const PAD = { top: 20, right: 72, bottom: 28, left: 4 }
+const HANDLE_R = 5
 
 function decimals(p: number) {
   if (p >= 1000) return 2
@@ -98,6 +106,14 @@ function makeId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
+function clamp(v: number, a: number, b: number) {
+  return Math.max(a, Math.min(b, v))
+}
+
+function dist(x1: number, y1: number, x2: number, y2: number) {
+  return Math.hypot(x1 - x2, y1 - y2)
+}
+
 export function MT5Chart({
   sym,
   tf,
@@ -119,23 +135,32 @@ export function MT5Chart({
   const drawingsRef = useRef<Drawing[]>([])
   const draftDrawingRef = useRef<Drawing | null>(null)
   const openTradesRef = useRef<ChartTrade[]>(openTrades)
+  const selectionRef = useRef<Selection>(null)
 
   const viewRef = useRef({ offset: 0, cw: 10 })
   const mouseRef = useRef<{ x: number; y: number } | null>(null)
 
   const dragRef = useRef<{
     active: boolean
-    mode: 'pan' | 'scale' | 'trade-line' | 'draw'
+    mode: 'pan' | 'scale' | 'trade-line' | 'draw' | 'move-drawing' | 'resize-drawing'
     startX: number
     startY: number
     startOff: number
     startPricePan: number
     startPriceZoom: number
+
     tradeId: string | number | null
     tradeField: 'sl' | 'tp' | null
     draftPrice: number | null
+
     drawStartIndex: number | null
     drawStartPrice: number | null
+
+    drawingId: string | null
+    handle: string | null
+    snapshot: Drawing | null
+    startIndex: number | null
+    startPrice: number | null
   }>({
     active: false,
     mode: 'pan',
@@ -149,6 +174,11 @@ export function MT5Chart({
     draftPrice: null,
     drawStartIndex: null,
     drawStartPrice: null,
+    drawingId: null,
+    handle: null,
+    snapshot: null,
+    startIndex: null,
+    startPrice: null,
   })
 
   const pricePanRef = useRef(0)
@@ -232,6 +262,21 @@ export function MT5Chart({
     return { canvas, W, H, cH, rightAxisStart, slice, cw, off, minP, maxP, rng, toY, toPrice, indexToX, xToIndex, dec }
   }, [getVisibleMeta, priceDecimals])
 
+  const drawHandle = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    selected: boolean
+  ) => {
+    ctx.beginPath()
+    ctx.arc(x, y, HANDLE_R, 0, Math.PI * 2)
+    ctx.fillStyle = '#fff'
+    ctx.fill()
+    ctx.lineWidth = 1.5
+    ctx.strokeStyle = selected ? COLORS.selected : COLORS.handle
+    ctx.stroke()
+  }
+
   const drawLineWithLabel = useCallback((
     ctx: CanvasRenderingContext2D,
     price: number | null | undefined,
@@ -241,15 +286,16 @@ export function MT5Chart({
     toY: (p: number) => number,
     minP: number,
     maxP: number,
-    W: number
+    W: number,
+    selected = false
   ) => {
     if (typeof price !== 'number') return
     if (price < minP || price > maxP) return
 
     const y = toY(price)
 
-    ctx.strokeStyle = color
-    ctx.lineWidth = 1
+    ctx.strokeStyle = selected ? COLORS.selected : color
+    ctx.lineWidth = selected ? 2 : 1
     ctx.setLineDash([4, 4])
     ctx.beginPath()
     ctx.moveTo(PAD.left, y)
@@ -257,7 +303,7 @@ export function MT5Chart({
     ctx.stroke()
     ctx.setLineDash([])
 
-    ctx.fillStyle = color
+    ctx.fillStyle = selected ? COLORS.selected : color
     ctx.fillRect(W - PAD.right, y - 8, PAD.right - 2, 16)
 
     ctx.fillStyle = '#fff'
@@ -265,7 +311,7 @@ export function MT5Chart({
     ctx.textAlign = 'center'
     ctx.fillText(price.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, y + 3)
 
-    ctx.fillStyle = color
+    ctx.fillStyle = selected ? COLORS.selected : color
     ctx.font = 'bold 8px Inter, sans-serif'
     ctx.textAlign = 'left'
     ctx.fillText(label, PAD.left + 8, y - 4)
@@ -356,17 +402,21 @@ export function MT5Chart({
             ? tradeDraft.draftPrice
             : (t.tp ?? null)
 
-        drawLineWithLabel(ctx, typeof slValue === 'number' ? slValue : null, COLORS.slLine, 'SL', dec, toY, minP, maxP, W)
-        drawLineWithLabel(ctx, typeof tpValue === 'number' ? tpValue : null, COLORS.tpLine, 'TP', dec, toY, minP, maxP, W)
+        const sel = selectionRef.current?.kind === 'trade' && selectionRef.current.tradeId === t.id
+        drawLineWithLabel(ctx, typeof slValue === 'number' ? slValue : null, COLORS.slLine, 'SL', dec, toY, minP, maxP, W, !!sel && selectionRef.current?.field === 'sl')
+        drawLineWithLabel(ctx, typeof tpValue === 'number' ? tpValue : null, COLORS.tpLine, 'TP', dec, toY, minP, maxP, W, !!sel && selectionRef.current?.field === 'tp')
       })
 
-    const drawingsToRender = draftDrawingRef.current
-      ? [...drawingsRef.current, draftDrawingRef.current]
-      : drawingsRef.current
+    const drawingsToRender = draftDrawingRef.current ? [...drawingsRef.current, draftDrawingRef.current] : drawingsRef.current
 
     drawingsToRender.forEach(d => {
+      const isSelected = selectionRef.current?.kind === 'drawing' && selectionRef.current.id === d.id
+
       if (d.type === 'hline') {
-        drawLineWithLabel(ctx, d.price, COLORS.rectStroke, 'LINE', dec, toY, minP, maxP, W)
+        drawLineWithLabel(ctx, d.price, COLORS.rectStroke, 'LINE', dec, toY, minP, maxP, W, isSelected)
+        if (isSelected) {
+          drawHandle(ctx, W - PAD.right - 22, toY(d.price), true)
+        }
       }
 
       if (d.type === 'rectangle') {
@@ -381,16 +431,24 @@ export function MT5Chart({
 
         ctx.fillStyle = COLORS.rectFill
         ctx.fillRect(left, top, width, height)
-        ctx.strokeStyle = COLORS.rectStroke
-        ctx.lineWidth = 1
+        ctx.strokeStyle = isSelected ? COLORS.selected : COLORS.rectStroke
+        ctx.lineWidth = isSelected ? 2 : 1
         ctx.strokeRect(left, top, width, height)
+
+        if (isSelected) {
+          drawHandle(ctx, left, top, true)
+          drawHandle(ctx, left + width, top, true)
+          drawHandle(ctx, left, top + height, true)
+          drawHandle(ctx, left + width, top + height, true)
+        }
       }
 
       if (d.type === 'long' || d.type === 'short') {
         const x1 = indexToX(d.i1)
         const x2 = indexToX(d.i2)
         const left = Math.min(x1, x2)
-        const width = Math.max(1, Math.abs(x2 - x1))
+        const right = Math.max(x1, x2)
+        const width = Math.max(1, right - left)
 
         const entryY = toY(d.entry)
         const tpY = toY(d.tp)
@@ -408,9 +466,20 @@ export function MT5Chart({
           ctx.fillRect(left, Math.min(entryY, slY), width, Math.max(1, Math.abs(entryY - slY)))
         }
 
-        drawLineWithLabel(ctx, d.entry, COLORS.entryLine, 'ENTRY', dec, toY, minP, maxP, W)
-        drawLineWithLabel(ctx, d.tp, COLORS.tpLine, 'TP', dec, toY, minP, maxP, W)
-        drawLineWithLabel(ctx, d.sl, COLORS.slLine, 'SL', dec, toY, minP, maxP, W)
+        ctx.strokeStyle = isSelected ? COLORS.selected : COLORS.rectStroke
+        ctx.lineWidth = isSelected ? 2 : 1
+        ctx.strokeRect(left, Math.min(tpY, slY), width, Math.max(1, Math.abs(tpY - slY)))
+
+        drawLineWithLabel(ctx, d.entry, COLORS.entryLine, 'ENTRY', dec, toY, minP, maxP, W, isSelected && selectionRef.current?.handle === 'entry')
+        drawLineWithLabel(ctx, d.tp, COLORS.tpLine, 'TP', dec, toY, minP, maxP, W, isSelected && selectionRef.current?.handle === 'tp')
+        drawLineWithLabel(ctx, d.sl, COLORS.slLine, 'SL', dec, toY, minP, maxP, W, isSelected && selectionRef.current?.handle === 'sl')
+
+        if (isSelected) {
+          drawHandle(ctx, right, entryY, selectionRef.current?.handle === 'right')
+          drawHandle(ctx, left + width / 2, entryY, selectionRef.current?.handle === 'entry')
+          drawHandle(ctx, left + width / 2, tpY, selectionRef.current?.handle === 'tp')
+          drawHandle(ctx, left + width / 2, slY, selectionRef.current?.handle === 'sl')
+        }
       }
     })
 
@@ -460,6 +529,7 @@ export function MT5Chart({
       priceZoomRef.current = 1
       drawingsRef.current = []
       draftDrawingRef.current = null
+      selectionRef.current = null
 
       const w = canvasRef.current?.parentElement?.clientWidth ?? 800
       const cw = viewRef.current.cw
@@ -519,12 +589,12 @@ export function MT5Chart({
       .filter(t => t.symbol === sym)
       .forEach(t => {
         if (typeof t.sl === 'number') {
-          const dist = Math.abs(scale.toY(t.sl) - mouseY)
-          if (dist <= 6) candidates.push({ tradeId: t.id, field: 'sl', price: t.sl, dist })
+          const d = Math.abs(scale.toY(t.sl) - mouseY)
+          if (d <= 6) candidates.push({ tradeId: t.id, field: 'sl', price: t.sl, dist: d })
         }
         if (typeof t.tp === 'number') {
-          const dist = Math.abs(scale.toY(t.tp) - mouseY)
-          if (dist <= 6) candidates.push({ tradeId: t.id, field: 'tp', price: t.tp, dist })
+          const d = Math.abs(scale.toY(t.tp) - mouseY)
+          if (d <= 6) candidates.push({ tradeId: t.id, field: 'tp', price: t.tp, dist: d })
         }
       })
 
@@ -532,6 +602,79 @@ export function MT5Chart({
     candidates.sort((a, b) => a.dist - b.dist)
     return candidates[0]
   }, [getScaleState, sym])
+
+  const getDrawingHit = useCallback((mx: number, my: number) => {
+    const scale = getScaleState()
+    if (!scale) return null
+
+    for (let i = drawingsRef.current.length - 1; i >= 0; i--) {
+      const d = drawingsRef.current[i]
+
+      if (d.type === 'hline') {
+        const y = scale.toY(d.price)
+        if (Math.abs(my - y) <= 6) return { id: d.id, handle: 'line' }
+      }
+
+      if (d.type === 'rectangle') {
+        const x1 = scale.indexToX(d.i1)
+        const x2 = scale.indexToX(d.i2)
+        const y1 = scale.toY(d.p1)
+        const y2 = scale.toY(d.p2)
+        const left = Math.min(x1, x2)
+        const right = Math.max(x1, x2)
+        const top = Math.min(y1, y2)
+        const bottom = Math.max(y1, y2)
+
+        const corners = [
+          { name: 'tl', x: left, y: top },
+          { name: 'tr', x: right, y: top },
+          { name: 'bl', x: left, y: bottom },
+          { name: 'br', x: right, y: bottom },
+        ]
+
+        for (const c of corners) {
+          if (dist(mx, my, c.x, c.y) <= 8) return { id: d.id, handle: c.name }
+        }
+
+        if (mx >= left && mx <= right && my >= top && my <= bottom) {
+          return { id: d.id, handle: 'move' }
+        }
+      }
+
+      if (d.type === 'long' || d.type === 'short') {
+        const x1 = scale.indexToX(d.i1)
+        const x2 = scale.indexToX(d.i2)
+        const left = Math.min(x1, x2)
+        const right = Math.max(x1, x2)
+        const entryY = scale.toY(d.entry)
+        const tpY = scale.toY(d.tp)
+        const slY = scale.toY(d.sl)
+
+        const handles = [
+          { name: 'right', x: right, y: entryY },
+          { name: 'entry', x: left + (right - left) / 2, y: entryY },
+          { name: 'tp', x: left + (right - left) / 2, y: tpY },
+          { name: 'sl', x: left + (right - left) / 2, y: slY },
+        ]
+
+        for (const h of handles) {
+          if (dist(mx, my, h.x, h.y) <= 8) return { id: d.id, handle: h.name }
+        }
+
+        const top = Math.min(tpY, slY)
+        const bottom = Math.max(tpY, slY)
+        if (mx >= left && mx <= right && my >= top && my <= bottom) {
+          return { id: d.id, handle: 'move' }
+        }
+      }
+    }
+
+    return null
+  }, [getScaleState])
+
+  const replaceDrawing = (id: string, updater: (d: Drawing) => Drawing) => {
+    drawingsRef.current = drawingsRef.current.map(d => d.id === id ? updater(d) : d)
+  }
 
   const onMove = (e: React.MouseEvent) => {
     const scale = getScaleState()
@@ -548,6 +691,8 @@ export function MT5Chart({
     if (dragRef.current.active) {
       const dx = e.clientX - dragRef.current.startX
       const dy = e.clientY - dragRef.current.startY
+      const dIndex = Math.round(dx / (viewRef.current.cw + 2))
+      const dPrice = snapPrice(scale.toPrice(y) - (dragRef.current.startPrice ?? snapPrice(scale.toPrice(y))))
 
       if (dragRef.current.mode === 'pan') {
         viewRef.current.offset = Math.max(0, dragRef.current.startOff - Math.round(dx / (viewRef.current.cw + 2)))
@@ -596,6 +741,79 @@ export function MT5Chart({
           }
         }
       }
+
+      if ((dragRef.current.mode === 'move-drawing' || dragRef.current.mode === 'resize-drawing') && dragRef.current.drawingId && dragRef.current.snapshot) {
+        const drawingId = dragRef.current.drawingId
+        const snap = dragRef.current.snapshot
+        const handle = dragRef.current.handle
+
+        if (snap.type === 'hline') {
+          replaceDrawing(drawingId, d => ({ ...(d as HLineDrawing), price: snapPrice(scale.toPrice(y)) }))
+        }
+
+        if (snap.type === 'rectangle') {
+          replaceDrawing(drawingId, d => {
+            let next = { ...(snap as RectDrawing) }
+
+            if (handle === 'move') {
+              next.i1 = snap.i1 + dIndex
+              next.i2 = snap.i2 + dIndex
+              next.p1 = snapPrice(snap.p1 + dPrice)
+              next.p2 = snapPrice(snap.p2 + dPrice)
+            }
+            if (handle === 'tl') {
+              next.i1 = scale.xToIndex(x)
+              next.p1 = snapPrice(scale.toPrice(y))
+            }
+            if (handle === 'tr') {
+              next.i2 = scale.xToIndex(x)
+              next.p1 = snapPrice(scale.toPrice(y))
+            }
+            if (handle === 'bl') {
+              next.i1 = scale.xToIndex(x)
+              next.p2 = snapPrice(scale.toPrice(y))
+            }
+            if (handle === 'br') {
+              next.i2 = scale.xToIndex(x)
+              next.p2 = snapPrice(scale.toPrice(y))
+            }
+
+            return next
+          })
+        }
+
+        if (snap.type === 'long' || snap.type === 'short') {
+          replaceDrawing(drawingId, d => {
+            let next = { ...(snap as PositionDrawing) }
+
+            if (handle === 'move') {
+              next.i1 = snap.i1 + dIndex
+              next.i2 = snap.i2 + dIndex
+              next.entry = snapPrice(snap.entry + dPrice)
+              next.tp = snapPrice(snap.tp + dPrice)
+              next.sl = snapPrice(snap.sl + dPrice)
+            }
+
+            if (handle === 'right') {
+              next.i2 = scale.xToIndex(x)
+            }
+
+            if (handle === 'entry') {
+              const newEntry = snapPrice(scale.toPrice(y))
+              const tpOffset = snap.tp - snap.entry
+              const slOffset = snap.sl - snap.entry
+              next.entry = newEntry
+              next.tp = snapPrice(newEntry + tpOffset)
+              next.sl = snapPrice(newEntry + slOffset)
+            }
+
+            if (handle === 'tp') next.tp = snapPrice(scale.toPrice(y))
+            if (handle === 'sl') next.sl = snapPrice(scale.toPrice(y))
+
+            return next
+          })
+        }
+      }
     }
 
     const ci = Math.floor((x - PAD.left) / (scale.cw + 2))
@@ -638,7 +856,9 @@ export function MT5Chart({
 
     if (tool === 'hline') {
       const price = snapPrice(scale.toPrice(y))
-      drawingsRef.current = [...drawingsRef.current, { id: makeId('hline'), type: 'hline', price }]
+      const id = makeId('hline')
+      drawingsRef.current = [...drawingsRef.current, { id, type: 'hline', price }]
+      selectionRef.current = { kind: 'drawing', id, handle: 'line' }
       setTool('cursor')
       draw()
       return
@@ -650,21 +870,41 @@ export function MT5Chart({
       dragRef.current.drawStartIndex = scale.xToIndex(x)
       dragRef.current.drawStartPrice = snapPrice(scale.toPrice(y))
       draftDrawingRef.current = null
+      selectionRef.current = null
       draw()
       return
     }
 
-    const hit = getHitTradeLine(y)
-    if (hit && x < scale.rightAxisStart) {
+    const tradeHit = getHitTradeLine(y)
+    if (tradeHit && x < scale.rightAxisStart) {
+      selectionRef.current = { kind: 'trade', tradeId: tradeHit.tradeId, field: tradeHit.field }
       dragRef.current.active = true
       dragRef.current.mode = 'trade-line'
-      dragRef.current.tradeId = hit.tradeId
-      dragRef.current.tradeField = hit.field
-      dragRef.current.draftPrice = hit.price
+      dragRef.current.tradeId = tradeHit.tradeId
+      dragRef.current.tradeField = tradeHit.field
+      dragRef.current.draftPrice = tradeHit.price
       draw()
       return
     }
 
+    const drawingHit = getDrawingHit(x, y)
+    if (drawingHit) {
+      selectionRef.current = { kind: 'drawing', id: drawingHit.id, handle: drawingHit.handle }
+      const snap = drawingsRef.current.find(d => d.id === drawingHit.id) || null
+      dragRef.current.active = true
+      dragRef.current.mode = drawingHit.handle === 'move' || drawingHit.handle === 'line' ? 'move-drawing' : 'resize-drawing'
+      dragRef.current.drawingId = drawingHit.id
+      dragRef.current.handle = drawingHit.handle
+      dragRef.current.snapshot = snap
+      dragRef.current.startX = e.clientX
+      dragRef.current.startY = e.clientY
+      dragRef.current.startIndex = scale.xToIndex(x)
+      dragRef.current.startPrice = snapPrice(scale.toPrice(y))
+      draw()
+      return
+    }
+
+    selectionRef.current = null
     dragRef.current.active = true
     dragRef.current.mode = x >= scale.rightAxisStart ? 'scale' : 'pan'
     dragRef.current.startX = e.clientX
@@ -672,6 +912,7 @@ export function MT5Chart({
     dragRef.current.startOff = viewRef.current.offset
     dragRef.current.startPricePan = pricePanRef.current
     dragRef.current.startPriceZoom = priceZoomRef.current
+    draw()
   }
 
   const onUp = async () => {
@@ -685,7 +926,9 @@ export function MT5Chart({
     }
 
     if (dragRef.current.active && dragRef.current.mode === 'draw' && draftDrawingRef.current) {
-      drawingsRef.current = [...drawingsRef.current, draftDrawingRef.current]
+      const finalId = makeId(draftDrawingRef.current.type)
+      drawingsRef.current = [...drawingsRef.current, { ...draftDrawingRef.current, id: finalId } as Drawing]
+      selectionRef.current = { kind: 'drawing', id: finalId, handle: 'move' }
       draftDrawingRef.current = null
       setTool('cursor')
     }
@@ -696,6 +939,11 @@ export function MT5Chart({
     dragRef.current.draftPrice = null
     dragRef.current.drawStartIndex = null
     dragRef.current.drawStartPrice = null
+    dragRef.current.drawingId = null
+    dragRef.current.handle = null
+    dragRef.current.snapshot = null
+    dragRef.current.startIndex = null
+    dragRef.current.startPrice = null
 
     draw()
   }
@@ -748,6 +996,7 @@ export function MT5Chart({
           onClick={() => {
             drawingsRef.current = []
             draftDrawingRef.current = null
+            selectionRef.current = null
             draw()
           }}
           style={{
