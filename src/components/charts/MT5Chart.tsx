@@ -2,6 +2,7 @@
 import type { Candle } from '@/hooks/useMT5Bridge'
 
 type ToolMode = 'cursor' | 'hline' | 'rectangle' | 'long' | 'short'
+type SettingsTab = 'canvas' | 'candles' | 'lines' | 'tools'
 
 interface ChartTrade {
   id: string | number
@@ -79,11 +80,11 @@ interface Props {
 
 const PAD = { top: 20, right: 72, bottom: 28, left: 4 }
 const HANDLE_R = 5
-const SETTINGS_KEY = 'tfd_chart_settings_v1'
+const SETTINGS_KEY = 'tfd_chart_settings_v2'
 
 const DEFAULT_SETTINGS: ChartSettings = {
   bg: '#FFFFFF',
-  grid: 'rgba(26,58,107,0.06)',
+  grid: '#E8EEF8',
   axisText: '#8FA3BF',
   bull: '#16A34A',
   bear: '#DC2626',
@@ -93,11 +94,11 @@ const DEFAULT_SETTINGS: ChartSettings = {
   slLine: '#DC2626',
   tpLine: '#16A34A',
   rectStroke: '#2255CC',
-  rectFill: 'rgba(34,85,204,0.08)',
-  longFill: 'rgba(22,163,74,0.16)',
-  longStop: 'rgba(220,38,38,0.18)',
-  shortFill: 'rgba(220,38,38,0.16)',
-  shortStop: 'rgba(22,163,74,0.18)',
+  rectFill: '#93C5FD',
+  longFill: '#16A34A',
+  longStop: '#DC2626',
+  shortFill: '#DC2626',
+  shortStop: '#16A34A',
 }
 
 function loadSettings(): ChartSettings {
@@ -143,7 +144,7 @@ function dist(x1: number, y1: number, x2: number, y2: number) {
   return Math.hypot(x1 - x2, y1 - y2)
 }
 
-function rgbaSolid(hex: string, alpha: number) {
+function hexToRgba(hex: string, alpha: number) {
   const h = hex.replace('#', '')
   if (h.length !== 6) return hex
   const r = parseInt(h.slice(0, 2), 16)
@@ -175,6 +176,7 @@ export function MT5Chart({
   const openTradesRef = useRef<ChartTrade[]>(openTrades)
   const selectionRef = useRef<Selection>(null)
   const settingsRef = useRef<ChartSettings>(loadSettings())
+  const deleteAnchorRef = useRef<{ x: number; y: number } | null>(null)
 
   const viewRef = useRef({ offset: 0, cw: 10 })
   const mouseRef = useRef<{ x: number; y: number } | null>(null)
@@ -225,8 +227,9 @@ export function MT5Chart({
   const [ohlc, setOhlc] = useState<Candle | null>(null)
   const [tool, setTool] = useState<ToolMode>('cursor')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [settingsPos, setSettingsPos] = useState({ x: 20, y: 20 })
+  const [settingsPos, setSettingsPos] = useState({ x: 24, y: 24 })
   const [settings, setSettings] = useState<ChartSettings>(loadSettings())
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('canvas')
   const [, forceTick] = useState(0)
 
   const redraw = useCallback(() => {
@@ -399,9 +402,13 @@ export function MT5Chart({
     const rrText = `RR: ${rr.toFixed(2)}`
 
     drawLabel(tpText, cx, Math.min(tpY, entryY) + 14, '#16A34A')
-    drawLabel(entryText, cx, entryY + (tpY > entryY ? -14 : 14), '#64748B')
-    drawLabel(slText, cx, Math.max(slY, entryY) - 14, '#DC2626')
-    drawLabel(rrText, cx, entryY + (slY > entryY ? 18 : -18), '#1A3A6B')
+    drawLabel(entryText, cx, entryY - 2, '#64748B')
+
+    const rrY = slY > entryY ? entryY + 22 : entryY - 22
+    drawLabel(rrText, cx, rrY, '#1A3A6B')
+
+    const slLabelY = slY > entryY ? slY - 14 : slY + 14
+    drawLabel(slText, cx, slLabelY, '#DC2626')
   }
 
   const draw = useCallback(() => {
@@ -412,6 +419,8 @@ export function MT5Chart({
     const S = settingsRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+
+    deleteAnchorRef.current = null
 
     const { W, H, cH, rightAxisStart, slice, cw, minP, maxP, toY, toPrice, indexToX, dec } = scale
 
@@ -481,13 +490,13 @@ export function MT5Chart({
         drawExtendedLineWithLabel(ctx, Number(t.open_price), S.entryLine, 'ENTRY', dec, toY, minP, maxP, W)
 
         const slValue =
-          tradeDraft && tradeDraft.tradeId === t.id && tradeDraft.tradeField === 'sl'
-            ? tradeDraft.draftPrice
+          tradeDraft && dragRef.current.tradeId === t.id && dragRef.current.tradeField === 'sl'
+            ? dragRef.current.draftPrice
             : (t.sl ?? null)
 
         const tpValue =
-          tradeDraft && tradeDraft.tradeId === t.id && tradeDraft.tradeField === 'tp'
-            ? tradeDraft.draftPrice
+          tradeDraft && dragRef.current.tradeId === t.id && dragRef.current.tradeField === 'tp'
+            ? dragRef.current.draftPrice
             : (t.tp ?? null)
 
         const sel = selectionRef.current?.kind === 'trade' && selectionRef.current.tradeId === t.id
@@ -502,7 +511,10 @@ export function MT5Chart({
 
       if (d.type === 'hline') {
         drawExtendedLineWithLabel(ctx, d.price, S.rectStroke, 'LINE', dec, toY, minP, maxP, W, isSelected)
-        if (isSelected) drawHandle(ctx, W - PAD.right - 22, toY(d.price), true)
+        if (isSelected) {
+          drawHandle(ctx, W - PAD.right - 22, toY(d.price), true)
+          deleteAnchorRef.current = { x: W - PAD.right - 34, y: toY(d.price) - 16 }
+        }
       }
 
       if (d.type === 'rectangle') {
@@ -515,7 +527,7 @@ export function MT5Chart({
         const top = Math.min(y1, y2)
         const bottom = Math.max(y1, y2)
 
-        ctx.fillStyle = S.rectFill
+        ctx.fillStyle = hexToRgba(S.rectFill, 0.18)
         ctx.fillRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top))
         ctx.strokeStyle = isSelected ? '#111827' : S.rectStroke
         ctx.lineWidth = isSelected ? 2 : 1
@@ -526,6 +538,7 @@ export function MT5Chart({
           drawHandle(ctx, right, top, true)
           drawHandle(ctx, left, bottom, true)
           drawHandle(ctx, right, bottom, true)
+          deleteAnchorRef.current = { x: right - 8, y: top - 24 }
         }
       }
 
@@ -541,18 +554,18 @@ export function MT5Chart({
         const slY = toY(d.sl)
 
         if (d.type === 'long') {
-          ctx.fillStyle = S.longFill
+          ctx.fillStyle = hexToRgba(S.longFill, 0.18)
           ctx.fillRect(left, Math.min(entryY, tpY), width, Math.max(1, Math.abs(entryY - tpY)))
-          ctx.fillStyle = S.longStop
+          ctx.fillStyle = hexToRgba(S.longStop, 0.18)
           ctx.fillRect(left, Math.min(entryY, slY), width, Math.max(1, Math.abs(entryY - slY)))
         } else {
-          ctx.fillStyle = S.shortFill
+          ctx.fillStyle = hexToRgba(S.shortFill, 0.18)
           ctx.fillRect(left, Math.min(entryY, tpY), width, Math.max(1, Math.abs(entryY - tpY)))
-          ctx.fillStyle = S.shortStop
+          ctx.fillStyle = hexToRgba(S.shortStop, 0.18)
           ctx.fillRect(left, Math.min(entryY, slY), width, Math.max(1, Math.abs(entryY - slY)))
         }
 
-        ctx.strokeStyle = isSelected ? '#111827' : rgbaSolid(S.rectStroke.startsWith('#') ? S.rectStroke : '#2255CC', 1)
+        ctx.strokeStyle = isSelected ? '#111827' : S.rectStroke
         ctx.lineWidth = isSelected ? 2 : 1
         ctx.strokeRect(left, Math.min(tpY, slY), width, Math.max(1, Math.abs(tpY - slY)))
 
@@ -563,9 +576,23 @@ export function MT5Chart({
           drawHandle(ctx, left + width / 2, entryY, selectionRef.current?.handle === 'entry')
           drawHandle(ctx, left + width / 2, tpY, selectionRef.current?.handle === 'tp')
           drawHandle(ctx, left + width / 2, slY, selectionRef.current?.handle === 'sl')
+          deleteAnchorRef.current = { x: right - 8, y: Math.min(tpY, slY) - 24 }
         }
       }
     })
+
+    if (deleteAnchorRef.current && selectionRef.current?.kind === 'drawing') {
+      const { x, y } = deleteAnchorRef.current
+      ctx.fillStyle = '#EF4444'
+      ctx.beginPath()
+      ctx.roundRect(x, y, 18, 18, 4)
+      ctx.fill()
+      ctx.fillStyle = '#fff'
+      ctx.font = 'bold 12px Inter, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('×', x + 9, y + 10)
+    }
 
     const m = mouseRef.current
     if (m && m.x > PAD.left && m.x < rightAxisStart && m.y > PAD.top && m.y < H - PAD.bottom) {
@@ -701,6 +728,13 @@ export function MT5Chart({
     const scale = getScaleState()
     if (!scale) return null
 
+    if (deleteAnchorRef.current && selectionRef.current?.kind === 'drawing') {
+      const a = deleteAnchorRef.current
+      if (mx >= a.x && mx <= a.x + 18 && my >= a.y && my <= a.y + 18) {
+        return { id: selectionRef.current.id, handle: 'delete' }
+      }
+    }
+
     for (let i = drawingsRef.current.length - 1; i >= 0; i--) {
       const d = drawingsRef.current[i]
 
@@ -760,7 +794,7 @@ export function MT5Chart({
     }
 
     return null
-  }, [getScaleState])
+  }, [getScaleState, sym])
 
   const replaceDrawing = (id: string, updater: (d: Drawing) => Drawing) => {
     drawingsRef.current = drawingsRef.current.map(d => d.id === id ? updater(d) : d)
@@ -977,6 +1011,13 @@ export function MT5Chart({
 
     const drawingHit = getDrawingHit(x, y)
     if (drawingHit) {
+      if (drawingHit.handle === 'delete') {
+        drawingsRef.current = drawingsRef.current.filter(d => d.id !== drawingHit.id)
+        selectionRef.current = null
+        draw()
+        return
+      }
+
       selectionRef.current = { kind: 'drawing', id: drawingHit.id, handle: drawingHit.handle }
       const snap = drawingsRef.current.find(d => d.id === drawingHit.id) || null
       dragRef.current.active = true
@@ -1044,22 +1085,11 @@ export function MT5Chart({
 
   const onContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
-    setSettingsPos({ x: e.clientX, y: e.clientY })
+    setSettingsPos({ x: Math.max(16, e.clientX - 140), y: Math.max(16, e.clientY - 40) })
     setSettingsOpen(true)
   }
 
-  const deleteSelected = () => {
-    if (selectionRef.current?.kind === 'drawing') {
-      drawingsRef.current = drawingsRef.current.filter(d => d.id !== selectionRef.current?.id)
-      selectionRef.current = null
-      setSettingsOpen(false)
-      draw()
-    }
-  }
-
-  const resetSettings = () => {
-    setSettings(DEFAULT_SETTINGS)
-  }
+  const resetSettings = () => setSettings(DEFAULT_SETTINGS)
 
   const dec = ohlc ? (typeof priceDecimals === 'number' ? priceDecimals : decimals(ohlc.close)) : (priceDecimals ?? 5)
 
@@ -1082,22 +1112,42 @@ export function MT5Chart({
   )
 
   const colorInput = (label: string, key: keyof ChartSettings) => (
-    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11, marginBottom: 6 }}>
+    <label style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, fontSize:12, color:'#E5E7EB', marginBottom:10 }}>
       <span>{label}</span>
       <input
         type="color"
-        value={(settings[key] || '#000000').startsWith('#') ? settings[key] as string : '#2255CC'}
+        value={String(settings[key]).startsWith('#') ? String(settings[key]) : '#2255CC'}
         onChange={e => setSettings(prev => ({ ...prev, [key]: e.target.value }))}
-        style={{ width: 34, height: 22, border: 'none', background: 'transparent', cursor: 'pointer' }}
+        style={{ width:36, height:24, border:'1px solid #374151', borderRadius:6, background:'transparent', cursor:'pointer' }}
       />
     </label>
   )
 
+  const tabBtn = (id: SettingsTab, label: string) => (
+    <button
+      onClick={() => setSettingsTab(id)}
+      style={{
+        width:'100%',
+        textAlign:'left',
+        padding:'10px 12px',
+        border:'none',
+        background: settingsTab === id ? 'rgba(255,255,255,.08)' : 'transparent',
+        color: settingsTab === id ? '#fff' : '#D1D5DB',
+        cursor:'pointer',
+        fontSize:13,
+        fontWeight: settingsTab === id ? 700 : 500,
+        borderRadius:8,
+      }}
+    >
+      {label}
+    </button>
+  )
+
   return (
-    <div ref={wrapRef} style={{ width: '100%', height: '100%', position: 'relative', background: settings.bg }}>
+    <div ref={wrapRef} style={{ width:'100%', height:'100%', position:'relative', background:settings.bg }}>
       <canvas
         ref={canvasRef}
-        style={{ display: 'block', width: '100%', height: '100%', cursor: dragRef.current.active ? 'grabbing' : 'crosshair' }}
+        style={{ display:'block', width:'100%', height:'100%', cursor: dragRef.current.active ? 'grabbing' : 'crosshair' }}
         onMouseMove={onMove}
         onMouseLeave={onLeave}
         onMouseDown={onDown}
@@ -1106,7 +1156,7 @@ export function MT5Chart({
         onContextMenu={onContextMenu}
       />
 
-      <div style={{ position: 'absolute', top: 8, left: 10, display: 'flex', gap: 4, zIndex: 3, alignItems: 'center' }}>
+      <div style={{ position:'absolute', top:8, left:10, display:'flex', gap:4, zIndex:3, alignItems:'center' }}>
         {toolBtn('cursor', 'Cursor')}
         {toolBtn('hline', 'HLine')}
         {toolBtn('rectangle', 'Rect')}
@@ -1120,14 +1170,14 @@ export function MT5Chart({
             draw()
           }}
           style={{
-            padding: '3px 7px',
-            fontSize: '9px',
-            fontWeight: 700,
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            background: 'rgba(244,247,253,.95)',
-            color: '#DC2626',
+            padding:'3px 7px',
+            fontSize:'9px',
+            fontWeight:700,
+            border:'none',
+            borderRadius:'4px',
+            cursor:'pointer',
+            background:'rgba(244,247,253,.95)',
+            color:'#DC2626',
           }}
         >
           Clear
@@ -1137,62 +1187,88 @@ export function MT5Chart({
       {settingsOpen && (
         <div
           style={{
-            position: 'fixed',
-            left: settingsPos.x,
-            top: settingsPos.y,
-            zIndex: 50,
-            width: 260,
-            maxHeight: '70vh',
-            overflow: 'auto',
-            background: '#fff',
-            border: '1px solid #E5E7EB',
-            borderRadius: 10,
-            boxShadow: '0 16px 40px rgba(0,0,0,.15)',
-            padding: 12,
+            position:'fixed',
+            left:settingsPos.x,
+            top:settingsPos.y,
+            zIndex:60,
+            width:560,
+            height:430,
+            background:'#131722',
+            color:'#fff',
+            border:'1px solid #1F2937',
+            borderRadius:14,
+            boxShadow:'0 24px 80px rgba(0,0,0,.45)',
+            overflow:'hidden',
+            display:'flex',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>Setări chart</div>
-            <button onClick={() => setSettingsOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14 }}>✕</button>
+          <div style={{ width:180, borderRight:'1px solid #1F2937', padding:14, background:'#11151F' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+              <div style={{ fontSize:16, fontWeight:700 }}>Settings</div>
+              <button onClick={() => setSettingsOpen(false)} style={{ background:'transparent', border:'none', color:'#9CA3AF', cursor:'pointer', fontSize:20 }}>×</button>
+            </div>
+            {tabBtn('canvas', 'Canvas')}
+            {tabBtn('candles', 'Candles')}
+            {tabBtn('lines', 'Scales and lines')}
+            {tabBtn('tools', 'Trading / Tools')}
           </div>
 
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', marginBottom: 6 }}>Chart</div>
-          {colorInput('Background', 'bg')}
-          {colorInput('Grid', 'grid')}
-          {colorInput('Axis text', 'axisText')}
-          {colorInput('Bull candle', 'bull')}
-          {colorInput('Bear candle', 'bear')}
-
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', margin:'10px 0 6px' }}>Lines</div>
-          {colorInput('Bid line', 'bidLine')}
-          {colorInput('Ask line', 'askLine')}
-          {colorInput('Entry line', 'entryLine')}
-          {colorInput('SL line', 'slLine')}
-          {colorInput('TP line', 'tpLine')}
-
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', margin:'10px 0 6px' }}>Tools</div>
-          {colorInput('Rect border', 'rectStroke')}
-          {colorInput('Long profit', 'longFill')}
-          {colorInput('Long stop', 'longStop')}
-          {colorInput('Short profit', 'shortFill')}
-          {colorInput('Short stop', 'shortStop')}
-
-          <div style={{ display:'flex', gap:8, marginTop:12, flexWrap:'wrap' }}>
-            <button
-              onClick={resetSettings}
-              style={{ padding:'6px 10px', border:'none', borderRadius:6, background:'#F3F4F6', cursor:'pointer', fontSize:11, fontWeight:600 }}
-            >
-              Reset culori
-            </button>
-
-            {selectionRef.current?.kind === 'drawing' && (
-              <button
-                onClick={deleteSelected}
-                style={{ padding:'6px 10px', border:'none', borderRadius:6, background:'#FEE2E2', color:'#B91C1C', cursor:'pointer', fontSize:11, fontWeight:700 }}
-              >
-                Șterge tool selectat
-              </button>
+          <div style={{ flex:1, padding:'18px 20px', overflow:'auto' }}>
+            {settingsTab === 'canvas' && (
+              <>
+                <div style={{ fontSize:11, color:'#6B7280', marginBottom:14, textTransform:'uppercase', letterSpacing:'1px' }}>Canvas</div>
+                {colorInput('Background', 'bg')}
+                {colorInput('Grid', 'grid')}
+                {colorInput('Axis text', 'axisText')}
+              </>
             )}
+
+            {settingsTab === 'candles' && (
+              <>
+                <div style={{ fontSize:11, color:'#6B7280', marginBottom:14, textTransform:'uppercase', letterSpacing:'1px' }}>Candles</div>
+                {colorInput('Bull candle', 'bull')}
+                {colorInput('Bear candle', 'bear')}
+              </>
+            )}
+
+            {settingsTab === 'lines' && (
+              <>
+                <div style={{ fontSize:11, color:'#6B7280', marginBottom:14, textTransform:'uppercase', letterSpacing:'1px' }}>Scales and lines</div>
+                {colorInput('Bid line', 'bidLine')}
+                {colorInput('Ask line', 'askLine')}
+                {colorInput('Entry line', 'entryLine')}
+                {colorInput('SL line', 'slLine')}
+                {colorInput('TP line', 'tpLine')}
+              </>
+            )}
+
+            {settingsTab === 'tools' && (
+              <>
+                <div style={{ fontSize:11, color:'#6B7280', marginBottom:14, textTransform:'uppercase', letterSpacing:'1px' }}>Tools</div>
+                {colorInput('Rectangle border', 'rectStroke')}
+                {colorInput('Rectangle fill', 'rectFill')}
+                {colorInput('Long profit', 'longFill')}
+                {colorInput('Long stop', 'longStop')}
+                {colorInput('Short profit', 'shortFill')}
+                {colorInput('Short stop', 'shortStop')}
+              </>
+            )}
+
+            <div style={{ display:'flex', gap:10, marginTop:24 }}>
+              <button
+                onClick={resetSettings}
+                style={{ padding:'10px 14px', border:'1px solid #374151', borderRadius:8, background:'#1F2937', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600 }}
+              >
+                Reset
+              </button>
+
+              <button
+                onClick={() => setSettingsOpen(false)}
+                style={{ marginLeft:'auto', padding:'10px 14px', border:'none', borderRadius:8, background:'#E5E7EB', color:'#111827', cursor:'pointer', fontSize:12, fontWeight:700 }}
+              >
+                Ok
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1200,38 +1276,38 @@ export function MT5Chart({
       {ohlc && (
         <div
           style={{
-            position: 'absolute',
-            top: 36,
-            left: 10,
-            background: 'rgba(26,58,107,.9)',
-            color: '#fff',
-            fontSize: '10px',
-            padding: '5px 9px',
-            borderRadius: '6px',
-            fontFamily: "'JetBrains Mono',monospace",
-            lineHeight: 1.9,
-            pointerEvents: 'none',
+            position:'absolute',
+            top:36,
+            left:10,
+            background:'rgba(26,58,107,.9)',
+            color:'#fff',
+            fontSize:'10px',
+            padding:'5px 9px',
+            borderRadius:'6px',
+            fontFamily:"'JetBrains Mono',monospace",
+            lineHeight:1.9,
+            pointerEvents:'none',
           }}
         >
-          <div style={{ opacity: 0.6, fontSize: '9px', marginBottom: 1 }}>{fmtTime(ohlc.time, tf)}</div>
-          <div>O <span style={{ color: '#93C5FD' }}>{ohlc.open.toFixed(dec)}</span></div>
-          <div>H <span style={{ color: '#4ADE80' }}>{ohlc.high.toFixed(dec)}</span></div>
-          <div>L <span style={{ color: '#F87171' }}>{ohlc.low.toFixed(dec)}</span></div>
+          <div style={{ opacity:0.6, fontSize:'9px', marginBottom:1 }}>{fmtTime(ohlc.time, tf)}</div>
+          <div>O <span style={{ color:'#93C5FD' }}>{ohlc.open.toFixed(dec)}</span></div>
+          <div>H <span style={{ color:'#4ADE80' }}>{ohlc.high.toFixed(dec)}</span></div>
+          <div>L <span style={{ color:'#F87171' }}>{ohlc.low.toFixed(dec)}</span></div>
           <div>C <span style={{ color: ohlc.close >= ohlc.open ? '#4ADE80' : '#F87171' }}>{ohlc.close.toFixed(dec)}</span></div>
         </div>
       )}
 
       {loading && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,.9)', gap: 8 }}>
-          <div style={{ width: 22, height: 22, border: '2px solid #2255CC', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
-          <div style={{ fontSize: 11, color: '#8FA3BF' }}>Se incarca {sym}…</div>
+        <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,.9)', gap:8 }}>
+          <div style={{ width:22, height:22, border:'2px solid #2255CC', borderTopColor:'transparent', borderRadius:'50%', animation:'spin .8s linear infinite' }} />
+          <div style={{ fontSize:11, color:'#8FA3BF' }}>Se incarca {sym}…</div>
         </div>
       )}
 
       {error && !loading && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,.9)', gap: 8 }}>
-          <div style={{ fontSize: 12, color: '#DC2626' }}>⚠ {error}</div>
-          <button onClick={load} style={{ padding: '5px 14px', background: '#2255CC', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+        <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,.9)', gap:8 }}>
+          <div style={{ fontSize:12, color:'#DC2626' }}>⚠ {error}</div>
+          <button onClick={load} style={{ padding:'5px 14px', background:'#2255CC', color:'#fff', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>
             Incearca din nou
           </button>
         </div>
@@ -1239,16 +1315,16 @@ export function MT5Chart({
 
       <div
         style={{
-          position: 'absolute',
-          top: 8,
-          right: 80,
-          fontSize: 9,
-          color: settings.axisText,
-          background: 'rgba(244,247,253,.9)',
-          padding: '2px 7px',
-          borderRadius: 10,
-          border: '1px solid #E8EEF8',
-          fontFamily: 'Inter,sans-serif',
+          position:'absolute',
+          top:8,
+          right:80,
+          fontSize:9,
+          color:settings.axisText,
+          background:'rgba(244,247,253,.9)',
+          padding:'2px 7px',
+          borderRadius:10,
+          border:'1px solid #E8EEF8',
+          fontFamily:'Inter,sans-serif',
         }}
       >
         {sym}
