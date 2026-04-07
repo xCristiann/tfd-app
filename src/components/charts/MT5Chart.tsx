@@ -80,7 +80,7 @@ interface Props {
 
 const PAD = { top: 20, right: 72, bottom: 28, left: 4 }
 const HANDLE_R = 5
-const SETTINGS_KEY = 'tfd_chart_settings_v2'
+const SETTINGS_KEY = 'tfd_chart_settings_v3'
 
 const DEFAULT_SETTINGS: ChartSettings = {
   bg: '#FFFFFF',
@@ -144,43 +144,49 @@ function dist(x1: number, y1: number, x2: number, y2: number) {
   return Math.hypot(x1 - x2, y1 - y2)
 }
 
+function fmtMoney(v: number) {
+  const n = Number(v) || 0
+  return `${n >= 0 ? '+' : '-'}$${Math.abs(n).toFixed(2)}`
+}
+
+function hexToRgba(hex: string, alpha: number) {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return hex
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
+function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const rr = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + rr, y)
+  ctx.lineTo(x + w - rr, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr)
+  ctx.lineTo(x + w, y + h - rr)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h)
+  ctx.lineTo(x + rr, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr)
+  ctx.lineTo(x, y + rr)
+  ctx.quadraticCurveTo(x, y, x + rr, y)
+  ctx.closePath()
+}
+
 function calcProjectedPnl(trade: ChartTrade, targetPrice: number, currentSym: string) {
   const lots = Number(trade.lots) || 0
   const open = Number(trade.open_price) || 0
   if (!lots || !open || !targetPrice) return 0
 
-  const diff =
-    trade.direction === 'buy'
-      ? targetPrice - open
-      : open - targetPrice
+  const diff = trade.direction === 'buy' ? targetPrice - open : open - targetPrice
 
-  if (currentSym.endsWith('/JPY')) {
-    return diff * 100000 / Math.max(targetPrice, 0.00001) * lots
-  }
-
-  if (currentSym === 'USD/CHF' || currentSym === 'USD/CAD') {
-    return diff * 100000 / Math.max(targetPrice, 0.00001) * lots
-  }
-
-  if (currentSym === 'XAU/USD') {
-    return diff * 100 * lots
-  }
-
-  if (currentSym === 'XAG/USD') {
-    return diff * 5000 * lots
-  }
-
-  if (currentSym === 'US30' || currentSym === 'JPN225') {
-    return diff * 5 * lots
-  }
-
-  if (currentSym === 'NAS100') {
-    return diff * 20 * lots
-  }
-
-  if (currentSym === 'SPX500') {
-    return diff * 50 * lots
-  }
+  if (currentSym.endsWith('/JPY')) return diff * 100000 / Math.max(targetPrice, 0.00001) * lots
+  if (currentSym === 'USD/CHF' || currentSym === 'USD/CAD') return diff * 100000 / Math.max(targetPrice, 0.00001) * lots
+  if (currentSym === 'XAU/USD') return diff * 100 * lots
+  if (currentSym === 'XAG/USD') return diff * 5000 * lots
+  if (currentSym === 'US30' || currentSym === 'JPN225') return diff * 5 * lots
+  if (currentSym === 'NAS100') return diff * 20 * lots
+  if (currentSym === 'SPX500') return diff * 50 * lots
 
   if (
     currentSym === 'GER40' ||
@@ -192,47 +198,20 @@ function calcProjectedPnl(trade: ChartTrade, targetPrice: number, currentSym: st
     currentSym === 'ESTX50' ||
     currentSym === 'CHINAA50' ||
     currentSym === 'FANG4'
-  ) {
-    return diff * 10 * lots
-  }
+  ) return diff * 10 * lots
 
-  if (currentSym === 'USDX' || currentSym === 'VIX') {
-    return diff * 100 * lots
-  }
+  if (currentSym === 'USDX' || currentSym === 'VIX') return diff * 100 * lots
 
   if (
     currentSym === 'WTI' ||
     currentSym === 'BRENT' ||
     currentSym === 'Gasoline' ||
     currentSym === 'HeatingOil'
-  ) {
-    return diff * 1000 * lots
-  }
+  ) return diff * 1000 * lots
 
-  if (currentSym === 'NATGAS') {
-    return diff * 10000 * lots
-  }
+  if (currentSym === 'NATGAS') return diff * 10000 * lots
 
   return diff * 100000 * lots
-}
-
-function dist(x1: number, y1: number, x2: number, y2: number) {
-  return Math.hypot(x1 - x2, y1 - y2)
-}
-
-function fmtMoney(v: number) {
-  const n = Number(v) || 0
-  return `${n >= 0 ? '+' : '-'}$${Math.abs(n).toFixed(2)}`
-}
-}
-
-function hexToRgba(hex: string, alpha: number) {
-  const h = hex.replace('#', '')
-  if (h.length !== 6) return hex
-  const r = parseInt(h.slice(0, 2), 16)
-  const g = parseInt(h.slice(2, 4), 16)
-  const b = parseInt(h.slice(4, 6), 16)
-  return `rgba(${r},${g},${b},${alpha})`
 }
 
 export function MT5Chart({
@@ -402,6 +381,28 @@ export function MT5Chart({
     ctx.stroke()
   }
 
+  const drawPill = (
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    bg: string,
+    fg = '#fff',
+    font = 'bold 10px Inter, sans-serif'
+  ) => {
+    ctx.font = font
+    const padX = 6
+    const w = ctx.measureText(text).width + padX * 2
+    const h = 18
+    ctx.fillStyle = bg
+    drawRoundedRect(ctx, x - w / 2, y - h / 2, w, h, 4)
+    ctx.fill()
+    ctx.fillStyle = fg
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(text, x, y + 1)
+  }
+
   const drawExtendedLineWithLabel = useCallback((
     ctx: CanvasRenderingContext2D,
     price: number | null | undefined,
@@ -457,40 +458,14 @@ export function MT5Chart({
     const left = Math.min(x1, x2)
     const right = Math.max(x1, x2)
     const cx = left + (right - left) / 2
-
     const rrBase = Math.abs(entry - sl)
     const rrGain = Math.abs(tp - entry)
-    const rr = rrBase > 0 ? (rrGain / rrBase) : 0
+    const rr = rrBase > 0 ? rrGain / rrBase : 0
 
-    const drawLabel = (text: string, x: number, y: number, bg: string) => {
-      ctx.font = 'bold 10px Inter, sans-serif'
-      const padX = 6
-      const padY = 4
-      const w = ctx.measureText(text).width + padX * 2
-      const h = 18
-      ctx.fillStyle = bg
-      ctx.beginPath()
-      ctx.roundRect(x - w / 2, y - h / 2, w, h, 4)
-      ctx.fill()
-      ctx.fillStyle = '#fff'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(text, x, y + 1)
-    }
-
-    const tpText = `TP: ${tp.toFixed(dec)}`
-    const entryText = `ENTRY: ${entry.toFixed(dec)}`
-    const slText = `SL: ${sl.toFixed(dec)}`
-    const rrText = `RR: ${rr.toFixed(2)}`
-
-    drawLabel(tpText, cx, Math.min(tpY, entryY) + 14, '#16A34A')
-    drawLabel(entryText, cx, entryY - 2, '#64748B')
-
-    const rrY = slY > entryY ? entryY + 22 : entryY - 22
-    drawLabel(rrText, cx, rrY, '#1A3A6B')
-
-    const slLabelY = slY > entryY ? slY - 14 : slY + 14
-    drawLabel(slText, cx, slLabelY, '#DC2626')
+    drawPill(ctx, `TP: ${tp.toFixed(dec)}`, cx, Math.min(tpY, entryY) + 14, '#16A34A')
+    drawPill(ctx, `ENTRY: ${entry.toFixed(dec)}`, cx, entryY - 2, '#64748B')
+    drawPill(ctx, `RR: ${rr.toFixed(2)}`, cx, slY > entryY ? entryY + 22 : entryY - 22, '#1A3A6B')
+    drawPill(ctx, `SL: ${sl.toFixed(dec)}`, cx, slY > entryY ? slY - 14 : slY + 14, '#DC2626')
   }
 
   const draw = useCallback(() => {
@@ -609,33 +584,14 @@ export function MT5Chart({
           !!sel && selectionRef.current?.field === 'tp'
         )
 
-        const labelBox = (text: string, x: number, y: number, bg: string) => {
-          ctx.font = 'bold 10px Inter, sans-serif'
-          const padX = 6
-          const w = ctx.measureText(text).width + padX * 2
-          const h = 18
-
-          ctx.fillStyle = bg
-          ctx.beginPath()
-          ctx.roundRect(x - w / 2, y - h / 2, w, h, 4)
-          ctx.fill()
-
-          ctx.fillStyle = '#fff'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(text, x, y + 1)
-        }
-
         if (typeof tpValue === 'number') {
           const pnlTp = calcProjectedPnl(t, tpValue, sym)
-          const yTp = toY(tpValue)
-          labelBox(fmtMoney(pnlTp), W - PAD.right - 90, yTp - 12, '#16A34A')
+          drawPill(ctx, fmtMoney(pnlTp), W - PAD.right - 90, toY(tpValue) - 12, '#16A34A')
         }
 
         if (typeof slValue === 'number') {
           const pnlSl = calcProjectedPnl(t, slValue, sym)
-          const ySl = toY(slValue)
-          labelBox(fmtMoney(pnlSl), W - PAD.right - 90, ySl - 12, '#DC2626')
+          drawPill(ctx, fmtMoney(pnlSl), W - PAD.right - 90, toY(slValue) - 12, '#DC2626')
         }
       })
 
@@ -715,19 +671,6 @@ export function MT5Chart({
         }
       }
     })
-
-    if (deleteAnchorRef.current && selectionRef.current?.kind === 'drawing') {
-      const { x, y } = deleteAnchorRef.current
-      ctx.fillStyle = '#EF4444'
-      ctx.beginPath()
-      ctx.roundRect(x, y, 18, 18, 4)
-      ctx.fill()
-      ctx.fillStyle = '#fff'
-      ctx.font = 'bold 12px Inter, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('×', x + 9, y + 10)
-    }
 
     const m = mouseRef.current
     if (m && m.x > PAD.left && m.x < rightAxisStart && m.y > PAD.top && m.y < H - PAD.bottom) {
@@ -1007,12 +950,12 @@ export function MT5Chart({
         const handle = dragRef.current.handle
 
         if (snap.type === 'hline') {
-          replaceDrawing(drawingId, d => ({ ...(d as HLineDrawing), price: snapPrice(scale.toPrice(y)) }))
+          replaceDrawing(drawingId, () => ({ ...(snap as HLineDrawing), price: snapPrice(scale.toPrice(y)) }))
         }
 
         if (snap.type === 'rectangle') {
-          replaceDrawing(drawingId, d => {
-            let next = { ...(snap as RectDrawing) }
+          replaceDrawing(drawingId, () => {
+            const next = { ...(snap as RectDrawing) }
 
             if (handle === 'move') {
               next.i1 = snap.i1 + dIndex
@@ -1042,8 +985,8 @@ export function MT5Chart({
         }
 
         if (snap.type === 'long' || snap.type === 'short') {
-          replaceDrawing(drawingId, d => {
-            let next = { ...(snap as PositionDrawing) }
+          replaceDrawing(drawingId, () => {
+            const next = { ...(snap as PositionDrawing) }
 
             if (handle === 'move') {
               next.i1 = snap.i1 + dIndex
@@ -1319,6 +1262,35 @@ export function MT5Chart({
         </button>
       </div>
 
+      {deleteAnchorRef.current && selectionRef.current?.kind === 'drawing' && (
+        <button
+          onClick={() => {
+            drawingsRef.current = drawingsRef.current.filter(d => d.id !== selectionRef.current?.id)
+            selectionRef.current = null
+            draw()
+          }}
+          style={{
+            position:'absolute',
+            left: deleteAnchorRef.current.x,
+            top: deleteAnchorRef.current.y,
+            width:18,
+            height:18,
+            border:'none',
+            borderRadius:4,
+            background:'#EF4444',
+            color:'#fff',
+            fontSize:12,
+            fontWeight:700,
+            lineHeight:'18px',
+            padding:0,
+            cursor:'pointer',
+            zIndex:10,
+          }}
+        >
+          ×
+        </button>
+      )}
+
       {settingsOpen && (
         <div
           style={{
@@ -1441,7 +1413,7 @@ export function MT5Chart({
 
       {error && !loading && (
         <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,.9)', gap:8 }}>
-          <div style={{ fontSize:12, color:'#DC2626' }}>⚠ {error}</div>
+          <div style={{ fontSize:12, color:'#DC2626' }}>Eroare: {error}</div>
           <button onClick={load} style={{ padding:'5px 14px', background:'#2255CC', color:'#fff', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>
             Incearca din nou
           </button>
@@ -1467,7 +1439,3 @@ export function MT5Chart({
     </div>
   )
 }
-
-
-
-
