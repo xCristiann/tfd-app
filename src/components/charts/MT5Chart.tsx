@@ -117,6 +117,7 @@ export function MT5Chart({
   const livePriceRef = useRef<number | undefined>(livePrice)
   const tfRef = useRef(tf)
   const drawingsRef = useRef<Drawing[]>([])
+  const draftDrawingRef = useRef<Drawing | null>(null)
   const openTradesRef = useRef<ChartTrade[]>(openTrades)
 
   const viewRef = useRef({ offset: 0, cw: 10 })
@@ -157,7 +158,11 @@ export function MT5Chart({
   const [error, setError] = useState<string | null>(null)
   const [ohlc, setOhlc] = useState<Candle | null>(null)
   const [tool, setTool] = useState<ToolMode>('cursor')
-  const [draftDrawing, setDraftDrawing] = useState<Drawing | null>(null)
+  const [, forceTick] = useState(0)
+
+  const redraw = useCallback(() => {
+    forceTick(v => v + 1)
+  }, [])
 
   useEffect(() => {
     livePriceRef.current = livePrice
@@ -179,9 +184,7 @@ export function MT5Chart({
 
   const getVisibleMeta = useCallback(() => {
     const canvas = canvasRef.current
-    if (!canvas) {
-      return { slice: [] as Candle[], cw: 10, shiftPx: 0, off: 0 }
-    }
+    if (!canvas) return { slice: [] as Candle[], cw: 10, shiftPx: 0, off: 0 }
 
     const W = canvas.width
     const cW = W - PAD.left - PAD.right
@@ -336,9 +339,7 @@ export function MT5Chart({
     drawLineWithLabel(ctx, ask, COLORS.askLine, 'ASK', dec, toY, minP, maxP, W)
     drawLineWithLabel(ctx, bid, COLORS.bidLine, 'BID', dec, toY, minP, maxP, W)
 
-    const tradeDraft = dragRef.current.active && dragRef.current.mode === 'trade-line'
-      ? dragRef.current
-      : null
+    const tradeDraft = dragRef.current.active && dragRef.current.mode === 'trade-line' ? dragRef.current : null
 
     openTradesRef.current
       .filter(t => t.symbol === sym)
@@ -359,7 +360,9 @@ export function MT5Chart({
         drawLineWithLabel(ctx, typeof tpValue === 'number' ? tpValue : null, COLORS.tpLine, 'TP', dec, toY, minP, maxP, W)
       })
 
-    const drawingsToRender = draftDrawing ? [...drawingsRef.current, draftDrawing] : drawingsRef.current
+    const drawingsToRender = draftDrawingRef.current
+      ? [...drawingsRef.current, draftDrawingRef.current]
+      : drawingsRef.current
 
     drawingsToRender.forEach(d => {
       if (d.type === 'hline') {
@@ -394,25 +397,15 @@ export function MT5Chart({
         const slY = toY(d.sl)
 
         if (d.type === 'long') {
-          const topProfit = Math.min(entryY, tpY)
-          const hProfit = Math.max(1, Math.abs(entryY - tpY))
-          const topLoss = Math.min(entryY, slY)
-          const hLoss = Math.max(1, Math.abs(entryY - slY))
-
           ctx.fillStyle = COLORS.longFill
-          ctx.fillRect(left, topProfit, width, hProfit)
+          ctx.fillRect(left, Math.min(entryY, tpY), width, Math.max(1, Math.abs(entryY - tpY)))
           ctx.fillStyle = COLORS.longStop
-          ctx.fillRect(left, topLoss, width, hLoss)
+          ctx.fillRect(left, Math.min(entryY, slY), width, Math.max(1, Math.abs(entryY - slY)))
         } else {
-          const topProfit = Math.min(entryY, tpY)
-          const hProfit = Math.max(1, Math.abs(entryY - tpY))
-          const topLoss = Math.min(entryY, slY)
-          const hLoss = Math.max(1, Math.abs(entryY - slY))
-
           ctx.fillStyle = COLORS.shortFill
-          ctx.fillRect(left, topProfit, width, hProfit)
+          ctx.fillRect(left, Math.min(entryY, tpY), width, Math.max(1, Math.abs(entryY - tpY)))
           ctx.fillStyle = COLORS.shortStop
-          ctx.fillRect(left, topLoss, width, hLoss)
+          ctx.fillRect(left, Math.min(entryY, slY), width, Math.max(1, Math.abs(entryY - slY)))
         }
 
         drawLineWithLabel(ctx, d.entry, COLORS.entryLine, 'ENTRY', dec, toY, minP, maxP, W)
@@ -448,7 +441,11 @@ export function MT5Chart({
       ctx.textAlign = 'center'
       ctx.fillText(cp.toFixed(dec), W - PAD.right + (PAD.right - 2) / 2, m.y + 3)
     }
-  }, [getScaleState, spread, draftDrawing, drawLineWithLabel, sym])
+  }, [getScaleState, spread, drawLineWithLabel, sym])
+
+  useEffect(() => {
+    draw()
+  }, [draw, tool])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -461,6 +458,8 @@ export function MT5Chart({
       candlesRef.current = data
       pricePanRef.current = 0
       priceZoomRef.current = 1
+      drawingsRef.current = []
+      draftDrawingRef.current = null
 
       const w = canvasRef.current?.parentElement?.clientWidth ?? 800
       const cw = viewRef.current.cw
@@ -505,7 +504,6 @@ export function MT5Chart({
     }
 
     resize()
-
     const ro = new ResizeObserver(resize)
     ro.observe(el)
     return () => ro.disconnect()
@@ -552,11 +550,7 @@ export function MT5Chart({
       const dy = e.clientY - dragRef.current.startY
 
       if (dragRef.current.mode === 'pan') {
-        viewRef.current.offset = Math.max(
-          0,
-          dragRef.current.startOff - Math.round(dx / (viewRef.current.cw + 2))
-        )
-
+        viewRef.current.offset = Math.max(0, dragRef.current.startOff - Math.round(dx / (viewRef.current.cw + 2)))
         const visibleRange = scale.rng * priceZoomRef.current
         pricePanRef.current = dragRef.current.startPricePan + (dy / cH) * visibleRange
       }
@@ -575,14 +569,14 @@ export function MT5Chart({
         const p2 = snapPrice(scale.toPrice(y))
 
         if (tool === 'rectangle' && dragRef.current.drawStartIndex !== null && dragRef.current.drawStartPrice !== null) {
-          setDraftDrawing({
+          draftDrawingRef.current = {
             id: 'draft_rect',
             type: 'rectangle',
             i1: dragRef.current.drawStartIndex,
             i2: idx2,
             p1: dragRef.current.drawStartPrice,
             p2,
-          })
+          }
         }
 
         if ((tool === 'long' || tool === 'short') && dragRef.current.drawStartIndex !== null && dragRef.current.drawStartPrice !== null) {
@@ -591,7 +585,7 @@ export function MT5Chart({
           const tp = tool === 'long' ? entry + distance : entry - distance
           const sl = tool === 'long' ? entry - distance : entry + distance
 
-          setDraftDrawing({
+          draftDrawingRef.current = {
             id: 'draft_pos',
             type: tool,
             i1: dragRef.current.drawStartIndex,
@@ -599,7 +593,7 @@ export function MT5Chart({
             entry,
             tp: snapPrice(tp),
             sl: snapPrice(sl),
-          })
+          }
         }
       }
     }
@@ -615,9 +609,7 @@ export function MT5Chart({
           prev.high === next.high &&
           prev.low === next.low &&
           prev.close === next.close
-        ) {
-          return prev
-        }
+        ) return prev
         return next
       })
     } else {
@@ -630,8 +622,8 @@ export function MT5Chart({
   const onLeave = () => {
     mouseRef.current = null
     dragRef.current.active = false
+    draftDrawingRef.current = null
     setOhlc(null)
-    setDraftDrawing(null)
     draw()
   }
 
@@ -657,6 +649,8 @@ export function MT5Chart({
       dragRef.current.mode = 'draw'
       dragRef.current.drawStartIndex = scale.xToIndex(x)
       dragRef.current.drawStartPrice = snapPrice(scale.toPrice(y))
+      draftDrawingRef.current = null
+      draw()
       return
     }
 
@@ -667,6 +661,7 @@ export function MT5Chart({
       dragRef.current.tradeId = hit.tradeId
       dragRef.current.tradeField = hit.field
       dragRef.current.draftPrice = hit.price
+      draw()
       return
     }
 
@@ -689,9 +684,9 @@ export function MT5Chart({
       }
     }
 
-    if (dragRef.current.active && dragRef.current.mode === 'draw' && draftDrawing) {
-      drawingsRef.current = [...drawingsRef.current, draftDrawing]
-      setDraftDrawing(null)
+    if (dragRef.current.active && dragRef.current.mode === 'draw' && draftDrawingRef.current) {
+      drawingsRef.current = [...drawingsRef.current, draftDrawingRef.current]
+      draftDrawingRef.current = null
       setTool('cursor')
     }
 
@@ -743,17 +738,7 @@ export function MT5Chart({
         onWheel={onWheel}
       />
 
-      <div
-        style={{
-          position: 'absolute',
-          top: 8,
-          left: 10,
-          display: 'flex',
-          gap: 4,
-          zIndex: 3,
-          alignItems: 'center',
-        }}
-      >
+      <div style={{ position: 'absolute', top: 8, left: 10, display: 'flex', gap: 4, zIndex: 3, alignItems: 'center' }}>
         {toolBtn('cursor', 'Cursor')}
         {toolBtn('hline', 'HLine')}
         {toolBtn('rectangle', 'Rect')}
@@ -762,7 +747,7 @@ export function MT5Chart({
         <button
           onClick={() => {
             drawingsRef.current = []
-            setDraftDrawing(null)
+            draftDrawingRef.current = null
             draw()
           }}
           style={{
@@ -800,68 +785,21 @@ export function MT5Chart({
           <div>O <span style={{ color: '#93C5FD' }}>{ohlc.open.toFixed(dec)}</span></div>
           <div>H <span style={{ color: '#4ADE80' }}>{ohlc.high.toFixed(dec)}</span></div>
           <div>L <span style={{ color: '#F87171' }}>{ohlc.low.toFixed(dec)}</span></div>
-          <div>
-            C{' '}
-            <span style={{ color: ohlc.close >= ohlc.open ? '#4ADE80' : '#F87171' }}>
-              {ohlc.close.toFixed(dec)}
-            </span>
-          </div>
+          <div>C <span style={{ color: ohlc.close >= ohlc.open ? '#4ADE80' : '#F87171' }}>{ohlc.close.toFixed(dec)}</span></div>
         </div>
       )}
 
       {loading && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(255,255,255,.9)',
-            gap: 8,
-          }}
-        >
-          <div
-            style={{
-              width: 22,
-              height: 22,
-              border: '2px solid #2255CC',
-              borderTopColor: 'transparent',
-              borderRadius: '50%',
-              animation: 'spin .8s linear infinite',
-            }}
-          />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,.9)', gap: 8 }}>
+          <div style={{ width: 22, height: 22, border: '2px solid #2255CC', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
           <div style={{ fontSize: 11, color: '#8FA3BF' }}>Se incarca {sym}…</div>
         </div>
       )}
 
       {error && !loading && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(255,255,255,.9)',
-            gap: 8,
-          }}
-        >
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,.9)', gap: 8 }}>
           <div style={{ fontSize: 12, color: '#DC2626' }}>⚠ {error}</div>
-          <button
-            onClick={load}
-            style={{
-              padding: '5px 14px',
-              background: '#2255CC',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              fontSize: 11,
-              cursor: 'pointer',
-            }}
-          >
+          <button onClick={load} style={{ padding: '5px 14px', background: '#2255CC', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
             Incearca din nou
           </button>
         </div>
