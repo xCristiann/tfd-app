@@ -144,6 +144,85 @@ function dist(x1: number, y1: number, x2: number, y2: number) {
   return Math.hypot(x1 - x2, y1 - y2)
 }
 
+function calcProjectedPnl(trade: ChartTrade, targetPrice: number, currentSym: string) {
+  const lots = Number(trade.lots) || 0
+  const open = Number(trade.open_price) || 0
+  if (!lots || !open || !targetPrice) return 0
+
+  const diff =
+    trade.direction === 'buy'
+      ? targetPrice - open
+      : open - targetPrice
+
+  if (currentSym.endsWith('/JPY')) {
+    return diff * 100000 / Math.max(targetPrice, 0.00001) * lots
+  }
+
+  if (currentSym === 'USD/CHF' || currentSym === 'USD/CAD') {
+    return diff * 100000 / Math.max(targetPrice, 0.00001) * lots
+  }
+
+  if (currentSym === 'XAU/USD') {
+    return diff * 100 * lots
+  }
+
+  if (currentSym === 'XAG/USD') {
+    return diff * 5000 * lots
+  }
+
+  if (currentSym === 'US30' || currentSym === 'JPN225') {
+    return diff * 5 * lots
+  }
+
+  if (currentSym === 'NAS100') {
+    return diff * 20 * lots
+  }
+
+  if (currentSym === 'SPX500') {
+    return diff * 50 * lots
+  }
+
+  if (
+    currentSym === 'GER40' ||
+    currentSym === 'UK100' ||
+    currentSym === 'HK50' ||
+    currentSym === 'AUS200' ||
+    currentSym === 'FRA40' ||
+    currentSym === 'ESP35' ||
+    currentSym === 'ESTX50' ||
+    currentSym === 'CHINAA50' ||
+    currentSym === 'FANG4'
+  ) {
+    return diff * 10 * lots
+  }
+
+  if (currentSym === 'USDX' || currentSym === 'VIX') {
+    return diff * 100 * lots
+  }
+
+  if (
+    currentSym === 'WTI' ||
+    currentSym === 'BRENT' ||
+    currentSym === 'Gasoline' ||
+    currentSym === 'HeatingOil'
+  ) {
+    return diff * 1000 * lots
+  }
+
+  if (currentSym === 'NATGAS') {
+    return diff * 10000 * lots
+  }
+
+  return diff * 100000 * lots
+}
+
+function fmtMoney(v: number) {
+  const n = Number(v) || 0
+  return ${n >= 0 ? '+' : '-'}function dist(x1: number, y1: number, x2: number, y2: number) {
+  return Math.hypot(x1 - x2, y1 - y2)
+}{Math.abs(n).toFixed(2)}
+}
+
 function hexToRgba(hex: string, alpha: number) {
   const h = hex.replace('#', '')
   if (h.length !== 6) return hex
@@ -500,8 +579,61 @@ export function MT5Chart({
             : (t.tp ?? null)
 
         const sel = selectionRef.current?.kind === 'trade' && selectionRef.current.tradeId === t.id
-        drawExtendedLineWithLabel(ctx, typeof slValue === 'number' ? slValue : null, S.slLine, 'SL', dec, toY, minP, maxP, W, !!sel && selectionRef.current?.field === 'sl')
-        drawExtendedLineWithLabel(ctx, typeof tpValue === 'number' ? tpValue : null, S.tpLine, 'TP', dec, toY, minP, maxP, W, !!sel && selectionRef.current?.field === 'tp')
+
+        drawExtendedLineWithLabel(
+          ctx,
+          typeof slValue === 'number' ? slValue : null,
+          S.slLine,
+          'SL',
+          dec,
+          toY,
+          minP,
+          maxP,
+          W,
+          !!sel && selectionRef.current?.field === 'sl'
+        )
+
+        drawExtendedLineWithLabel(
+          ctx,
+          typeof tpValue === 'number' ? tpValue : null,
+          S.tpLine,
+          'TP',
+          dec,
+          toY,
+          minP,
+          maxP,
+          W,
+          !!sel && selectionRef.current?.field === 'tp'
+        )
+
+        const labelBox = (text: string, x: number, y: number, bg: string) => {
+          ctx.font = 'bold 10px Inter, sans-serif'
+          const padX = 6
+          const w = ctx.measureText(text).width + padX * 2
+          const h = 18
+
+          ctx.fillStyle = bg
+          ctx.beginPath()
+          ctx.roundRect(x - w / 2, y - h / 2, w, h, 4)
+          ctx.fill()
+
+          ctx.fillStyle = '#fff'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(text, x, y + 1)
+        }
+
+        if (typeof tpValue === 'number') {
+          const pnlTp = calcProjectedPnl(t, tpValue, sym)
+          const yTp = toY(tpValue)
+          labelBox(fmtMoney(pnlTp), W - PAD.right - 90, yTp - 12, '#16A34A')
+        }
+
+        if (typeof slValue === 'number') {
+          const pnlSl = calcProjectedPnl(t, slValue, sym)
+          const ySl = toY(slValue)
+          labelBox(fmtMoney(pnlSl), W - PAD.right - 90, ySl - 12, '#DC2626')
+        }
       })
 
     const drawingsToRender = draftDrawingRef.current ? [...drawingsRef.current, draftDrawingRef.current] : drawingsRef.current
@@ -1332,3 +1464,4 @@ export function MT5Chart({
     </div>
   )
 }
+
