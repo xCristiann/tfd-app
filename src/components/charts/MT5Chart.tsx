@@ -136,6 +136,23 @@ function fmtTime(ts: number, tf: string) {
   })
 }
 
+function tfToSeconds(tf: string) {
+  if (tf === '1') return 60
+  if (tf === '5') return 300
+  if (tf === '15') return 900
+  if (tf === '30') return 1800
+  if (tf === '60') return 3600
+  if (tf === '240') return 14400
+  if (tf === 'D') return 86400
+  if (tf === 'W') return 604800
+  return 60
+}
+
+function getBucketStart(tsSec: number, tf: string) {
+  const size = tfToSeconds(tf)
+  return Math.floor(tsSec / size) * size
+}
+
 function makeId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
@@ -741,10 +758,27 @@ export function MT5Chart({
 
   useEffect(() => {
     if (!livePrice || !candlesRef.current.length) return
+
+    const nowSec = Math.floor(Date.now() / 1000)
+    const currentBucket = getBucketStart(nowSec, tfRef.current)
+
     const last = candlesRef.current[candlesRef.current.length - 1]
-    last.close = livePrice
-    if (livePrice > last.high) last.high = livePrice
-    if (livePrice < last.low) last.low = livePrice
+    const lastBucket = getBucketStart(last.time, tfRef.current)
+
+    if (currentBucket > lastBucket) {
+      candlesRef.current.push({
+        time: currentBucket,
+        open: livePrice,
+        high: livePrice,
+        low: livePrice,
+        close: livePrice,
+      })
+    } else {
+      last.close = livePrice
+      if (livePrice > last.high) last.high = livePrice
+      if (livePrice < last.low) last.low = livePrice
+    }
+
     draw()
   }, [livePrice, draw])
 
@@ -1439,3 +1473,5 @@ export function MT5Chart({
     </div>
   )
 }
+
+
