@@ -757,6 +757,47 @@ export function MT5Chart({
   }, [load])
 
   useEffect(() => {
+    let cancelled = false
+
+    const syncCandles = async () => {
+      try {
+        const fresh = await requestCandles(sym, tfRef.current)
+        if (cancelled || !fresh || !fresh.length) return
+
+        const current = candlesRef.current
+        if (!current.length) {
+          candlesRef.current = fresh
+          draw()
+          return
+        }
+
+        const oldLast = current[current.length - 1]
+        const newLast = fresh[fresh.length - 1]
+
+        const changed =
+          fresh.length !== current.length ||
+          oldLast.time !== newLast.time ||
+          oldLast.open !== newLast.open ||
+          oldLast.high !== newLast.high ||
+          oldLast.low !== newLast.low ||
+          oldLast.close !== newLast.close
+
+        if (changed) {
+          candlesRef.current = fresh
+          draw()
+        }
+      } catch {
+      }
+    }
+
+    const id = setInterval(syncCandles, 2000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [sym, requestCandles, draw])
+
+  useEffect(() => {
   if (!livePrice || !candlesRef.current.length) return
 
   const last = candlesRef.current[candlesRef.current.length - 1]
@@ -1458,6 +1499,10 @@ export function MT5Chart({
     </div>
   )
 }
+
+
+
+
 
 
 
