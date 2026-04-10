@@ -757,30 +757,15 @@ export function MT5Chart({
   }, [load])
 
   useEffect(() => {
-    if (!livePrice || !candlesRef.current.length) return
+  if (!livePrice || !candlesRef.current.length) return
 
-    const nowSec = Math.floor(Date.now() / 1000)
-    const currentBucket = getBucketStart(nowSec, tfRef.current)
+  const last = candlesRef.current[candlesRef.current.length - 1]
+  last.close = livePrice
+  if (livePrice > last.high) last.high = livePrice
+  if (livePrice < last.low) last.low = livePrice
 
-    const last = candlesRef.current[candlesRef.current.length - 1]
-    const lastBucket = getBucketStart(last.time, tfRef.current)
-
-    if (currentBucket > lastBucket) {
-      candlesRef.current.push({
-        time: currentBucket,
-        open: livePrice,
-        high: livePrice,
-        low: livePrice,
-        close: livePrice,
-      })
-    } else {
-      last.close = livePrice
-      if (livePrice > last.high) last.high = livePrice
-      if (livePrice < last.low) last.low = livePrice
-    }
-
-    draw()
-  }, [livePrice, draw])
+  draw()
+}, [livePrice, draw])
 
   useEffect(() => {
     const el = wrapRef.current
@@ -1473,5 +1458,6 @@ export function MT5Chart({
     </div>
   )
 }
+
 
 
