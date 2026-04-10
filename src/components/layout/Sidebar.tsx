@@ -38,7 +38,7 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
       <aside className="w-[212px] bg-white border-r border-[#E8EEF8] flex flex-col flex-shrink-0 h-full">
         <div className="px-5 py-4 border-b border-[#E8EEF8]">
           <div className="mb-1">
-            <img src="/logo.png" alt="The Funded Diaries" style={{height:'36px',width:'auto',objectFit:'contain'}}/>
+            <img src="/logo.png" alt="The Funded Diaries" style={{height:'42px',width:'auto',objectFit:'contain'}}/>
           </div>
           <div className="text-[9px] uppercase tracking-[2px]" style={{fontWeight:600,color:accent,opacity:.7}}>{logo.subtitle}</div>
           {accountBox && (
@@ -155,7 +155,7 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
             }}>
               <div>
                 <div>
-                  <img src="/logo.png" alt="The Funded Diaries" style={{height:'36px',width:'auto',objectFit:'contain'}}/>
+                  <img src="/logo.png" alt="The Funded Diaries" style={{height:'42px',width:'auto',objectFit:'contain'}}/>
                 </div>
                 <div style={{fontSize:'9px',fontWeight:600,color:accent,opacity:.7,textTransform:'uppercase',letterSpacing:'2px',marginTop:'2px'}}>{logo.subtitle}</div>
               </div>
