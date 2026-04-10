@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/useToast'
@@ -124,6 +124,29 @@ const SEED = {
 const TF_LIST = ['1','5','15','30','60','240','D','W']
 const TF_LABEL = {'1':'1m','5':'5m','15':'15m','30':'30m','60':'1h','240':'4h','D':'1D','W':'1W'}
 
+const ORDER_MODE_META = {
+  market: { label:'Market', sideOnly:true },
+  buy_limit: { label:'Buy Limit', side:'buy' },
+  sell_limit: { label:'Sell Limit', side:'sell' },
+  buy_stop: { label:'Buy Stop', side:'buy' },
+  sell_stop: { label:'Sell Stop', side:'sell' },
+}
+
+function orderModeLabel(mode){
+  return ORDER_MODE_META[mode]?.label ?? mode
+}
+
+function shouldTriggerPending(order, price){
+  if(!order||!price||price<=0) return false
+  const trg = Number(order.trigger_price)
+  if(!trg||trg<=0) return false
+  if(order.order_type==='buy_limit') return price<=trg
+  if(order.order_type==='sell_limit') return price>=trg
+  if(order.order_type==='buy_stop') return price>=trg
+  if(order.order_type==='sell_stop') return price<=trg
+  return false
+}
+
 function lsGet(k,fb){try{return localStorage.getItem(k)||fb}catch{return fb}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch{}}
 
@@ -196,8 +219,10 @@ export function PlatformPage() {
   const primary=accounts.find(a=>a.id===selAccId)??defPrimary
   const [sym,setSym]=useState(()=>{const s=lsGet('tfd_sym','EUR/USD');return ALL_INSTRUMENTS.find(i=>i.sym===s)?s:'EUR/USD'})
   const [tf,setTf]=useState(()=>lsGet('tfd_tf','60'))
+  const [orderMode,setOrderMode]=useState('market')
   const [dir,setDir]=useState('buy')
   const [lots,setLots]=useState('0.10')
+  const [triggerPrice,setTriggerPrice]=useState('')
   const [sl,setSl]=useState('')
   const [tp,setTp]=useState('')
   const [tab,setTab]=useState('positions')
@@ -207,6 +232,7 @@ export function PlatformPage() {
   const [editSLTP,setEditSLTP]=useState(null)
   const [openTrades,setOpenTrades]=useState([])
   const [closedTrades,setClosedTrades]=useState([])
+  const [pendingOrders,setPendingOrders]=useState([])
   const [favorites,setFavorites]=useState(()=>{
     try{return new Set(JSON.parse(localStorage.getItem('tfd_favs')||'[]'))}
     catch{return new Set(['EUR/USD','XAU/USD','NAS100'])}
@@ -226,13 +252,16 @@ export function PlatformPage() {
 
   const tradesRef=useRef(openTrades); tradesRef.current=openTrades
   const primaryRef=useRef(primary); primaryRef.current=primary
+  const pendingRef=useRef(pendingOrders); pendingRef.current=pendingOrders
   const closingRef=useRef(new Set())
   const prices=mt5Prices
   const inst=(ALL_INSTRUMENTS.find(i=>i.sym===sym)??ALL_INSTRUMENTS[0])
   const livePrice=refPrices.current[sym]||SEED[sym]||1
   const prevPrice=refPrev.current[sym]||livePrice
   const up=livePrice>=prevPrice
-  const execPrice=+(dir==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
+  const effectiveSide=orderMode==='market'?dir:(ORDER_MODE_META[orderMode]?.side ?? dir)
+  const execPrice=+(effectiveSide==='buy'?livePrice+inst.spread:livePrice).toFixed(inst.dec)
+  const pendingTrigger = triggerPrice!=='' ? +Number(triggerPrice).toFixed(inst.dec) : null
   const lotsNum=Math.max(0.01,parseFloat(lots)||0.01)
   const balance=primary?.balance??0
   const openPnl=openTrades.reduce((s,t)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price),0)
@@ -254,6 +283,11 @@ export function PlatformPage() {
     if(!primary?.id) return
     supabase.from('trades').select('*').eq('account_id',primary.id).eq('status','open').order('opened_at',{ascending:false}).then(({data})=>setOpenTrades(data??[]))
     supabase.from('trades').select('*').eq('account_id',primary.id).eq('status','closed').order('closed_at',{ascending:false}).limit(50).then(({data})=>setClosedTrades(data??[]))
+  },[primary?.id])
+
+  useEffect(()=>{
+    if(!primary?.id) return
+    supabase.from('pending_orders').select('*').eq('account_id',primary.id).eq('status','pending').order('placed_at',{ascending:false}).then(({data})=>setPendingOrders(data??[]))
   },[primary?.id])
 
   useRiskMonitor(tradesRef,refPrices,primaryRef,primary?.id,async(reason,trades)=>{
@@ -302,6 +336,63 @@ export function PlatformPage() {
     return()=>clearInterval(iv)
   },[primary?.id])
 
+
+  useEffect(()=>{
+    if(!primary?.id) return
+    const iv=setInterval(async()=>{
+      const orders=pendingRef.current
+      const pr=primaryRef.current
+      if(!orders.length||!pr||marketStatus==='closed') return
+      for(const o of orders){
+        const cur=refPrices.current[o.symbol]
+        if(!shouldTriggerPending(o,cur)) continue
+        const i=ALL_INSTRUMENTS.find(x=>x.sym===o.symbol)
+        if(!i) continue
+
+        const side=o.side==='sell'?'sell':'buy'
+        const entry=+(side==='buy'?cur+i.spread:cur).toFixed(i.dec)
+        const lotsPending=Math.max(0.01,Number(o.lots)||0.01)
+        const required=calcMargin(o.symbol, entry, lotsPending)
+        const currentUsed=tradesRef.current.reduce((s,t)=>{
+          const px=refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price
+          return s+calcMargin(t.symbol,px,Number(t.lots)||0)
+        },0)
+        const currentOpenPnl=tradesRef.current.reduce((s,t)=>s+calcPnl(t,refPrices.current[t.symbol]||SEED[t.symbol]||t.open_price),0)
+        const currentEq=(pr.balance??0)+currentOpenPnl
+        const currentFree=Math.max(0,currentEq-currentUsed)
+
+        if(required>currentFree){
+          await supabase.from('pending_orders').update({status:'cancelled',cancelled_at:new Date().toISOString(),note:'Insufficient margin on trigger'}).eq('id',o.id)
+          setPendingOrders(prev=>prev.filter(x=>x.id!==o.id))
+          toast('error','⚠️',`${o.symbol} pending cancelled`,'Insufficient margin at trigger')
+          continue
+        }
+
+        const {data:newTrade,error:newTradeError}=await supabase.from('trades').insert({
+          account_id:pr.id,
+          user_id:pr.user_id,
+          symbol:o.symbol,
+          direction:side,
+          lots:lotsPending,
+          open_price:entry,
+          status:'open',
+          sl:o.stop_loss ?? null,
+          tp:o.take_profit ?? null,
+          opened_at:new Date().toISOString(),
+          note:`Triggered from ${o.order_type} @ ${o.trigger_price}`,
+        }).select().single()
+
+        if(newTradeError) continue
+
+        await supabase.from('pending_orders').update({status:'triggered',triggered_at:new Date().toISOString()}).eq('id',o.id)
+        setPendingOrders(prev=>prev.filter(x=>x.id!==o.id))
+        setOpenTrades(prev=>[newTrade,...prev])
+        toast('success','🚀',`${orderModeLabel(o.order_type)} triggered`,`${o.symbol} ${side.toUpperCase()} @ ${entry}`)
+      }
+    },500)
+    return()=>clearInterval(iv)
+  },[primary?.id,marketStatus])
+
   const toggleFav=(s)=>{setFavorites(prev=>{const n=new Set(prev);n.has(s)?n.delete(s):n.add(s);localStorage.setItem('tfd_favs',JSON.stringify([...n]));return n})}
 
   async function placeOrder(){
@@ -309,16 +400,64 @@ export function PlatformPage() {
     if(!primary?.id){toast('error','❌','No Account','Select an account');return}
     if(primary.status==='breached'){toast('error','❌','Breached','Account is breached');return}
     if(primary.status==='soft_locked'){toast('error','🔒','Frozen','Account is frozen pending risk investigation. Trading suspended.');return}
-    if(reqMgn>freeMgn){toast('error','❌','Margin',`Max ${maxLots} lots`);return}
+
     setPlacing(true)
     let traderIp=null
     try{const r=await fetch('https://api.ipify.org?format=json');const d=await r.json();traderIp=d.ip??null}catch{}
-    const {data,error}=await supabase.from('trades').insert({account_id:primary.id,user_id:primary.user_id,symbol:sym,direction:dir,lots:lotsNum,open_price:execPrice,status:'open',sl:sl?parseFloat(sl):null,tp:tp?parseFloat(tp):null,opened_at:new Date().toISOString(),ip_address:traderIp}).select().single()
+
+    if(orderMode==='market'){
+      if(reqMgn>freeMgn){setPlacing(false);toast('error','❌','Margin',`Max ${maxLots} lots`);return}
+      const {data,error}=await supabase.from('trades').insert({account_id:primary.id,user_id:primary.user_id,symbol:sym,direction:dir,lots:lotsNum,open_price:execPrice,status:'open',sl:sl?parseFloat(sl):null,tp:tp?parseFloat(tp):null,opened_at:new Date().toISOString(),ip_address:traderIp}).select().single()
+      setPlacing(false)
+      if(error){toast('error','❌','Error',error.message);return}
+      setOpenTrades(p=>[data,...p])
+      toast('success','✅',`${dir.toUpperCase()} ${sym}`,`${lotsNum} lots @ ${execPrice}`)
+      setSl('');setTp('');setTriggerPrice('')
+      return
+    }
+
+    if(pendingTrigger===null || !Number.isFinite(pendingTrigger) || pendingTrigger<=0){
+      setPlacing(false);toast('error','❌','Trigger Price','Enter a valid trigger price');return
+    }
+
+    const invalidLimit =
+      (orderMode==='buy_limit' && pendingTrigger>=livePrice) ||
+      (orderMode==='sell_limit' && pendingTrigger<=livePrice) ||
+      (orderMode==='buy_stop' && pendingTrigger<=livePrice) ||
+      (orderMode==='sell_stop' && pendingTrigger>=livePrice)
+
+    if(invalidLimit){
+      setPlacing(false);toast('error','❌','Invalid Price','Trigger price is on the wrong side of the current market');return
+    }
+
+    const side=ORDER_MODE_META[orderMode]?.side ?? dir
+    const {data,error}=await supabase.from('pending_orders').insert({
+      account_id:primary.id,
+      user_id:primary.user_id,
+      symbol:sym,
+      side,
+      order_type:orderMode,
+      lots:lotsNum,
+      trigger_price:pendingTrigger,
+      stop_loss:sl?parseFloat(sl):null,
+      take_profit:tp?parseFloat(tp):null,
+      status:'pending',
+      placed_at:new Date().toISOString(),
+      note:`Placed from terminal`,
+    }).select().single()
+
     setPlacing(false)
     if(error){toast('error','❌','Error',error.message);return}
-    setOpenTrades(p=>[data,...p])
-    toast('success','✅',`${dir.toUpperCase()} ${sym}`,`${lotsNum} lots @ ${execPrice}`)
-    setSl('');setTp('')
+
+    setPendingOrders(prev=>[data,...prev])
+    toast('success','⏳',orderModeLabel(orderMode),`${sym} @ ${pendingTrigger.toFixed(inst.dec)}`)
+    setSl('');setTp('');setTriggerPrice('')
+  }
+
+  async function cancelPendingOrder(o){
+    await supabase.from('pending_orders').update({status:'cancelled',cancelled_at:new Date().toISOString()}).eq('id',o.id)
+    setPendingOrders(prev=>prev.filter(x=>x.id!==o.id))
+    toast('success','🗑️','Pending order cancelled',`${o.symbol} ${orderModeLabel(o.order_type)}`)
   }
 
   async function closeTrade(t){
@@ -447,15 +586,37 @@ export function PlatformPage() {
         <div style={{width:isMobile?'100%':'230px',background:'#fff',borderLeft:'1px solid #E8EEF8',display:isMobile&&mobilePanel!=='trade'?'none':'flex',flexDirection:'column',flexShrink:0}}>
           <div style={{padding:'10px',flex:1,overflowY:'auto'}}>
             <div style={{fontSize:'9px',fontWeight:700,color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:'8px'}}>New Order — {sym}</div>
+            <div style={{marginBottom:'8px'}}>
+              <div style={{fontSize:'8px',color:'#8FA3BF',fontWeight:700,textTransform:'uppercase',marginBottom:'3px'}}>Order Type</div>
+              <select value={orderMode} onChange={e=>setOrderMode(e.target.value)} style={{width:'100%',padding:'7px',background:'#fff',border:'1px solid #E8EEF8',borderRadius:'7px',fontSize:'11px',color:'#1A3A6B',outline:'none'}}>
+                <option value="market">Market</option>
+                <option value="buy_limit">Buy Limit</option>
+                <option value="sell_limit">Sell Limit</option>
+                <option value="buy_stop">Buy Stop</option>
+                <option value="sell_stop">Sell Stop</option>
+              </select>
+            </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5px',marginBottom:'8px'}}>
-              <button onClick={()=>marketStatus!=='closed'&&setDir('buy')} style={{padding:'9px',border:'none',borderRadius:'7px',cursor:marketStatus==='closed'?'not-allowed':'pointer',fontWeight:700,fontSize:'12px',background:marketStatus==='closed'?'#F4F7FD':dir==='buy'?'#16A34A':'#F4F7FD',color:marketStatus==='closed'?'#D1D5DB':dir==='buy'?'#fff':'#5C7A9E',opacity:marketStatus==='closed'?0.5:1}}>BUY</button>
-              <button onClick={()=>marketStatus!=='closed'&&setDir('sell')} style={{padding:'9px',border:'none',borderRadius:'7px',cursor:marketStatus==='closed'?'not-allowed':'pointer',fontWeight:700,fontSize:'12px',background:marketStatus==='closed'?'#F4F7FD':dir==='sell'?'#DC2626':'#F4F7FD',color:marketStatus==='closed'?'#D1D5DB':dir==='sell'?'#fff':'#5C7A9E',opacity:marketStatus==='closed'?0.5:1}}>SELL</button>
+              <button onClick={()=>marketStatus!=='closed'&&setDir('buy')} disabled={orderMode!=='market'} style={{padding:'9px',border:'none',borderRadius:'7px',cursor:marketStatus==='closed'||orderMode!=='market'?'not-allowed':'pointer',fontWeight:700,fontSize:'12px',background:marketStatus==='closed'||orderMode!=='market'?'#F4F7FD':dir==='buy'?'#16A34A':'#F4F7FD',color:marketStatus==='closed'||orderMode!=='market'?'#D1D5DB':dir==='buy'?'#fff':'#5C7A9E',opacity:marketStatus==='closed'||orderMode!=='market'?0.5:1}}>BUY</button>
+              <button onClick={()=>marketStatus!=='closed'&&setDir('sell')} disabled={orderMode!=='market'} style={{padding:'9px',border:'none',borderRadius:'7px',cursor:marketStatus==='closed'||orderMode!=='market'?'not-allowed':'pointer',fontWeight:700,fontSize:'12px',background:marketStatus==='closed'||orderMode!=='market'?'#F4F7FD':dir==='sell'?'#DC2626':'#F4F7FD',color:marketStatus==='closed'||orderMode!=='market'?'#D1D5DB':dir==='sell'?'#fff':'#5C7A9E',opacity:marketStatus==='closed'||orderMode!=='market'?0.5:1}}>SELL</button>
             </div>
-            <div style={{background:dir==='buy'?'rgba(22,163,74,.08)':'rgba(220,38,38,.08)',border:`1px solid ${dir==='buy'?'rgba(22,163,74,.2)':'rgba(220,38,38,.2)'}`,borderRadius:'8px',padding:'8px',marginBottom:'8px',textAlign:'center'}}>
-              <div style={{fontSize:'8px',color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'2px'}}>{dir==='buy'?'Ask':'Bid'}</div>
-              <div style={{...mono,fontSize:'22px',fontWeight:700,color:dir==='buy'?'#16A34A':'#DC2626'}}>{execPrice.toFixed(inst.dec)}</div>
-              <div style={{fontSize:'8px',color:'#8FA3BF'}}>spread {inst.spread.toFixed(inst.dec)}</div>
+            <div style={{background:effectiveSide==='buy'?'rgba(22,163,74,.08)':'rgba(220,38,38,.08)',border:`1px solid ${effectiveSide==='buy'?'rgba(22,163,74,.2)':'rgba(220,38,38,.2)'}`,borderRadius:'8px',padding:'8px',marginBottom:'8px',textAlign:'center'}}>
+              <div style={{fontSize:'8px',color:'#8FA3BF',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'2px'}}>
+                {orderMode==='market' ? (effectiveSide==='buy'?'Ask':'Bid') : 'Trigger'}
+              </div>
+              <div style={{...mono,fontSize:'22px',fontWeight:700,color:effectiveSide==='buy'?'#16A34A':'#DC2626'}}>
+                {(orderMode==='market'?execPrice:(pendingTrigger??livePrice)).toFixed(inst.dec)}
+              </div>
+              <div style={{fontSize:'8px',color:'#8FA3BF'}}>
+                {orderMode==='market' ? `spread ${inst.spread.toFixed(inst.dec)}` : orderModeLabel(orderMode)}
+              </div>
             </div>
+            {orderMode!=='market'&&(
+              <div style={{marginBottom:'8px'}}>
+                <div style={{fontSize:'8px',color:'#8FA3BF',fontWeight:700,textTransform:'uppercase',marginBottom:'3px'}}>Trigger Price</div>
+                <input value={triggerPrice} onChange={e=>setTriggerPrice(e.target.value)} placeholder={livePrice.toFixed(inst.dec)} type="number" style={{width:'100%',padding:'7px',background:'#FFF',border:'1px solid #E8EEF8',borderRadius:'7px',fontSize:'11px',color:'#1A3A6B',outline:'none',...mono,boxSizing:'border-box'}}/>
+              </div>
+            )}
             <div style={{marginBottom:'7px'}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'3px'}}>
                 <span style={{fontSize:'8px',color:'#8FA3BF',fontWeight:600,textTransform:'uppercase'}}>Lots</span>
@@ -491,7 +652,7 @@ export function PlatformPage() {
               <div style={{width:'100%',padding:'10px',fontSize:'11px',fontWeight:700,border:'none',borderRadius:'7px',background:'#F4F7FD',color:'#9CA3AF',textAlign:'center'}}>🔒 Market Closed</div>
             ):(
               <button onClick={placeOrder} disabled={placing||!primary||primary.status==='breached'||lotsNum>maxLots} style={{width:'100%',padding:'10px',fontSize:'12px',fontWeight:700,border:'none',borderRadius:'7px',cursor:lotsNum>maxLots?'not-allowed':'pointer',background:lotsNum>maxLots?'#9CA3AF':dir==='buy'?'#16A34A':'#DC2626',color:'#fff',opacity:placing||!primary?0.6:1,textTransform:'uppercase'}}>
-                {placing?'…':`${dir.toUpperCase()} ${lotsNum} ${sym}`}
+                {placing?'…':`${orderMode==='market'?dir.toUpperCase():orderModeLabel(orderMode).toUpperCase()} ${lotsNum} ${sym}`}
               </button>
             )}
           </div>
@@ -500,6 +661,7 @@ export function PlatformPage() {
               ['Account',primary?.account_number??'—','#1A3A6B'],
               ['Type',accountTypeLabel(primary?.phase??'phase1',primary?.challenge_products?.challenge_type),'#2255CC'],
               ['Status',primary?.status??'—',primary?.status==='active'?'#16A34A':'#DC2626'],
+              ['Pending',String(pendingOrders.length),'#F59E0B'],
             ].map(([l,v,c])=>(
               <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'2px 0',fontSize:'9px'}}>
                 <span style={{color:'#8FA3BF'}}>{l}</span>
@@ -512,9 +674,9 @@ export function PlatformPage() {
 
       <div style={{height:'175px',background:'#fff',borderTop:'1px solid #E8EEF8',flexShrink:0,display:'flex',flexDirection:'column'}}>
         <div style={{display:'flex',alignItems:'center',borderBottom:'1px solid #E8EEF8',height:'32px',padding:'0 12px',flexShrink:0}}>
-          {['positions','history'].map(t=>(
+          {['positions','pending','history'].map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{padding:'0 12px',height:'32px',fontSize:'10px',fontWeight:600,border:'none',borderBottom:tab===t?'2px solid #2255CC':'2px solid transparent',background:'transparent',color:tab===t?'#2255CC':'#8FA3BF',cursor:'pointer',textTransform:'capitalize'}}>
-              {t}{t==='positions'&&openTrades.length>0?` (${openTrades.length})`:''}</button>
+              {t}{t==='positions'&&openTrades.length>0?` (${openTrades.length})`:t==='pending'&&pendingOrders.length>0?` (${pendingOrders.length})`:''}</button>
           ))}
           <div style={{marginLeft:'auto',...mono,fontSize:'11px',fontWeight:600,color:openPnl>=0?'#16A34A':'#DC2626'}}>Float: {openPnl>=0?'+':''}${(openPnl||0).toFixed(2)}</div>
         </div>
@@ -563,6 +725,28 @@ export function PlatformPage() {
                     </tr>
                   )
                 })}</tbody>
+              </table>
+          ):tab==='pending'?(
+            pendingOrders.length===0
+              ?<div style={{padding:'16px',textAlign:'center',fontSize:'11px',color:'#8FA3BF'}}>No pending orders</div>
+              :<table style={{width:'100%',borderCollapse:'collapse',fontSize:'10px'}}>
+                <thead><tr>{['Symbol','Type','Lots','Trigger','SL','TP','Placed','Actions'].map(h=>(
+                  <th key={h} style={{padding:'3px 7px',fontSize:'8px',textTransform:'uppercase',letterSpacing:'1px',color:'#8FA3BF',fontWeight:600,textAlign:'left',background:'#FAFBFF',borderBottom:'1px solid #F0F4FB',whiteSpace:'nowrap'}}>{h}</th>
+                ))}</tr></thead>
+                <tbody>{pendingOrders.map(o=>(
+                  <tr key={o.id} style={{borderBottom:'1px solid #F4F7FD'}}>
+                    <td style={{padding:'4px 7px',fontWeight:600}}><button onClick={()=>setSym(o.symbol)} style={{background:'none',border:'none',cursor:'pointer',fontWeight:600,color:'#2255CC',fontSize:'10px',padding:0}}>{o.symbol}</button></td>
+                    <td style={{padding:'4px 7px',fontWeight:700,color:o.side==='buy'?'#16A34A':'#DC2626'}}>{orderModeLabel(o.order_type)}</td>
+                    <td style={{padding:'4px 7px',...mono}}>{o.lots}</td>
+                    <td style={{padding:'4px 7px',...mono,color:'#5C7A9E'}}>{Number(o.trigger_price||0).toFixed(ALL_INSTRUMENTS.find(x=>x.sym===o.symbol)?.dec??5)}</td>
+                    <td style={{padding:'4px 7px',...mono,color:'#DC2626'}}>{o.stop_loss??'—'}</td>
+                    <td style={{padding:'4px 7px',...mono,color:'#16A34A'}}>{o.take_profit??'—'}</td>
+                    <td style={{padding:'4px 7px',color:'#8FA3BF',fontSize:'9px'}}>{o.placed_at?new Date(o.placed_at).toLocaleString():'—'}</td>
+                    <td style={{padding:'4px 7px'}}>
+                      <button onClick={()=>cancelPendingOrder(o)} style={{padding:'2px 7px',fontSize:'9px',fontWeight:600,background:'#FEF2F2',border:'1px solid rgba(220,38,38,.2)',borderRadius:'4px',cursor:'pointer',color:'#DC2626'}}>Cancel</button>
+                    </td>
+                  </tr>
+                ))}</tbody>
               </table>
           ):(
             closedTrades.length===0
@@ -616,7 +800,7 @@ export function PlatformPage() {
       <ToastContainer toasts={toasts} dismiss={dismiss}/>
       {isMobile&&(
         <div style={{display:'flex',background:'#1A3A6B',borderTop:'1px solid rgba(255,255,255,.1)',flexShrink:0}}>
-          {[['chart','📈','Chart'],['trade','🎯','Trade'],['positions','📋','Positions']].map(([id,icon,label])=>(
+          {[['chart','📈','Chart'],['trade','🎯','Trade'],['positions','📋','Positions'],['pending','⏳','Pending']].map(([id,icon,label])=>(
             <button key={id} onClick={()=>setMobilePanel(id)} style={{flex:1,padding:'10px 4px',background:mobilePanel===id?'rgba(255,255,255,.15)':'transparent',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:'2px',borderTop:mobilePanel===id?'2px solid #60A5FA':'2px solid transparent',color:'#fff'}}>
               <span style={{fontSize:'16px'}}>{icon}</span>
               <span style={{fontSize:'9px',fontWeight:600,letterSpacing:'0.5px'}}>{label}</span>
