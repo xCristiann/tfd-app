@@ -723,9 +723,15 @@ export function MT5Chart({
   }, [draw, tool, settings])
 
   const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  setLoading(true)
+  setError(null)
 
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+  let lastErr: any = null
+  let loaded = false
+
+  for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const data = await requestCandles(sym, tf)
       if (!data?.length) throw new Error('Fara date')
@@ -745,12 +751,20 @@ export function MT5Chart({
       viewRef.current.offset = Math.max(0, data.length - vis)
 
       draw()
+      loaded = true
+      break
     } catch (e: any) {
-      setError(e.message || 'Eroare')
+      lastErr = e
+      await sleep(700)
     }
+  }
 
-    setLoading(false)
-  }, [sym, tf, requestCandles, shiftBars, draw])
+  if (!loaded) {
+    setError(lastErr?.message || 'Eroare')
+  }
+
+  setLoading(false)
+}, [sym, tf, requestCandles, shiftBars, draw])
 
   useEffect(() => {
     load()
@@ -1480,6 +1494,7 @@ useEffect(() => {
     </div>
   )
 }
+
 
 
 
