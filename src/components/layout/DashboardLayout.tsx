@@ -181,8 +181,10 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
       {/* Top nav — full width across entire page */}
         <nav style={{height:'64px',display:'flex',alignItems:'center',padding:'0 32px',borderBottom:'none',background:'linear-gradient(135deg, #1A3A8B 0%, #2255CC 100%)',flexShrink:0,zIndex:10,boxSizing:'border-box'}}>
           <div style={{width:'100%',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:'16px'}}>
-            {/* Empty left column to keep links centered */}
-            <div/>
+            {/* Logo left */}
+            <div style={{display:'flex',alignItems:'center'}}>
+              <img src="/logo.png" alt="The Funded Diaries" style={{height:'38px',width:'auto',objectFit:'contain'}}/>
+            </div>
             {/* Center links — hidden on mobile */}
             <div style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
               {!isMobile && [['How It Works','/#how'],['Challenge Plans','/#plans'],['Payouts','/#payouts'],['Features','/#features'],['Help Centre','/help']].map(([l,h])=>(

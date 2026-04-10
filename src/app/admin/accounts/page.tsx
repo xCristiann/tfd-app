@@ -122,7 +122,10 @@ export function AdminAccountsPage() {
           }
         }
       }
-      setMirrorGroups(Object.values(mirrorMap).filter((g:any)=>g.trades.length>=2))
+      // Only show mirror groups that include THIS account
+      setMirrorGroups(Object.values(mirrorMap).filter((g:any)=>
+        g.trades.length>=2 && g.trades.some((t:any)=>t.account===acc.account_number)
+      ))
 
       // 3. Trade IPs — other accounts with same trade IP
       const myIps = [...new Set(allTrades.map(t=>t.ip_address).filter(Boolean))]
@@ -176,9 +179,11 @@ export function AdminAccountsPage() {
         }
       }
 
-      // 8. Existing flags
+      // 8. Existing flags — filter by THIS account only
       const { data: fl } = await supabase.from('risk_flags').select('*')
-        .eq('user_id', acc.users?.id).order('flagged_at',{ascending:false})
+        .eq('user_id', acc.users?.id)
+        .eq('account_number', acc.account_number)
+        .order('flagged_at',{ascending:false})
       setFlags(fl??[])
 
     } catch(e) { console.error('[Risk tab]', e) }
@@ -217,7 +222,9 @@ export function AdminAccountsPage() {
 
   async function resolveFlag(flagId: string, userId: string, account: string, notes: string) {
     await supabase.from('risk_flags').update({status:'resolved',resolved_at:new Date().toISOString(),notes}).eq('id',flagId)
-    const {data:open} = await supabase.from('risk_flags').select('id').eq('user_id',userId).eq('status','open').neq('id',flagId)
+    // Check remaining open flags for THIS account only
+    const {data:open} = await supabase.from('risk_flags').select('id')
+      .eq('user_id',userId).eq('account_number',account).eq('status','open').neq('id',flagId)
     if (!open?.length) {
       await supabase.from('accounts').update({status:'active'}).eq('user_id',userId).eq('status','soft_locked')
       await supabase.from('notifications').insert({user_id:userId,type:'info',title:'✅ Account Unfrozen',body:`Your account ${account} has been cleared. Trading restored.`,is_read:false})

@@ -37,8 +37,8 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
     return (
       <aside className="w-[212px] bg-white border-r border-[#E8EEF8] flex flex-col flex-shrink-0 h-full">
         <div className="px-5 py-4 border-b border-[#E8EEF8]">
-          <div className="mb-1" style={{fontFamily:"'Playfair Display',serif",fontSize:'16px',fontWeight:700,color:'#1A3A6B',letterSpacing:'-0.2px'}}>
-            The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span>
+          <div className="mb-1">
+            <img src="/logo.png" alt="The Funded Diaries" style={{height:'36px',width:'auto',objectFit:'contain'}}/>
           </div>
           <div className="text-[9px] uppercase tracking-[2px]" style={{fontWeight:600,color:accent,opacity:.7}}>{logo.subtitle}</div>
           {accountBox && (
@@ -154,8 +154,8 @@ export function Sidebar({ logo, accountBox, nav, user, onLogout, accentColor = '
               display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',
             }}>
               <div>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:'17px',fontWeight:700,color:'#1A3A6B'}}>
-                  The Funded <span style={{color:'#2255CC',fontStyle:'italic'}}>Diaries</span>
+                <div>
+                  <img src="/logo.png" alt="The Funded Diaries" style={{height:'36px',width:'auto',objectFit:'contain'}}/>
                 </div>
                 <div style={{fontSize:'9px',fontWeight:600,color:accent,opacity:.7,textTransform:'uppercase',letterSpacing:'2px',marginTop:'2px'}}>{logo.subtitle}</div>
               </div>
