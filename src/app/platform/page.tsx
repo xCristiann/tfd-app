@@ -575,6 +575,7 @@ export function PlatformPage() {
               priceStep={inst.pip}
               shiftBars={chartShift ? 12 : 0}
               openTrades={openTrades.filter(t=>t.symbol===sym)}
+              pendingOrders={pendingOrders.filter(o=>o.symbol===sym && o.status==='pending')}
               onTradeSLTPChange={async(tradeId,newSl,newTp)=>{
                 await supabase.from('trades').update({sl:newSl,tp:newTp}).eq('id',tradeId)
                 setOpenTrades(prev=>prev.map(t=>t.id===tradeId?{...t,sl:newSl,tp:newTp}:t))

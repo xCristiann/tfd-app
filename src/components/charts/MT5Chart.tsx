@@ -14,6 +14,18 @@ interface ChartTrade {
   tp?: number | null
 }
 
+interface ChartPendingOrder {
+  id: string | number
+  symbol: string
+  side: 'buy' | 'sell' | string
+  order_type: 'buy_limit' | 'sell_limit' | 'buy_stop' | 'sell_stop' | string
+  lots?: number | string
+  trigger_price: number
+  stop_loss?: number | null
+  take_profit?: number | null
+  status?: string | null
+}
+
 type HLineDrawing = {
   id: string
   type: 'hline'
@@ -75,6 +87,7 @@ interface Props {
   priceStep?: number
   shiftBars?: number
   openTrades?: ChartTrade[]
+  pendingOrders?: ChartPendingOrder[]
   onTradeSLTPChange?: (tradeId: string | number, newSl: number | null, newTp: number | null) => void | Promise<void>
 }
 
@@ -231,6 +244,10 @@ function calcProjectedPnl(trade: ChartTrade, targetPrice: number, currentSym: st
   return diff * 100000 * lots
 }
 
+function pendingOrderLabel(order: ChartPendingOrder) {
+  return String(order.order_type || '').replace('_', ' ').replace(/\w/g, c => c.toUpperCase())
+}
+
 export function MT5Chart({
   sym,
   tf,
@@ -241,6 +258,7 @@ export function MT5Chart({
   priceStep,
   shiftBars = 0,
   openTrades = [],
+  pendingOrders = [],
   onTradeSLTPChange,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -252,6 +270,7 @@ export function MT5Chart({
   const drawingsRef = useRef<Drawing[]>([])
   const draftDrawingRef = useRef<Drawing | null>(null)
   const openTradesRef = useRef<ChartTrade[]>(openTrades)
+  const pendingOrdersRef = useRef<ChartPendingOrder[]>(pendingOrders)
   const selectionRef = useRef<Selection>(null)
   const settingsRef = useRef<ChartSettings>(loadSettings())
   const deleteAnchorRef = useRef<{ x: number; y: number } | null>(null)
@@ -331,6 +350,10 @@ export function MT5Chart({
   useEffect(() => {
     openTradesRef.current = openTrades
   }, [openTrades])
+
+  useEffect(() => {
+    pendingOrdersRef.current = pendingOrders
+  }, [pendingOrders])
 
   const snapPrice = useCallback((value: number) => {
     const dec = typeof priceDecimals === 'number' ? priceDecimals : decimals(Math.abs(value || 1))
@@ -609,6 +632,54 @@ export function MT5Chart({
         if (typeof slValue === 'number') {
           const pnlSl = calcProjectedPnl(t, slValue, sym)
           drawPill(ctx, fmtMoney(pnlSl), W - PAD.right - 90, toY(slValue) - 12, '#DC2626')
+        }
+      })
+
+    pendingOrdersRef.current
+      .filter(o => o.symbol === sym && (!o.status || o.status === 'pending'))
+      .forEach(o => {
+        const trigger = Number(o.trigger_price)
+        if (!Number.isFinite(trigger) || trigger <= 0) return
+
+        const sideColor = String(o.side) === 'buy' ? '#2563EB' : '#EA580C'
+        const label = pendingOrderLabel(o)
+        const y = toY(trigger)
+        if (trigger >= minP && trigger <= maxP) {
+          ctx.strokeStyle = sideColor
+          ctx.lineWidth = 1
+          ctx.setLineDash([8, 4])
+          ctx.beginPath()
+          ctx.moveTo(PAD.left, y)
+          ctx.lineTo(W - PAD.right, y)
+          ctx.stroke()
+          ctx.setLineDash([])
+          drawPill(ctx, `${label} @ ${trigger.toFixed(dec)}`, Math.max(120, W * 0.42), y - 12, sideColor)
+        }
+
+        if (typeof o.take_profit === 'number' && o.take_profit >= minP && o.take_profit <= maxP) {
+          const yTp = toY(o.take_profit)
+          ctx.strokeStyle = S.tpLine
+          ctx.lineWidth = 1
+          ctx.setLineDash([4, 4])
+          ctx.beginPath()
+          ctx.moveTo(PAD.left + 18, yTp)
+          ctx.lineTo(W - PAD.right - 18, yTp)
+          ctx.stroke()
+          ctx.setLineDash([])
+          drawPill(ctx, `TP ${Number(o.take_profit).toFixed(dec)}`, Math.max(78, W * 0.22), yTp - 10, '#16A34A')
+        }
+
+        if (typeof o.stop_loss === 'number' && o.stop_loss >= minP && o.stop_loss <= maxP) {
+          const ySl = toY(o.stop_loss)
+          ctx.strokeStyle = S.slLine
+          ctx.lineWidth = 1
+          ctx.setLineDash([4, 4])
+          ctx.beginPath()
+          ctx.moveTo(PAD.left + 18, ySl)
+          ctx.lineTo(W - PAD.right - 18, ySl)
+          ctx.stroke()
+          ctx.setLineDash([])
+          drawPill(ctx, `SL ${Number(o.stop_loss).toFixed(dec)}`, Math.max(78, W * 0.22), ySl - 10, '#DC2626')
         }
       })
 
