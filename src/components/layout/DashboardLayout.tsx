@@ -183,7 +183,7 @@ export function DashboardLayout({ children, title, topbarRight, nav, accentColor
           <div style={{width:'100%',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:'16px'}}>
             {/* Logo left */}
             <div style={{display:'flex',alignItems:'center'}}>
-              <img src="/logo.png" alt="The Funded Diaries" style={{height:'46px',width:'auto',objectFit:'contain'}}/>
+              <img src="/logo.png" alt="The Funded Diaries" style={{height:'56px',width:'auto',objectFit:'contain'}}/>
             </div>
             {/* Center links — hidden on mobile */}
             <div style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
