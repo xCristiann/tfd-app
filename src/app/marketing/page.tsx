@@ -80,9 +80,9 @@ export function MarketingPage() {
 
       {/* ── NAV ── */}
       <nav style={{...S.nav, padding: isMobile ? '0 16px' : undefined}}>
-        <div style={{maxWidth:'1400px',width:'100%',margin:'0 auto',height:'64px',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center'}}>
+        <div style={{maxWidth:'1400px',width:'100%',margin:'0 auto',height:'80px',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center'}}>
           <a href="/" style={{textDecoration:'none', display:'flex', alignItems:'center'}}>
-            <img src="/logo.png" alt="The Funded Diaries" style={{height:'56px',width:'auto',objectFit:'contain'}}/>
+            <img src="/logo.png" alt="The Funded Diaries" style={{height:'80px',width:'auto',objectFit:'contain'}}/>
           </a>
           {!isMobile && (
             <div style={{display:'flex'}}>
@@ -441,7 +441,7 @@ export function MarketingPage() {
               ['24/7 Support','Our team is available around the clock to help with any questions or issues you encounter.'],
             ].map(([t,d])=>(
               <div key={t} style={{background:'#fff',border:'1px solid #E8EEF8',borderRadius:'12px',padding:'28px 24px'}}>
-                <div style={{width:'36px',height:'52px',background:'#EEF3FF',borderRadius:'8px',marginBottom:'16px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{width:'36px',height:'70px',background:'#EEF3FF',borderRadius:'8px',marginBottom:'16px',display:'flex',alignItems:'center',justifyContent:'center'}}>
                   <div style={{width:'12px',height:'12px',background:'#2255CC',borderRadius:'3px'}}/>
                 </div>
                 <div style={{fontSize:'15px',fontWeight:600,color:'#1A3A6B',marginBottom:'8px'}}>{t}</div>
@@ -461,7 +461,7 @@ export function MarketingPage() {
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:'12px'}}>
             {[['AJ','Alex J.','$1,200','TFD-25K'],['MR','Maria R.','$890','TFD-25K'],['DK','David K.','$2,100','TFD-50K'],['ST','Sara T.','$750','TFD-25K']].map(([init,name,amt,acc])=>(
               <div key={name} style={{display:'flex',alignItems:'center',gap:'12px',padding:'16px 20px',background:'#F4F7FD',border:'1px solid #E8EEF8',borderRadius:'10px'}}>
-                <div style={{width:'36px',height:'52px',borderRadius:'50%',background:'#1A3A6B',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:700,color:'#fff',flexShrink:0}}>{init}</div>
+                <div style={{width:'36px',height:'70px',borderRadius:'50%',background:'#1A3A6B',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:700,color:'#fff',flexShrink:0}}>{init}</div>
                 <div style={{flex:1}}>
                   <div style={{fontSize:'13px',fontWeight:600,color:'#1A3A6B'}}>{name}</div>
                   <div style={{fontSize:'11px',color:'#8FA3BF'}}>{acc}</div>
