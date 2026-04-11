@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/useToast'
@@ -369,22 +369,23 @@ export function PlatformPage() {
         }
 
         const {data:newTrade,error:newTradeError}=await supabase.from('trades').insert({
-          account_id:pr.id,
-          user_id:pr.user_id,
-          symbol:o.symbol,
-          direction:side,
-          lots:lotsPending,
-          open_price:entry,
-          status:'open',
-          sl:o.stop_loss ?? null,
-          tp:o.take_profit ?? null,
-          opened_at:new Date().toISOString(),
-          note:`Triggered from ${o.order_type} @ ${o.trigger_price}`,
-        }).select().single()
+  account_id:pr.id,
+  user_id:pr.user_id,
+  symbol:o.symbol,
+  direction:side,
+  lots:lotsPending,
+  open_price:entry,
+  status:'open',
+  sl:o.stop_loss ?? null,
+  tp:o.take_profit ?? null,
+  opened_at:new Date().toISOString(),
+}).select().single()
 
-        if(newTradeError) continue
-
-        await supabase.from('pending_orders').update({status:'triggered',triggered_at:new Date().toISOString()}).eq('id',o.id)
+if(newTradeError){
+  console.error('[Pending trigger] trade insert failed', newTradeError, o)
+  toast('error','❌','Pending trigger failed', newTradeError.message || 'Trade insert failed')
+  continue
+}await supabase.from('pending_orders').update({status:'triggered',triggered_at:new Date().toISOString()}).eq('id',o.id)
         setPendingOrders(prev=>prev.filter(x=>x.id!==o.id))
         setOpenTrades(prev=>[newTrade,...prev])
         toast('success','🚀',`${orderModeLabel(o.order_type)} triggered`,`${o.symbol} ${side.toUpperCase()} @ ${entry}`)
@@ -812,4 +813,5 @@ export function PlatformPage() {
     </div>
   )
 }
+
 
