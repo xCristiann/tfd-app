@@ -11,6 +11,38 @@ import { ADMIN_NAV } from '@/lib/nav'
 import { sendEmail } from '@/lib/email'
 
 const mono = { fontFamily:"'JetBrains Mono',monospace" } as const
+
+// IP → country cache (session-level)
+const ipCountryCache: Record<string, string> = {}
+async function getCountry(ip: string): Promise<string> {
+  if (!ip || ip === '—') return ''
+  if (ipCountryCache[ip] !== undefined) return ipCountryCache[ip]
+  try {
+    // Try multiple free geo APIs (no key needed, CORS-safe)
+    const r = await fetch(`https://freeipapi.com/api/json/${ip}`, { signal: AbortSignal.timeout(4000) })
+    const d = await r.json()
+    const result = d.countryCode && d.countryCode !== '-' ? d.countryCode : ''
+    ipCountryCache[ip] = result
+    return result
+  } catch {
+    try {
+      // Fallback: ipwho.is
+      const r2 = await fetch(`https://ipwho.is/${ip}`, { signal: AbortSignal.timeout(4000) })
+      const d2 = await r2.json()
+      const result2 = d2.country_code || ''
+      ipCountryCache[ip] = result2
+      return result2
+    } catch { ipCountryCache[ip] = ''; return '' }
+  }
+}
+
+// Flag emoji from 2-letter country code
+function countryFlag(code: string): string {
+  if (!code || code.length < 2) return ''
+  const cc = code.slice(0,2).toUpperCase()
+  try { return cc.replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0))) }
+  catch { return '' }
+}
 function timeDiff(a: string, b: string) { return Math.abs(new Date(a).getTime() - new Date(b).getTime()) / 1000 }
 function timeAgo(dt: string) {
   const s = Math.floor((Date.now() - new Date(dt).getTime()) / 1000)
@@ -40,6 +72,7 @@ export function AdminAccountsPage() {
   const [panelTab, setPanelTab]   = useState<'trades'|'risk'|'breach'|'notify'>('trades')
   const [trades, setTrades]       = useState<any[]>([])
   const [tradesLoading, setTradesLoading] = useState(false)
+  const [ipCountries, setIpCountries] = useState<Record<string,string>>({})
   const [riskLoading, setRiskLoading] = useState(false)
 
   // Risk tab state (mirrors Risk Monitor tool data per account)
@@ -70,8 +103,20 @@ export function AdminAccountsPage() {
     setSameAccHedge([]); setMirrorGroups([]); setTradeIps([]); setNewsViolations([])
     setVelocityCount(0); setWinRateData(null); setConsistentProfit(null); setFlags([])
     const { data } = await supabase.from('trades').select('*').eq('account_id', acc.id).order('opened_at', { ascending: false })
-    setTrades(data ?? [])
+    const tradeData = data ?? []
+    setTrades(tradeData)
     setTradesLoading(false)
+    // Fetch countries for unique IPs in background
+    const uniqueIps = [...new Set(tradeData.map((t:any) => t.ip_address).filter(Boolean))] as string[]
+    const countries: Record<string,string> = {}
+    // Load in batches of 5 to avoid rate limits
+    for (let i = 0; i < uniqueIps.length; i += 5) {
+      const batch = uniqueIps.slice(i, i + 5)
+      await Promise.allSettled(batch.map(async (ip) => {
+        countries[ip] = await getCountry(ip)
+      }))
+      setIpCountries(prev => ({...prev, ...countries}))
+    }
   }, [])
 
   // Load full risk data for selected account
@@ -412,7 +457,19 @@ export function AdminAccountsPage() {
                       <tbody>
                         {trades.map(t=>(
                           <tr key={t.id} className="border-b border-[#F4F7FD] hover:bg-[rgba(34,85,204,.02)]">
-                            <td className="px-[7px] py-[6px]"><span className="text-[8px] font-mono text-[#8FA3BF] bg-[#F4F7FD] px-1 py-[1px] border border-[#E8EEF8]">{t.ip_address??'—'}</span></td>
+                            <td className="px-[7px] py-[6px]">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[8px] font-mono text-[#8FA3BF] bg-[#F4F7FD] px-1 py-[1px] border border-[#E8EEF8]">{t.ip_address??'—'}</span>
+                                {t.ip_address && ipCountries[t.ip_address] && (
+                                  <span className="text-[9px] text-[#5C7A9E] font-semibold whitespace-nowrap">
+                                    {countryFlag(ipCountries[t.ip_address])} {ipCountries[t.ip_address]}
+                                  </span>
+                                )}
+                                {t.ip_address && !ipCountries[t.ip_address] && (
+                                  <span className="text-[8px] text-[#BCC9DA]">loading…</span>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-[7px] py-[6px] font-semibold text-[#2255CC]">{t.symbol}</td>
                             <td className="px-[7px] py-[6px] font-bold" style={{color:t.direction==='buy'?'#16A34A':'#DC2626'}}>{t.direction?.toUpperCase()}</td>
                             <td className="px-[7px] py-[6px] font-mono">{t.lots}</td>
