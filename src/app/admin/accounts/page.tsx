@@ -13,26 +13,22 @@ import { sendEmail } from '@/lib/email'
 const mono = { fontFamily:"'JetBrains Mono',monospace" } as const
 
 // IP → country cache (session-level)
+// Uses /api/ip-country Vercel proxy — no CORS issues
 const ipCountryCache: Record<string, string> = {}
 async function getCountry(ip: string): Promise<string> {
   if (!ip || ip === '—') return ''
   if (ipCountryCache[ip] !== undefined) return ipCountryCache[ip]
   try {
-    // Try multiple free geo APIs (no key needed, CORS-safe)
-    const r = await fetch(`https://freeipapi.com/api/json/${ip}`, { signal: AbortSignal.timeout(4000) })
+    const r = await fetch(`/api/ip-country?ip=${encodeURIComponent(ip)}`, {
+      signal: AbortSignal.timeout(6000),
+    })
     const d = await r.json()
-    const result = d.countryCode && d.countryCode !== '-' ? d.countryCode : ''
+    const result = d.code || ''
     ipCountryCache[ip] = result
     return result
   } catch {
-    try {
-      // Fallback: ipwho.is
-      const r2 = await fetch(`https://ipwho.is/${ip}`, { signal: AbortSignal.timeout(4000) })
-      const d2 = await r2.json()
-      const result2 = d2.country_code || ''
-      ipCountryCache[ip] = result2
-      return result2
-    } catch { ipCountryCache[ip] = ''; return '' }
+    ipCountryCache[ip] = ''
+    return ''
   }
 }
 
@@ -465,8 +461,8 @@ export function AdminAccountsPage() {
                                     {countryFlag(ipCountries[t.ip_address])} {ipCountries[t.ip_address]}
                                   </span>
                                 )}
-                                {t.ip_address && !ipCountries[t.ip_address] && (
-                                  <span className="text-[8px] text-[#BCC9DA]">loading…</span>
+                                {t.ip_address && ipCountries[t.ip_address] === undefined && (
+                                  <span className="text-[8px] text-[#BCC9DA]">…</span>
                                 )}
                               </div>
                             </td>
