@@ -69,6 +69,7 @@ export function AdminAccountsPage() {
   const [trades, setTrades]       = useState<any[]>([])
   const [tradesLoading, setTradesLoading] = useState(false)
   const [ipCountries, setIpCountries] = useState<Record<string,string>>({})
+  const [ipLoading, setIpLoading]     = useState<Set<string>>(new Set())
   const [riskLoading, setRiskLoading] = useState(false)
 
   // Risk tab state (mirrors Risk Monitor tool data per account)
@@ -104,14 +105,15 @@ export function AdminAccountsPage() {
     setTradesLoading(false)
     // Fetch countries for unique IPs in background
     const uniqueIps = [...new Set(tradeData.map((t:any) => t.ip_address).filter(Boolean))] as string[]
-    const countries: Record<string,string> = {}
-    // Load in batches of 5 to avoid rate limits
-    for (let i = 0; i < uniqueIps.length; i += 5) {
-      const batch = uniqueIps.slice(i, i + 5)
-      await Promise.allSettled(batch.map(async (ip) => {
-        countries[ip] = await getCountry(ip)
-      }))
-      setIpCountries(prev => ({...prev, ...countries}))
+    // Mark all IPs as loading
+    setIpLoading(new Set(uniqueIps))
+    // Fetch one by one with small delay to avoid rate limits
+    for (const ip of uniqueIps) {
+      getCountry(ip).then(code => {
+        setIpCountries(prev => ({...prev, [ip]: code}))
+        setIpLoading(prev => { const n = new Set(prev); n.delete(ip); return n })
+      })
+      await new Promise(r => setTimeout(r, 100))
     }
   }, [])
 
@@ -456,13 +458,13 @@ export function AdminAccountsPage() {
                             <td className="px-[7px] py-[6px]">
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-[8px] font-mono text-[#8FA3BF] bg-[#F4F7FD] px-1 py-[1px] border border-[#E8EEF8]">{t.ip_address??'—'}</span>
-                                {t.ip_address && ipCountries[t.ip_address] && (
+                                {t.ip_address && ipLoading.has(t.ip_address) && (
+                                  <span className="text-[8px] text-[#BCC9DA]">loading…</span>
+                                )}
+                                {t.ip_address && !ipLoading.has(t.ip_address) && ipCountries[t.ip_address] && (
                                   <span className="text-[9px] text-[#5C7A9E] font-semibold whitespace-nowrap">
                                     {countryFlag(ipCountries[t.ip_address])} {ipCountries[t.ip_address]}
                                   </span>
-                                )}
-                                {t.ip_address && ipCountries[t.ip_address] === undefined && (
-                                  <span className="text-[8px] text-[#BCC9DA]">…</span>
                                 )}
                               </div>
                             </td>
