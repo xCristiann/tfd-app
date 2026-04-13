@@ -13,19 +13,19 @@ import { sendEmail } from '@/lib/email'
 const mono = { fontFamily:"'JetBrains Mono',monospace" } as const
 
 // IP → country cache (session-level)
-// Uses /api/ip-country Vercel proxy — no CORS issues
 const ipCountryCache: Record<string, string> = {}
 async function getCountry(ip: string): Promise<string> {
   if (!ip || ip === '—') return ''
   if (ipCountryCache[ip] !== undefined) return ipCountryCache[ip]
   try {
     const r = await fetch(`/api/ip-country?ip=${encodeURIComponent(ip)}`, {
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(8000),
     })
+    if (!r.ok) throw new Error('not ok')
     const d = await r.json()
-    const result = d.code || ''
-    ipCountryCache[ip] = result
-    return result
+    const code = d.code || ''
+    ipCountryCache[ip] = code
+    return code
   } catch {
     ipCountryCache[ip] = ''
     return ''
