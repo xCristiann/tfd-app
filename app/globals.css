@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #07090f;
+  --bg1: #0c0f1a;
+  --bg2: #111420;
+  --bg3: #161b28;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --border3: rgba(255,255,255,0.18);
+  --t1: #eef0f6;
+  --t2: #8b92a8;
+  --t3: #4e5568;
+  --teal: #00e5a0;
+  --teal2: #00c085;
+  --teal-glow: rgba(0,229,160,0.2);
+  --violet: #a78bfa;
+  --violet-glow: rgba(167,139,250,0.2);
+  --amber: #fbbf24;
+  --coral: #f87171;
+  --green: #34d399;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--t1);
+  font-family: 'Inter', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+@layer utilities {
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+  .text-teal { color: var(--teal); }
+  .text-violet { color: var(--violet); }
+  .text-t2 { color: var(--t2); }
+  .text-t3 { color: var(--t3); }
+  .bg-bg { background: var(--bg); }
+  .bg-bg1 { background: var(--bg1); }
+  .bg-bg2 { background: var(--bg2); }
+  .bg-bg3 { background: var(--bg3); }
+  .border-dim { border-color: var(--border); }
+  .border-dim2 { border-color: var(--border2); }
+  .glow-teal { box-shadow: 0 0 24px var(--teal-glow); }
+  .glow-teal-lg { box-shadow: 0 0 40px var(--teal-glow); }
+  .gradient-text {
+    background: linear-gradient(115deg, var(--teal) 0%, #4fffcc 40%, var(--violet) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@layer components {
+  .card { background: var(--bg1); border: 1px solid var(--border); border-radius: 16px; }
+  .card-hover { transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s; }
+  .card-hover:hover { border-color: var(--border2); transform: translateY(-3px); box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
+  .input-base { width: 100%; padding: 10px 14px; background: var(--bg2); border: 1px solid var(--border2); border-radius: 9px; color: var(--t1); font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+  .input-base:focus { border-color: rgba(0,229,160,0.4); box-shadow: 0 0 0 3px rgba(0,229,160,0.07); }
+  .input-base::placeholder { color: var(--t3); }
+  .btn-primary { padding: 10px 20px; border-radius: 9px; font-size: 14px; font-weight: 700; color: #04120c; background: var(--teal); border: none; cursor: pointer; box-shadow: 0 0 20px var(--teal-glow); transition: box-shadow 0.2s, transform 0.15s; font-family: 'Inter', sans-serif; }
+  .btn-primary:hover { box-shadow: 0 0 36px rgba(0,229,160,0.4); transform: translateY(-1px); }
+  .btn-ghost { padding: 9px 18px; border-radius: 9px; font-size: 13.5px; font-weight: 500; color: var(--t1); background: transparent; border: 1px solid var(--border2); cursor: pointer; transition: background 0.15s, border-color 0.15s; font-family: 'Inter', sans-serif; }
+  .btn-ghost:hover { background: var(--bg2); border-color: var(--border3); }
+  .trust-bar { height: 5px; background: var(--bg3); border-radius: 100px; overflow: hidden; }
+  .trust-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--teal2), var(--teal)); box-shadow: 0 0 8px rgba(0,229,160,0.4); }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); animation: pulse 2s infinite; }
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.8); } }
+
+.ambient-blob { position: fixed; border-radius: 50%; filter: blur(130px); opacity: 0.5; pointer-events: none; z-index: 0; }
+
+select { -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234e5568' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
