@@ -5,17 +5,28 @@ import Footer from '@/components/layout/Footer'
 import FirmTabs from '@/components/firm/FirmTabs'
 
 export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
-export default async function FirmPage({ params }: { params: { slug: string } }) {
+type Props = {
+  params: Promise<{ slug: string }> | { slug: string }
+}
+
+export default async function FirmPage({ params }: Props) {
+  const resolvedParams = await Promise.resolve(params)
+  const slug = resolvedParams.slug
+
   const supabase = await createClient()
-  const { data: firm } = await supabase
+  
+  const { data: firm, error } = await supabase
     .from('firms')
     .select('*, challenges(*), rules(*)')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .eq('is_published', true)
     .single()
 
-  if (!firm) notFound()
+  if (error || !firm) {
+    notFound()
+  }
 
   const { data: reviews } = await supabase
     .from('reviews')
@@ -24,8 +35,8 @@ export default async function FirmPage({ params }: { params: { slug: string } })
     .eq('status', 'approved')
     .order('created_at', { ascending: false })
 
-  const challenges = firm.challenges?.sort((a: any, b: any) => a.sort_order - b.sort_order) || []
-  const rules = firm.rules?.sort((a: any, b: any) => a.sort_order - b.sort_order) || []
+  const challenges = (firm.challenges || []).sort((a: any, b: any) => a.sort_order - b.sort_order)
+  const rules = (firm.rules || []).sort((a: any, b: any) => a.sort_order - b.sort_order)
 
   return (
     <>
@@ -57,24 +68,18 @@ export default async function FirmPage({ params }: { params: { slug: string } })
                     {firm.headquarters}
                   </span>
                 )}
-                {firm.platforms?.map((p: string) => (
-                  <span key={p} style={{fontSize:'11.5px',fontWeight:600,padding:'4px 11px',borderRadius:'100px',background:'var(--bg2)',color:'var(--t2)',border:'1px solid var(--border2)'}}>
-                    {p}
-                  </span>
-                ))}
               </div>
             </div>
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'10px',flexShrink:0}}>
-            {firm.affiliate_link ? (
-              <a href={firm.affiliate_link} target="_blank" rel="noopener noreferrer" style={{padding:'13px 26px',borderRadius:'10px',fontSize:'14px',fontWeight:800,color:'#04120c',background:'var(--teal)',textDecoration:'none',boxShadow:'0 0 24px var(--teal-glow)',whiteSpace:'nowrap'}}>
-                Visit {firm.name} →
-              </a>
-            ) : (
-              <a href={firm.website || '#'} target="_blank" rel="noopener noreferrer" style={{padding:'13px 26px',borderRadius:'10px',fontSize:'14px',fontWeight:800,color:'#04120c',background:'var(--teal)',textDecoration:'none',boxShadow:'0 0 24px var(--teal-glow)',whiteSpace:'nowrap'}}>
-                Visit {firm.name} →
-              </a>
-            )}
+            <a
+              href={firm.affiliate_link || firm.website || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{padding:'13px 26px',borderRadius:'10px',fontSize:'14px',fontWeight:800,color:'#04120c',background:'var(--teal)',textDecoration:'none',boxShadow:'0 0 24px var(--teal-glow)',whiteSpace:'nowrap'}}
+            >
+              Visit {firm.name} →
+            </a>
             {firm.discount_code && (
               <div style={{fontSize:'12px',color:'var(--t3)',textAlign:'right'}}>
                 Use code <b style={{color:'var(--teal)',fontFamily:'JetBrains Mono, monospace'}}>{firm.discount_code}</b> for discount
