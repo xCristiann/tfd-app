@@ -102,7 +102,7 @@ export default function FirmsTable({ firms, market }: { firms: FirmWithExtras[];
           firm.markets_indices && 'Indices',
           firm.markets_metals && 'Metals',
           firm.markets_commodities && 'Commodities',
-        ].filter(Boolean)
+        ].filter((x): x is string => Boolean(x))
 
         return (
           <div
@@ -199,12 +199,11 @@ export default function FirmsTable({ firms, market }: { firms: FirmWithExtras[];
                     </div>
                   )}
                   <div style={{ fontSize: '13px', fontWeight: 900, color: '#fff' }}>{firm.promo_discount}</div>
-                  <div style={{
-                    marginTop: '4px', fontSize: '8.5px', fontWeight: 800, color: 'rgba(255,255,255,0.9)',
-                    letterSpacing: '.03em', fontFamily: 'JetBrains Mono, monospace'
-                  }}>
-                    CODE: {firm.discount_code || 'DIARIES'}
-                  </div>
+                  {firm.discount_code && (
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', marginTop: '2px', letterSpacing: '.03em' }}>
+                      {firm.discount_code}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <span style={{ fontSize: '11px', color: 'var(--t3)' }}>—</span>
