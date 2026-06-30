@@ -6,7 +6,7 @@ import Footer from '@/components/layout/Footer'
 import Link from 'next/link'
 import type { Firm, Challenge } from '@/types'
 
-type FirmWithChallenges = Firm & { challenges: Challenge[] }
+type FirmWithChallenges = Firm & { challenges: Challenge[]; logo_url?: string }
 
 export default function FirmsClient() {
   const [firms, setFirms] = useState<FirmWithChallenges[]>([])
@@ -199,16 +199,30 @@ export default function FirmsClient() {
                       {i + 1}
                     </div>
 
-                    {/* FIRM */}
+                    {/* FIRM — with logo */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{
                         width: '36px', height: '36px', borderRadius: '9px',
-                        background: 'var(--bg3)', border: '1px solid var(--border2)',
+                        background: '#fff', border: '1px solid var(--border2)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '10px', fontWeight: 800, color: 'var(--t2)',
-                        fontFamily: 'JetBrains Mono, monospace', flexShrink: 0
+                        flexShrink: 0, position: 'relative', overflow: 'hidden'
                       }}>
-                        {firm.name.slice(0, 2).toUpperCase()}
+                        <span style={{
+                          position: 'absolute', fontSize: '10px', fontWeight: 800,
+                          color: '#222', fontFamily: 'JetBrains Mono, monospace'
+                        }}>
+                          {firm.name.slice(0, 2).toUpperCase()}
+                        </span>
+                        {firm.logo_url && (
+                          <img
+                            src={firm.logo_url}
+                            alt={firm.name}
+                            width={22}
+                            height={22}
+                            style={{ width: '22px', height: '22px', objectFit: 'contain', position: 'relative', zIndex: 1, background: '#fff' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none' }}
+                          />
+                        )}
                       </div>
                       <div>
                         <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '2px' }}>{firm.name}</div>
