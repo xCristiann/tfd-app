@@ -102,7 +102,7 @@ export default function FirmsTable({ firms, market }: { firms: FirmWithExtras[];
           firm.markets_indices && 'Indices',
           firm.markets_metals && 'Metals',
           firm.markets_commodities && 'Commodities',
-        ].filter(Boolean)
+        ].filter((x): x is string => Boolean(x))
 
         return (
           <div
