@@ -112,6 +112,13 @@ export default function OffersClient() {
                   <div style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginTop: '2px' }}>
                     {firm.promo_discount?.split(' ').slice(1).join(' ')}
                   </div>
+                  <div style={{
+                    marginTop: '8px', fontSize: '10.5px', fontWeight: 800, color: '#fff',
+                    background: 'rgba(0,0,0,0.25)', padding: '3px 10px', borderRadius: '100px',
+                    fontFamily: 'JetBrains Mono, monospace', letterSpacing: '.02em'
+                  }}>
+                    CODE: {firm.discount_code || 'DIARIES'}
+                  </div>
                 </div>
 
                 {/* MAIN INFO */}
@@ -133,22 +140,6 @@ export default function OffersClient() {
 
                 {/* CODE + APPLY */}
                 <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '10px', borderLeft: '1px solid var(--border)', minWidth: '180px' }}>
-                  {firm.discount_code && (
-                    <button
-                      onClick={() => copyCode(firm.discount_code!)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '8px 14px', borderRadius: '100px',
-                        border: '1px solid rgba(167,139,250,0.3)', background: 'rgba(167,139,250,0.08)',
-                        cursor: 'pointer', fontFamily: 'Inter, sans-serif'
-                      }}
-                    >
-                      <span style={{ fontSize: '11px', color: 'var(--t3)', fontWeight: 600 }}>Code</span>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--violet)', fontFamily: 'JetBrains Mono, monospace' }}>
-                        {copiedCode === firm.discount_code ? 'Copied!' : firm.discount_code}
-                      </span>
-                    </button>
-                  )}
                   <a
                     href={firm.affiliate_link || firm.website || '#'}
                     target="_blank" rel="noopener noreferrer"
