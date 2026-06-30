@@ -16,29 +16,33 @@ function TrustBar({ score }: { score: number }) {
 }
 
 function FirmLogo({ name, logoUrl }: { name: string; logoUrl?: string }) {
-  if (logoUrl) {
-    return (
-      <div style={{ width: '44px', height: '44px', borderRadius: '11px', background: '#fff', border: '1px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden', padding: '4px' }}>
+  return (
+    <div style={{
+      width: '44px', height: '44px', borderRadius: '11px',
+      background: '#fff', border: '1px solid var(--border2)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0, overflow: 'hidden', position: 'relative'
+    }}>
+      {/* Fallback initials always rendered behind */}
+      <span style={{
+        position: 'absolute', fontSize: '12px', fontWeight: 800,
+        color: '#222', fontFamily: 'JetBrains Mono, monospace'
+      }}>
+        {name.slice(0, 2).toUpperCase()}
+      </span>
+      {logoUrl && (
         <img
           src={logoUrl}
           alt={name}
-          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          onError={(e) => {
-            const target = e.currentTarget
-            target.style.display = 'none'
-            const parent = target.parentElement
-            if (parent) {
-              parent.style.background = 'var(--bg2)'
-              parent.innerHTML = `<span style="font-size:12px;font-weight:800;color:var(--t2);font-family:JetBrains Mono,monospace">${name.slice(0, 2).toUpperCase()}</span>`
-            }
+          width={28}
+          height={28}
+          style={{
+            width: '28px', height: '28px', objectFit: 'contain',
+            position: 'relative', zIndex: 1, background: '#fff'
           }}
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
         />
-      </div>
-    )
-  }
-  return (
-    <div style={{ width: '44px', height: '44px', borderRadius: '11px', background: 'var(--bg2)', border: '1px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: 'var(--t2)', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
-      {name.slice(0, 2).toUpperCase()}
+      )}
     </div>
   )
 }
