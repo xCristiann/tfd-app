@@ -3,20 +3,18 @@ import { notFound } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import FirmTabs from '@/components/firm/FirmTabs'
+import FirmLogoServer from '@/components/firm/FirmLogoServer'
 
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
 
-type Props = {
-  params: Promise<{ slug: string }> | { slug: string }
-}
+type Props = { params: Promise<{ slug: string }> | { slug: string } }
 
 export default async function FirmPage({ params }: Props) {
   const resolvedParams = await Promise.resolve(params)
   const slug = resolvedParams.slug
 
   const supabase = await createClient()
-
   const { data: firm, error } = await supabase
     .from('firms')
     .select('*, challenges(*), rules(*)')
@@ -24,9 +22,7 @@ export default async function FirmPage({ params }: Props) {
     .eq('is_published', true)
     .single()
 
-  if (error || !firm) {
-    notFound()
-  }
+  if (error || !firm) notFound()
 
   const { data: reviews } = await supabase
     .from('reviews')
@@ -44,63 +40,22 @@ export default async function FirmPage({ params }: Props) {
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 40px 80px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '24px', paddingBottom: '36px', borderBottom: '1px solid var(--border)', marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '18px' }}>
-
-            {/* LOGO — fixed to actually render the image */}
-            <div style={{
-              width: '68px', height: '68px', borderRadius: '16px',
-              background: '#fff', border: '1px solid var(--border2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, position: 'relative', overflow: 'hidden'
-            }}>
-              <span style={{
-                position: 'absolute', fontSize: '16px', fontWeight: 900,
-                color: '#222', fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                {firm.name.slice(0, 2).toUpperCase()}
-              </span>
-              {firm.logo_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={firm.logo_url}
-                  alt={firm.name}
-                  width={44}
-                  height={44}
-                  style={{ width: '44px', height: '44px', objectFit: 'contain', position: 'relative', zIndex: 1, background: '#fff' }}
-                />
-              )}
-            </div>
-
+            <FirmLogoServer name={firm.name} logoUrl={firm.logo_url} size={68} radius={16} />
             <div>
               <h1 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-.03em', marginBottom: '10px' }}>{firm.name}</h1>
               <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '11.5px', fontWeight: 600, padding: '4px 11px', borderRadius: '100px', background: 'rgba(0,229,160,0.1)', color: 'var(--teal)', border: '1px solid rgba(0,229,160,0.25)' }}>
                   Trust Score {firm.trust_score}/100
                 </span>
-                {firm.founded_year && (
-                  <span style={{ fontSize: '11.5px', fontWeight: 600, padding: '4px 11px', borderRadius: '100px', background: 'var(--bg2)', color: 'var(--t2)', border: '1px solid var(--border2)' }}>
-                    Since {firm.founded_year}
-                  </span>
-                )}
-                {firm.accepts_eu && (
-                  <span style={{ fontSize: '11.5px', fontWeight: 600, padding: '4px 11px', borderRadius: '100px', background: 'rgba(0,229,160,0.1)', color: 'var(--teal)', border: '1px solid rgba(0,229,160,0.25)' }}>
-                    Accepts EU
-                  </span>
-                )}
-                {firm.headquarters && (
-                  <span style={{ fontSize: '11.5px', fontWeight: 600, padding: '4px 11px', borderRadius: '100px', background: 'var(--bg2)', color: 'var(--t2)', border: '1px solid var(--border2)' }}>
-                    {firm.headquarters}
-                  </span>
-                )}
+                {firm.founded_year && <span style={{ fontSize: '11.5px', fontWeight: 600, padding: '4px 11px', borderRadius: '100px', background: 'var(--bg2)', color: 'var(--t2)', border: '1px solid var(--border2)' }}>Since {firm.founded_year}</span>}
+                {firm.accepts_eu && <span style={{ fontSize: '11.5px', fontWeight: 600, padding: '4px 11px', borderRadius: '100px', background: 'rgba(0,229,160,0.1)', color: 'var(--teal)', border: '1px solid rgba(0,229,160,0.25)' }}>Accepts EU</span>}
+                {firm.headquarters && <span style={{ fontSize: '11.5px', fontWeight: 600, padding: '4px 11px', borderRadius: '100px', background: 'var(--bg2)', color: 'var(--t2)', border: '1px solid var(--border2)' }}>{firm.headquarters}</span>}
               </div>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', flexShrink: 0 }}>
-            <a
-              href={firm.affiliate_link || firm.website || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ padding: '13px 26px', borderRadius: '10px', fontSize: '14px', fontWeight: 800, color: '#04120c', background: 'var(--teal)', textDecoration: 'none', boxShadow: '0 0 24px var(--teal-glow)', whiteSpace: 'nowrap' }}
-            >
+            <a href={firm.affiliate_link || firm.website || '#'} target="_blank" rel="noopener noreferrer"
+              style={{ padding: '13px 26px', borderRadius: '10px', fontSize: '14px', fontWeight: 800, color: '#04120c', background: 'var(--teal)', textDecoration: 'none', boxShadow: '0 0 24px var(--teal-glow)', whiteSpace: 'nowrap' }}>
               Visit {firm.name} →
             </a>
             {firm.discount_code && (
@@ -110,7 +65,6 @@ export default async function FirmPage({ params }: Props) {
             )}
           </div>
         </div>
-
         <FirmTabs firm={firm} challenges={challenges} rules={rules} reviews={reviews || []} />
       </main>
       <Footer />

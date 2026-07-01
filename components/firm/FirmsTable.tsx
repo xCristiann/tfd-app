@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import type { Firm, Challenge } from '@/types'
+import FirmLogo from './FirmLogo'
 
 type FirmWithExtras = Firm & {
   challenges?: Challenge[]
@@ -24,58 +25,24 @@ function formatAllocation(n?: number) {
   return `$${Math.round(n / 1000)}K`
 }
 
-function FirmLogo({ name, logoUrl }: { name: string; logoUrl?: string }) {
-  return (
-    <div style={{
-      width: '40px', height: '40px', borderRadius: '10px',
-      background: '#fff', border: '1px solid var(--border2)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0, position: 'relative', overflow: 'hidden'
-    }}>
-      <span style={{ position: 'absolute', fontSize: '10px', fontWeight: 800, color: '#222', fontFamily: 'JetBrains Mono, monospace' }}>
-        {name.slice(0, 2).toUpperCase()}
-      </span>
-      {logoUrl && (
-        <img src={logoUrl} alt={name} width={26} height={26}
-          style={{ width: '26px', height: '26px', objectFit: 'contain', position: 'relative', zIndex: 1, background: '#fff' }}
-          onError={(e) => { e.currentTarget.style.display = 'none' }} />
-      )}
-    </div>
-  )
-}
-
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) return <span style={{ fontSize: '20px' }}>🏆</span>
   if (rank === 2) return <span style={{ fontSize: '20px' }}>🥈</span>
   if (rank === 3) return <span style={{ fontSize: '20px' }}>🥉</span>
   return (
-    <div style={{
-      width: '26px', height: '26px', borderRadius: '50%',
-      border: '1px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '12px', fontWeight: 700, color: 'var(--t2)'
-    }}>
+    <div style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: 'var(--t2)' }}>
       {rank}
     </div>
   )
 }
 
-export default function FirmsTable({ firms, market }: { firms: FirmWithExtras[]; market: string }) {
-
+export default function FirmsTable({ firms }: { firms: FirmWithExtras[]; market?: string }) {
   const getLowestChallenge = (f: FirmWithExtras) =>
     f.challenges?.sort((a, b) => a.price_usd - b.price_usd)[0]
 
   return (
     <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
-
-      {/* HEADER */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '50px 1.8fr 110px 70px 90px 1.6fr 1fr 110px 140px 90px',
-        padding: '14px 20px',
-        background: 'var(--bg2)',
-        fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--t3)',
-        gap: '10px', alignItems: 'center'
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '50px 1.8fr 110px 70px 90px 1.6fr 1fr 110px 140px 90px', padding: '14px 20px', background: 'var(--bg2)', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--t3)', gap: '10px', alignItems: 'center' }}>
         <div>Firm</div>
         <div></div>
         <div>Rank / Reviews</div>
@@ -89,9 +56,7 @@ export default function FirmsTable({ firms, market }: { firms: FirmWithExtras[];
       </div>
 
       {firms.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--t2)' }}>
-          No firms found for this market filter.
-        </div>
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--t2)' }}>No firms found for this market filter.</div>
       ) : firms.map((firm, i) => {
         const ch = getLowestChallenge(firm)
         const isTop3 = i < 3
@@ -105,32 +70,20 @@ export default function FirmsTable({ firms, market }: { firms: FirmWithExtras[];
         ].filter((x): x is string => Boolean(x))
 
         return (
-          <div
-            key={firm.id}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '50px 1.8fr 110px 70px 90px 1.6fr 1fr 110px 140px 90px',
-              padding: '18px 20px',
-              borderTop: '1px solid var(--border)',
-              gap: '10px', alignItems: 'center',
-              background: isTop3 ? 'rgba(167,139,250,0.03)' : 'transparent',
-              transition: 'background .15s',
-            }}
+          <div key={firm.id} style={{ display: 'grid', gridTemplateColumns: '50px 1.8fr 110px 70px 90px 1.6fr 1fr 110px 140px 90px', padding: '18px 20px', borderTop: '1px solid var(--border)', gap: '10px', alignItems: 'center', background: isTop3 ? 'rgba(167,139,250,0.03)' : 'transparent', transition: 'background .15s', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.background = isTop3 ? 'rgba(167,139,250,0.06)' : 'var(--bg2)')}
             onMouseLeave={e => (e.currentTarget.style.background = isTop3 ? 'rgba(167,139,250,0.03)' : 'transparent')}
+            onClick={() => window.location.href = `/firms/${firm.slug}`}
           >
-            {/* RANK */}
             <RankBadge rank={i + 1} />
 
-            {/* LOGO + NAME */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-              <FirmLogo name={firm.name} logoUrl={firm.logo_url} />
+              <FirmLogo name={firm.name} logoUrl={firm.logo_url} size={40} radius={10} />
               <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {firm.name}
               </div>
             </div>
 
-            {/* RANK / REVIEWS */}
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 9px', borderRadius: '100px', border: '1px solid rgba(167,139,250,0.3)', fontSize: '12px', fontWeight: 700, color: 'var(--violet)', marginBottom: '4px' }}>
                 {(firm.rating || 4).toFixed(1)} <span style={{ color: 'var(--amber)' }}>★</span>
@@ -138,23 +91,16 @@ export default function FirmsTable({ firms, market }: { firms: FirmWithExtras[];
               <div style={{ fontSize: '11px', color: 'var(--t3)' }}>{(firm.review_count || 0).toLocaleString()} reviews</div>
             </div>
 
-            {/* COUNTRY */}
             <div style={{ fontSize: '20px' }} title={firm.country_code}>
               {countryFlags[firm.country_code || ''] || '🌐'}
             </div>
 
-            {/* YEARS */}
             <div>
-              <div style={{
-                width: '36px', height: '36px', borderRadius: '50%',
-                border: '2px solid var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '12px', fontWeight: 800, color: 'var(--violet)'
-              }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: 'var(--violet)' }}>
                 {firm.years_active && firm.years_active >= 10 ? '10+' : (firm.years_active || '—')}
               </div>
             </div>
 
-            {/* ASSETS */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
               {markets.slice(0, 4).map(m => (
                 <span key={m} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '100px', background: 'var(--bg2)', color: 'var(--t2)', fontWeight: 600, border: '1px solid var(--border)' }}>
@@ -163,7 +109,6 @@ export default function FirmsTable({ firms, market }: { firms: FirmWithExtras[];
               ))}
             </div>
 
-            {/* PLATFORMS */}
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
               {(firm.platforms || []).slice(0, 3).map(p => (
                 <span key={p} style={{ fontSize: '10px', padding: '3px 7px', borderRadius: '6px', background: 'var(--bg2)', color: 'var(--t3)', fontWeight: 600 }}>
@@ -172,51 +117,31 @@ export default function FirmsTable({ firms, market }: { firms: FirmWithExtras[];
               ))}
             </div>
 
-            {/* MAX ALLOCATION */}
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 800, marginBottom: '5px' }}>
-                {formatAllocation(firm.max_allocation)}
-              </div>
+              <div style={{ fontSize: '14px', fontWeight: 800, marginBottom: '5px' }}>{formatAllocation(firm.max_allocation)}</div>
               <div style={{ height: '3px', background: 'var(--bg3)', borderRadius: '100px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', borderRadius: '100px',
-                  width: `${Math.min(100, ((firm.max_allocation || 0) / 4000000) * 100)}%`,
-                  background: 'linear-gradient(90deg,var(--violet),#818cf8)'
-                }} />
+                <div style={{ height: '100%', borderRadius: '100px', width: `${Math.min(100, ((firm.max_allocation || 0) / 4000000) * 100)}%`, background: 'linear-gradient(90deg,var(--violet),#818cf8)' }} />
               </div>
             </div>
 
-            {/* PROMO */}
             <div>
               {firm.promo_discount ? (
-                <div style={{
-                  background: 'linear-gradient(135deg,#ec4899,var(--violet))',
-                  borderRadius: '8px', padding: '6px 10px', textAlign: 'center'
-                }}>
+                <div style={{ background: 'linear-gradient(135deg,#ec4899,var(--violet))', borderRadius: '8px', padding: '6px 10px', textAlign: 'center' }}>
                   {firm.promo_label && (
-                    <div style={{ fontSize: '8.5px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', marginBottom: '2px', letterSpacing: '.04em' }}>
-                      {firm.promo_label}
-                    </div>
+                    <div style={{ fontSize: '8.5px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', marginBottom: '2px', letterSpacing: '.04em' }}>{firm.promo_label}</div>
                   )}
                   <div style={{ fontSize: '13px', fontWeight: 900, color: '#fff' }}>{firm.promo_discount}</div>
-                  {firm.discount_code && (
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', marginTop: '2px', letterSpacing: '.03em' }}>
-                      {firm.discount_code}
-                    </div>
-                  )}
+                  <div style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.9)', marginTop: '3px', fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap' }}>
+                    {firm.discount_code || 'DIARIES'}
+                  </div>
                 </div>
               ) : (
                 <span style={{ fontSize: '11px', color: 'var(--t3)' }}>—</span>
               )}
             </div>
 
-            {/* ACTIONS */}
             <div style={{ textAlign: 'right' }}>
-              <Link href={`/firms/${firm.slug}`} style={{
-                display: 'inline-block', padding: '8px 18px', borderRadius: '100px',
-                border: '1px solid var(--border2)', color: 'var(--t1)', fontSize: '12.5px', fontWeight: 700,
-                textDecoration: 'none', transition: 'all .15s'
-              }}>
+              <Link href={`/firms/${firm.slug}`} onClick={e => e.stopPropagation()} style={{ display: 'inline-block', padding: '8px 18px', borderRadius: '100px', border: '1px solid var(--border2)', color: 'var(--t1)', fontSize: '12.5px', fontWeight: 700, textDecoration: 'none' }}>
                 Firm
               </Link>
             </div>

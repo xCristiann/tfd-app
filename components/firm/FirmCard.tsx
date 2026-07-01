@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Firm } from '@/types'
+import FirmLogo from './FirmLogo'
 
 function TrustBar({ score }: { score: number }) {
   return (
@@ -15,38 +16,6 @@ function TrustBar({ score }: { score: number }) {
   )
 }
 
-function FirmLogo({ name, logoUrl }: { name: string; logoUrl?: string }) {
-  return (
-    <div style={{
-      width: '44px', height: '44px', borderRadius: '11px',
-      background: '#fff', border: '1px solid var(--border2)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0, overflow: 'hidden', position: 'relative'
-    }}>
-      {/* Fallback initials always rendered behind */}
-      <span style={{
-        position: 'absolute', fontSize: '12px', fontWeight: 800,
-        color: '#222', fontFamily: 'JetBrains Mono, monospace'
-      }}>
-        {name.slice(0, 2).toUpperCase()}
-      </span>
-      {logoUrl && (
-        <img
-          src={logoUrl}
-          alt={name}
-          width={28}
-          height={28}
-          style={{
-            width: '28px', height: '28px', objectFit: 'contain',
-            position: 'relative', zIndex: 1, background: '#fff'
-          }}
-          onError={(e) => { e.currentTarget.style.display = 'none' }}
-        />
-      )}
-    </div>
-  )
-}
-
 export default function FirmCard({ firm, featured }: { firm: Firm & { logo_url?: string }; featured?: boolean }) {
   const challenges = (firm as any).challenges || []
   const lowestChallenge = challenges.sort((a: any, b: any) => a.price_usd - b.price_usd)[0]
@@ -56,7 +25,7 @@ export default function FirmCard({ firm, featured }: { firm: Firm & { logo_url?:
     firm.markets_futures && 'Futures',
     firm.markets_crypto && 'Crypto',
     firm.markets_metals && 'Metals',
-  ].filter(Boolean).slice(0, 2).join(', ')
+  ].filter((x): x is string => Boolean(x)).slice(0, 2).join(', ')
 
   return (
     <div style={{ background: 'var(--bg1)', border: `1px solid ${featured ? 'rgba(0,229,160,0.3)' : 'var(--border)'}`, borderRadius: '16px', padding: '24px', position: 'relative', transition: 'all .2s', boxShadow: featured ? '0 0 40px rgba(0,229,160,0.07)' : undefined }} className="card-hover">
@@ -67,7 +36,7 @@ export default function FirmCard({ firm, featured }: { firm: Firm & { logo_url?:
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '13px', marginBottom: '18px' }}>
-        <FirmLogo name={firm.name} logoUrl={(firm as any).logo_url} />
+        <FirmLogo name={firm.name} logoUrl={(firm as any).logo_url} size={44} radius={11} />
         <div>
           <div style={{ fontSize: '15.5px', fontWeight: 700, marginBottom: '3px' }}>{firm.name}</div>
           <div style={{ fontSize: '12px', color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: '6px' }}>
