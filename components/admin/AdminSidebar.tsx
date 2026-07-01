@@ -15,6 +15,9 @@ const navItems = [
   { label: 'Community', items: [
     { href: '/admin/reviews', label: 'Reviews & Comments', icon: '💬' },
   ]},
+  { label: 'Marketing', items: [
+    { href: '/admin/email', label: 'Email Manager', icon: '📧' },
+  ]},
 ]
 
 export default function AdminSidebar() {
