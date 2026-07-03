@@ -1,4 +1,4 @@
-﻿import Link from 'next/link'
+import Link from 'next/link'
 import { TFDLogo } from '@/components/ui/TFDLogo'
 
 export default function Footer() {
@@ -18,9 +18,9 @@ export default function Footer() {
       title: 'Tools',
       links: [
         { label: 'Matching Calculator', href: '/calculator' },
-        { label: 'Forex Firms', href: '/firms?market=forex' },
-        { label: 'Futures Firms', href: '/firms?market=futures' },
-        { label: 'Crypto Firms', href: '/firms?market=crypto' },
+        { label: 'Forex Firms', href: '/firms' },
+        { label: 'Futures Firms', href: '/firms' },
+        { label: 'Crypto Firms', href: '/firms' },
       ]
     },
     {
@@ -61,7 +61,7 @@ export default function Footer() {
             </p>
             <div style={{ display: 'flex', gap: '8px' }}>
               {['X', 'TG', 'DC'].map(s => (
-                <div key={s} style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg2)', border: '1px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: 'var(--t3)', cursor: 'pointer' }}>
+                <div key={s} style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg2)', border: '1px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: 'var(--t3)' }}>
                   {s}
                 </div>
               ))}
@@ -76,9 +76,7 @@ export default function Footer() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {section.links.map(link => (
-                  <Link key={link.label} href={link.href} style={{ fontSize: '13px', color: 'var(--t3)', textDecoration: 'none', transition: 'color .15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--t1)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--t3)')}>
+                  <Link key={link.label} href={link.href} style={{ fontSize: '13px', color: 'var(--t3)', textDecoration: 'none' }}>
                     {link.label}
                   </Link>
                 ))}
