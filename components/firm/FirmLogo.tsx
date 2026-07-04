@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
 
 interface FirmLogoProps {
@@ -10,11 +10,9 @@ interface FirmLogoProps {
 
 export default function FirmLogo({ name, logoUrl, size = 44, radius = 11 }: FirmLogoProps) {
   const [imgError, setImgError] = useState(false)
-
   const initials = name.slice(0, 2).toUpperCase()
-  const fontSize = size * 0.27
+  const fontSize = Math.round(size * 0.27)
 
-  // Daca nu are logo sau imaginea a dat eroare, afisam initiale
   if (!logoUrl || imgError) {
     return (
       <div style={{
@@ -32,9 +30,9 @@ export default function FirmLogo({ name, logoUrl, size = 44, radius = 11 }: Firm
   return (
     <div style={{
       width: `${size}px`, height: `${size}px`, borderRadius: `${radius}px`,
-      background: 'transparent',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0, overflow: 'hidden'
+      overflow: 'hidden', flexShrink: 0, display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      background: 'transparent'
     }}>
       <img
         src={logoUrl}

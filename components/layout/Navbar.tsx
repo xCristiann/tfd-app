@@ -42,7 +42,7 @@ export default function Navbar() {
   }
 
   const isActive = (href: string) => pathname === href
-  const linkStyle = (href: string) => ({
+  const linkStyle = (href: string): React.CSSProperties => ({
     fontSize: '13.5px',
     color: isActive(href) ? 'var(--t1)' : 'var(--t2)',
     padding: '7px 14px', borderRadius: '8px', textDecoration: 'none',
@@ -61,6 +61,7 @@ export default function Navbar() {
         <div style={{ display: 'flex', gap: '2px' }}>
           <Link href="/" style={linkStyle('/')}>Firms</Link>
           <Link href="/firms" style={linkStyle('/firms')}>Compare</Link>
+          <Link href="/compare" style={linkStyle('/compare')}>⚡ vs</Link>
           <Link href="/offers" style={linkStyle('/offers')}>Offers</Link>
           <Link href="/calculator" style={linkStyle('/calculator')}>Calculator</Link>
         </div>
