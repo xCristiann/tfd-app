@@ -11,7 +11,7 @@ interface FirmLogoProps {
 export default function FirmLogo({ name, logoUrl, size = 44, radius = 11 }: FirmLogoProps) {
   const [imgError, setImgError] = useState(false)
   const initials = name.slice(0, 2).toUpperCase()
-  const fontSize = Math.round(size * 0.27)
+  const fontSize = Math.round(size * 0.28)
 
   if (!logoUrl || imgError) {
     return (
@@ -20,26 +20,27 @@ export default function FirmLogo({ name, logoUrl, size = 44, radius = 11 }: Firm
         background: 'var(--bg2)', border: '1px solid var(--border2)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0, fontSize: `${fontSize}px`, fontWeight: 800,
-        color: 'var(--t2)', fontFamily: 'JetBrains Mono, monospace'
+        color: 'var(--t2)', fontFamily: 'JetBrains Mono, monospace',
+        letterSpacing: '-0.02em'
       }}>
         {initials}
       </div>
     )
   }
 
+  // No white background, no border — just the logo image directly
   return (
     <div style={{
       width: `${size}px`, height: `${size}px`, borderRadius: `${radius}px`,
-      overflow: 'hidden', flexShrink: 0, display: 'flex',
-      alignItems: 'center', justifyContent: 'center',
-      background: 'transparent'
+      overflow: 'hidden', flexShrink: 0,
+      background: 'transparent',
     }}>
       <img
         src={logoUrl}
         alt={name}
         width={size}
         height={size}
-        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         onError={() => setImgError(true)}
       />
     </div>

@@ -11,6 +11,7 @@ export default function Navbar() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [coins, setCoins] = useState<number | null>(null)
   const [loaded, setLoaded] = useState(false)
   const supabase = createClient()
 
@@ -19,8 +20,9 @@ export default function Navbar() {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
       if (user) {
-        const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+        const { data: p } = await supabase.from('profiles').select('is_admin, coins').eq('id', user.id).single()
         setIsAdmin(p?.is_admin || false)
+        setCoins(p?.coins ?? 0)
       }
       setLoaded(true)
     }
@@ -28,23 +30,18 @@ export default function Navbar() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
-        const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', session.user.id).single()
+        const { data: p } = await supabase.from('profiles').select('is_admin, coins').eq('id', session.user.id).single()
         setIsAdmin(p?.is_admin || false)
-      } else setIsAdmin(false)
+        setCoins(p?.coins ?? 0)
+      } else { setIsAdmin(false); setCoins(null) }
     })
     return () => subscription.unsubscribe()
   }, [])
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
-  }
-
+  const handleSignOut = async () => { await supabase.auth.signOut(); router.push('/'); router.refresh() }
   const isActive = (href: string) => pathname === href
   const linkStyle = (href: string): React.CSSProperties => ({
-    fontSize: '13.5px',
-    color: isActive(href) ? 'var(--t1)' : 'var(--t2)',
+    fontSize: '13.5px', color: isActive(href) ? 'var(--t1)' : 'var(--t2)',
     padding: '7px 14px', borderRadius: '8px', textDecoration: 'none',
     background: isActive(href) ? 'rgba(255,255,255,0.05)' : 'transparent',
   })
@@ -66,9 +63,12 @@ export default function Navbar() {
           <Link href="/calculator" style={linkStyle('/calculator')}>Calculator</Link>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {!loaded ? <div style={{ width: '120px', height: '36px' }} /> : user ? (
+          {!loaded ? <div style={{ width: '140px', height: '36px' }} /> : user ? (
             <>
-              {isAdmin && <Link href="/admin" style={{ textDecoration: 'none', fontSize: '13.5px', padding: '8px 16px', borderRadius: '9px', border: '1px solid rgba(0,229,160,0.3)', color: 'var(--teal)', background: 'rgba(0,229,160,0.06)', fontWeight: 600 }}>Admin CRM</Link>}
+              <Link href="/coins" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '9px', border: '1px solid rgba(251,191,36,0.3)', background: 'rgba(251,191,36,0.06)', textDecoration: 'none', fontSize: '13.5px', fontWeight: 700, color: 'var(--amber)' }}>
+                🪙 {coins?.toLocaleString() ?? '0'}
+              </Link>
+              {isAdmin && <Link href="/admin" style={{ textDecoration: 'none', fontSize: '13.5px', padding: '8px 16px', borderRadius: '9px', border: '1px solid rgba(0,229,160,0.3)', color: 'var(--teal)', background: 'rgba(0,229,160,0.06)', fontWeight: 600 }}>Admin</Link>}
               <button onClick={handleSignOut} style={{ padding: '8px 16px', borderRadius: '9px', fontSize: '13.5px', border: '1px solid var(--border2)', color: 'var(--t1)', background: 'transparent', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Sign Out</button>
             </>
           ) : (
