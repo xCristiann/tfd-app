@@ -2,12 +2,29 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
-  return createBrowserClient(url, key, {
-    auth: {
-      persistSession: false,
-      detectSessionInUrl: true,
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+        storage: {
+          getItem: (key) => {
+            if (typeof window === 'undefined') return null
+            return window.sessionStorage.getItem(key)
+          },
+          setItem: (key, value) => {
+            if (typeof window === 'undefined') return
+            window.sessionStorage.setItem(key, value)
+          },
+          removeItem: (key) => {
+            if (typeof window === 'undefined') return
+            window.sessionStorage.removeItem(key)
+          },
+        },
+      },
     }
-  })
+  )
 }

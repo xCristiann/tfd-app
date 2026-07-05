@@ -25,7 +25,7 @@ export default function RegisterClient() {
       password,
       options: {
         data: { full_name: name },
-        emailRedirectTo: `${SITE_URL}/auth/confirmed`,
+        emailRedirectTo: `${SITE_URL}/auth/callback?next=/auth/confirmed`,
       }
     })
 
@@ -47,7 +47,7 @@ export default function RegisterClient() {
             Click the link in the email to activate your account.
           </p>
           <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', fontSize: '13.5px', color: 'var(--t2)', lineHeight: 1.7, marginBottom: '24px', textAlign: 'left' }}>
-            <div style={{ fontWeight: 700, color: 'var(--t1)', marginBottom: '8px' }}>Didn't receive it?</div>
+            <div style={{ fontWeight: 700, color: 'var(--t1)', marginBottom: '8px' }}>Didn&apos;t receive it?</div>
             <div>• Check your spam/junk folder</div>
             <div>• Make sure you typed the correct email</div>
             <div>• The link expires in 24 hours</div>
@@ -62,15 +62,13 @@ export default function RegisterClient() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'grid', gridTemplateColumns: '1fr 440px 1fr' }}>
-      {/* LEFT AD */}
-      <div style={{ background: 'var(--bg1)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: '20px' }}>
-        <div style={{ width: '100%', maxWidth: '280px', aspectRatio: '1/1.4', background: 'linear-gradient(135deg,rgba(0,229,160,0.1),rgba(167,139,250,0.1))', border: '1px dashed rgba(0,229,160,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ background: 'var(--bg1)', borderRight: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ width: '100%', maxWidth: '280px', aspectRatio: '1/1.4', background: 'rgba(0,229,160,0.05)', border: '1px dashed rgba(0,229,160,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Ad Space</div>
           <div style={{ fontSize: '12px', color: 'var(--t3)' }}>280 × 392px</div>
         </div>
       </div>
 
-      {/* CENTER */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 32px', borderRight: '1px solid var(--border)' }}>
         <div style={{ width: '100%' }}>
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
@@ -85,27 +83,21 @@ export default function RegisterClient() {
           </div>
 
           {error && (
-            <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '9px', padding: '12px', fontSize: '13.5px', color: 'var(--coral)', marginBottom: '16px' }}>
-              {error}
-            </div>
+            <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '9px', padding: '12px', fontSize: '13.5px', color: 'var(--coral)', marginBottom: '16px' }}>{error}</div>
           )}
 
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--t2)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.04em' }}>Full Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
-              style={{ width: '100%', padding: '12px 14px', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: '9px', color: 'var(--t1)', fontSize: '15px', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
-          </div>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--t2)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.04em' }}>Email address</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
-              style={{ width: '100%', padding: '12px 14px', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: '9px', color: 'var(--t1)', fontSize: '15px', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
-          </div>
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--t2)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.04em' }}>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 8 characters"
-              onKeyDown={e => e.key === 'Enter' && handleRegister()}
-              style={{ width: '100%', padding: '12px 14px', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: '9px', color: 'var(--t1)', fontSize: '15px', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
-          </div>
+          {[
+            { label: 'Full Name', value: name, setter: setName, type: 'text', placeholder: 'Your name' },
+            { label: 'Email address', value: email, setter: setEmail, type: 'email', placeholder: 'you@example.com' },
+            { label: 'Password', value: password, setter: setPassword, type: 'password', placeholder: 'Min 8 characters' },
+          ].map((f, i) => (
+            <div key={i} style={{ marginBottom: i === 2 ? '24px' : '14px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--t2)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.04em' }}>{f.label}</label>
+              <input type={f.type} value={f.value} onChange={e => f.setter(e.target.value)} placeholder={f.placeholder}
+                onKeyDown={e => e.key === 'Enter' && handleRegister()}
+                style={{ width: '100%', padding: '12px 14px', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: '9px', color: 'var(--t1)', fontSize: '15px', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+          ))}
 
           <button onClick={handleRegister} disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: '10px', fontSize: '15px', fontWeight: 800, color: '#04120c', background: 'var(--teal)', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 24px var(--teal-glow)', opacity: loading ? 0.7 : 1 }}>
             {loading ? 'Creating account...' : 'Create Account →'}
@@ -125,9 +117,8 @@ export default function RegisterClient() {
         </div>
       </div>
 
-      {/* RIGHT AD */}
-      <div style={{ background: 'var(--bg1)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-        <div style={{ width: '100%', maxWidth: '280px', height: '600px', background: 'linear-gradient(135deg,rgba(167,139,250,0.1),rgba(0,229,160,0.1))', border: '1px dashed rgba(167,139,250,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ background: 'var(--bg1)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ width: '100%', maxWidth: '280px', height: '600px', background: 'rgba(167,139,250,0.05)', border: '1px dashed rgba(167,139,250,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Premium Ad</div>
           <div style={{ fontSize: '12px', color: 'var(--t3)' }}>280 × 600px</div>
         </div>
