@@ -3,9 +3,14 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+  const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/auth/confirmed'
+  const errorParam = searchParams.get('error')
+
+  if (errorParam) {
+    return NextResponse.redirect(`${origin}/auth/confirmed?error=${errorParam}`)
+  }
 
   if (code) {
     const cookieStore = await cookies()
@@ -14,9 +19,7 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
+          getAll() { return cookieStore.getAll() },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
@@ -28,12 +31,10 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(new URL(next, request.url))
+      return NextResponse.redirect(`${origin}${next}`)
     }
+    console.error('Auth callback error:', error.message)
   }
 
-  // Error or no code — redirect to confirmed page with error
-  return NextResponse.redirect(
-    new URL('/auth/confirmed?error=auth_error', request.url)
-  )
+  return NextResponse.redirect(`${origin}/auth/confirmed?error=confirmation_failed`)
 }
