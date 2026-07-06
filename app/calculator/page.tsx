@@ -1,2 +1,12 @@
+﻿import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+
 export const dynamic = 'force-dynamic'
-export { default } from './CalculatorClient'
+
+export default async function CalculatorPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login?redirect=/calculator')
+  const { default: CalculatorClient } = await import('./CalculatorClient')
+  return <CalculatorClient />
+}
