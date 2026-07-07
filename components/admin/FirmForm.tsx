@@ -1,154 +1,233 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import type { Firm } from '@/types'
 
-const EMPTY: Partial<Firm> = {
-  name:'', slug:'', website:'', affiliate_link:'', discount_code:'',
-  founded_year: undefined, headquarters:'', platforms:[], short_description:'',
-  admin_notes:'', trust_score:0, payout_reliability:'Unknown', avg_payout_days: undefined,
-  support_quality:'Medium', years_active: undefined, delayed_payout_reports:0,
-  rules_clarity:'Clear', total_funded_traders:'', payout_methods:[],
-  accepts_eu:true, markets_forex:true, markets_futures:false, markets_crypto:false,
-  markets_indices:false, markets_metals:false, markets_commodities:false,
-  is_published:false, is_featured:false
+interface FirmFormProps {
+  firm?: any
+  isEdit?: boolean
 }
 
-export default function FirmForm({ firm }: { firm?: Firm }) {
-  const [data, setData] = useState<Partial<Firm>>(firm || EMPTY)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+export default function FirmForm({ firm, isEdit = false }: FirmFormProps) {
   const router = useRouter()
   const supabase = createClient()
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
 
-  const set = (k: keyof Firm, v: any) => setData(prev => ({ ...prev, [k]: v }))
+  const [data, setData] = useState({
+    name: firm?.name || '',
+    slug: firm?.slug || '',
+    website: firm?.website || '',
+    affiliate_link: firm?.affiliate_link || '',
+    discount_code: firm?.discount_code || '',
+    short_description: firm?.short_description || '',
+    founded_year: firm?.founded_year?.toString() || '',
+    headquarters: firm?.headquarters || '',
+    country_code: firm?.country_code || '',
+    max_allocation: firm?.max_allocation?.toString() || '',
+    promo_discount: firm?.promo_discount || '',
+    promo_label: firm?.promo_label || '',
+    years_active: firm?.years_active?.toString() || '',
+    platforms: (firm?.platforms || []).join(', '),
+    payout_reliability: firm?.payout_reliability || 'Confirmed',
+    avg_payout_days: firm?.avg_payout_days?.toString() || '',
+    support_quality: firm?.support_quality || 'Medium',
+    delayed_payout_reports: firm?.delayed_payout_reports?.toString() || '0',
+    rules_clarity: firm?.rules_clarity || 'Clear',
+    markets_forex: firm?.markets_forex ?? true,
+    markets_futures: firm?.markets_futures ?? false,
+    markets_crypto: firm?.markets_crypto ?? false,
+    markets_indices: firm?.markets_indices ?? false,
+    markets_metals: firm?.markets_metals ?? false,
+    markets_commodities: firm?.markets_commodities ?? false,
+    accepts_eu: firm?.accepts_eu ?? true,
+    is_published: firm?.is_published ?? false,
+    is_featured: firm?.is_featured ?? false,
+    logo_url: firm?.logo_url || '',
+  })
 
-  const save = async () => {
-    setSaving(true); setError('')
-    if (!data.name || !data.slug) { setError('Name and slug are required'); setSaving(false); return }
-    const payload = { ...data, updated_at: new Date().toISOString() }
-    let err
-    if (firm?.id) {
-      ({ error: err } = await supabase.from('firms').update(payload).eq('id', firm.id))
-    } else {
-      ({ error: err } = await supabase.from('firms').insert(payload))
+  const set = (k: string, v: any) => setData(d => ({ ...d, [k]: v }))
+
+  const handleSubmit = async () => {
+    if (!data.name || !data.slug) { setMsg('Name and slug are required'); return }
+    setLoading(true); setMsg('')
+
+    const payload = {
+      name: data.name,
+      slug: data.slug,
+      website: data.website || null,
+      affiliate_link: data.affiliate_link || null,
+      discount_code: data.discount_code || null,
+      short_description: data.short_description || null,
+      founded_year: data.founded_year ? parseInt(data.founded_year) : null,
+      headquarters: data.headquarters || null,
+      country_code: data.country_code || null,
+      max_allocation: data.max_allocation ? parseInt(data.max_allocation) : null,
+      promo_discount: data.promo_discount || null,
+      promo_label: data.promo_label || null,
+      years_active: data.years_active ? parseInt(data.years_active) : null,
+      platforms: data.platforms ? data.platforms.split(',').map((p: string) => p.trim()).filter(Boolean) : [],
+      payout_reliability: data.payout_reliability,
+      avg_payout_days: data.avg_payout_days ? parseInt(data.avg_payout_days) : null,
+      support_quality: data.support_quality,
+      delayed_payout_reports: data.delayed_payout_reports ? parseInt(data.delayed_payout_reports) : 0,
+      rules_clarity: data.rules_clarity,
+      markets_forex: data.markets_forex,
+      markets_futures: data.markets_futures,
+      markets_crypto: data.markets_crypto,
+      markets_indices: data.markets_indices,
+      markets_metals: data.markets_metals,
+      markets_commodities: data.markets_commodities,
+      accepts_eu: data.accepts_eu,
+      is_published: data.is_published,
+      is_featured: data.is_featured,
+      logo_url: data.logo_url || null,
+      // promo_discount_value extracted from promo_discount
+      promo_discount_value: data.promo_discount ? parseInt(data.promo_discount.replace(/[^0-9]/g, '')) || 0 : 0,
     }
-    if (err) { setError(err.message); setSaving(false); return }
-    router.push('/admin/firms')
-    router.refresh()
+
+    let error
+    if (isEdit && firm?.id) {
+      const res = await supabase.from('firms').update(payload).eq('id', firm.id)
+      error = res.error
+    } else {
+      const res = await supabase.from('firms').insert(payload)
+      error = res.error
+    }
+
+    if (error) {
+      setMsg(`Error: ${error.message}`)
+      setLoading(false)
+      return
+    }
+
+    setMsg(isEdit ? '✓ Firm updated successfully' : '✓ Firm created successfully')
+    setLoading(false)
+    setTimeout(() => router.push('/admin/firms'), 1000)
   }
 
-  const inp = (label: string, key: keyof Firm, type='text', placeholder='') => (
+  const inp = (label: string, key: string, type = 'text', placeholder = '') => (
     <div>
-      <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>{label}</label>
-      <input type={type} value={String(data[key]??'')} onChange={e=>set(key, type==='number'?Number(e.target.value):e.target.value)} placeholder={placeholder} className="input-base" />
+      <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t2)', display: 'block', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '.04em' }}>{label}</label>
+      <input type={type} value={(data as any)[key]} onChange={e => set(key, e.target.value)} placeholder={placeholder}
+        style={{ width: '100%', padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: '8px', color: 'var(--t1)', fontSize: '13.5px', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
     </div>
   )
 
-  const sel = (label: string, key: keyof Firm, options: string[]) => (
+  const sel = (label: string, key: string, options: string[]) => (
     <div>
-      <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>{label}</label>
-      <select value={String(data[key]??'')} onChange={e=>set(key,e.target.value)} className="input-base">
-        {options.map(o=><option key={o}>{o}</option>)}
+      <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t2)', display: 'block', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '.04em' }}>{label}</label>
+      <select value={(data as any)[key]} onChange={e => set(key, e.target.value)}
+        style={{ width: '100%', padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: '8px', color: 'var(--t1)', fontSize: '13.5px', fontFamily: 'Inter, sans-serif', outline: 'none' }}>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>
   )
 
-  const tog = (label: string, key: keyof Firm) => (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0',borderTop:'1px solid var(--border)'}}>
-      <label style={{fontSize:'14px',color:'var(--t2)'}}>{label}</label>
-      <div onClick={()=>set(key,!data[key])} style={{width:'44px',height:'24px',borderRadius:'100px',background:data[key]?'var(--teal)':'var(--bg3)',border:`1px solid ${data[key]?'var(--teal)':'var(--border2)'}`,position:'relative',cursor:'pointer',transition:'background .2s',boxShadow:data[key]?'0 0 10px var(--teal-glow)':undefined}}>
-        <div style={{position:'absolute',top:'3px',left:data[key]?'23px':'3px',width:'16px',height:'16px',borderRadius:'50%',background:data[key]?'#04120c':'var(--t3)',transition:'left .2s'}} />
-      </div>
-    </div>
+  const chk = (label: string, key: string) => (
+    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13.5px', color: 'var(--t1)' }}>
+      <input type="checkbox" checked={(data as any)[key]} onChange={e => set(key, e.target.checked)}
+        style={{ width: '16px', height: '16px', accentColor: 'var(--teal)', cursor: 'pointer' }} />
+      {label}
+    </label>
   )
 
   const panel = (title: string, children: React.ReactNode) => (
-    <div style={{background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px',padding:'28px',marginBottom:'20px'}}>
-      <h3 style={{fontSize:'15px',fontWeight:700,marginBottom:'20px',paddingBottom:'14px',borderBottom:'1px solid var(--border)'}}>{title}</h3>
+    <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+      <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '16px' }}>{title}</h3>
       {children}
     </div>
   )
 
   return (
-    <div>
-      {error && <div style={{background:'rgba(248,113,113,0.1)',border:'1px solid rgba(248,113,113,0.2)',borderRadius:'9px',padding:'12px 16px',color:'var(--coral)',fontSize:'13.5px',marginBottom:'20px'}}>{error}</div>}
+    <div style={{ maxWidth: '800px' }}>
+      {msg && (
+        <div style={{ background: msg.startsWith('✓') ? 'rgba(0,229,160,0.1)' : 'rgba(248,113,113,0.1)', border: `1px solid ${msg.startsWith('✓') ? 'rgba(0,229,160,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: '9px', padding: '12px 16px', marginBottom: '16px', fontSize: '13.5px', color: msg.startsWith('✓') ? 'var(--teal)' : 'var(--coral)', fontWeight: 600 }}>
+          {msg}
+        </div>
+      )}
 
-      {panel('Firm Identity', (
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
-          {inp('Firm Name','name','text','e.g. The5ers')}
-          {inp('Slug (URL)','slug','text','e.g. the5ers')}
-          {inp('Official Website','website','url','https://')}
-          {inp('Affiliate / Referral Link','affiliate_link','url','https://')}
-          {inp('Discount Code','discount_code','text','e.g. TFD10')}
-          {inp('Founded Year','founded_year','number','2016')}
-          {inp('Headquarters','headquarters','text','Tel Aviv, Israel')}
+      {/* TRUST SCORE — read only from DB */}
+      {isEdit && (
+        <div style={{ background: 'rgba(0,229,160,0.06)', border: '1px solid rgba(0,229,160,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>Platforms (comma separated)</label>
-            <input value={(data.platforms||[]).join(', ')} onChange={e=>set('platforms',e.target.value.split(',').map(s=>s.trim()))} placeholder="MT4, MT5, cTrader" className="input-base" />
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '4px' }}>Trust Score (Auto-calculated)</div>
+            <div style={{ fontSize: '12px', color: 'var(--t3)' }}>Calculated from: payout reliability, speed, years active, delayed reports, support quality, rules clarity, rating</div>
+          </div>
+          <div style={{ fontSize: '32px', fontWeight: 900, color: 'var(--teal)', fontFamily: 'JetBrains Mono, monospace' }}>
+            {firm?.trust_score || 0}<span style={{ fontSize: '14px', color: 'var(--t3)' }}>/100</span>
+          </div>
+        </div>
+      )}
+
+      {panel('Basic Info', (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          {inp('Firm Name *', 'name', 'text', 'e.g. FTMO')}
+          {inp('Slug *', 'slug', 'text', 'e.g. ftmo')}
+          {inp('Website', 'website', 'url', 'https://...')}
+          {inp('Affiliate Link', 'affiliate_link', 'url', 'https://...')}
+          {inp('Discount Code', 'discount_code', 'text', 'e.g. DIARIES')}
+          {inp('Country Code', 'country_code', 'text', 'e.g. CZ, GB, US')}
+          {inp('Founded Year', 'founded_year', 'number', '2020')}
+          {inp('Headquarters', 'headquarters', 'text', 'e.g. Prague, CZ')}
+          {inp('Logo URL', 'logo_url', 'url', 'https://...')}
+          {inp('Max Allocation ($)', 'max_allocation', 'number', '2000000')}
+        </div>
+      ))}
+
+      {panel('Description & Promo', (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ gridColumn: '1/-1' }}>
+            <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t2)', display: 'block', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '.04em' }}>Short Description</label>
+            <textarea value={data.short_description} onChange={e => set('short_description', e.target.value)} rows={2}
+              style={{ width: '100%', padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: '8px', color: 'var(--t1)', fontSize: '13.5px', fontFamily: 'Inter, sans-serif', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+          </div>
+          {inp('Promo Discount', 'promo_discount', 'text', 'e.g. 25% OFF')}
+          {inp('Promo Label', 'promo_label', 'text', 'e.g. HOT, NEW, LIMITED')}
+        </div>
+      ))}
+
+      {panel('Trust Score Factors (affect auto-calculation)', (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          {sel('Payout Reliability', 'payout_reliability', ['Confirmed', 'Unknown', 'Reported issues'])}
+          {inp('Avg Payout Days', 'avg_payout_days', 'number', '3')}
+          {sel('Support Quality', 'support_quality', ['Fast', 'Medium', 'Slow'])}
+          {sel('Rules Clarity', 'rules_clarity', ['Clear', 'Ambiguous', 'Unclear'])}
+          {inp('Years Active', 'years_active', 'number', '3')}
+          {inp('Delayed Payout Reports', 'delayed_payout_reports', 'number', '0')}
+        </div>
+      ))}
+
+      {panel('Markets', (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px' }}>
+          {chk('Forex', 'markets_forex')}
+          {chk('Futures', 'markets_futures')}
+          {chk('Crypto', 'markets_crypto')}
+          {chk('Indices', 'markets_indices')}
+          {chk('Metals', 'markets_metals')}
+          {chk('Commodities', 'markets_commodities')}
+        </div>
+      ))}
+
+      {panel('Settings', (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {chk('Published (visible on site)', 'is_published')}
+            {chk('Featured firm', 'is_featured')}
+            {chk('Accepts EU traders', 'accepts_eu')}
           </div>
           <div>
-            <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>Total Funded Traders</label>
-            <input value={data.total_funded_traders||''} onChange={e=>set('total_funded_traders',e.target.value)} placeholder="10,000+" className="input-base" />
+            {inp('Platforms (comma separated)', 'platforms', 'text', 'MT4, MT5, cTrader')}
           </div>
         </div>
       ))}
 
-      {panel('Trust Score Inputs', (
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'16px'}}>
-          <div>
-            <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>Trust Score (0–100)</label>
-            <input type="number" min={0} max={100} value={data.trust_score||0} onChange={e=>set('trust_score',Number(e.target.value))} className="input-base" />
-          </div>
-          {sel('Payout Reliability','payout_reliability',['Unknown','Confirmed','Reported issues'])}
-          {inp('Avg Payout Speed (days)','avg_payout_days','number')}
-          {sel('Support Quality','support_quality',['Fast','Medium','Slow'])}
-          {inp('Years Active','years_active','number')}
-          {inp('Delayed Payout Reports','delayed_payout_reports','number')}
-          {sel('Rules Clarity','rules_clarity',['Clear','Ambiguous','Unclear'])}
-          <div>
-            <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>Payout Methods (comma sep.)</label>
-            <input value={(data.payout_methods||[]).join(', ')} onChange={e=>set('payout_methods',e.target.value.split(',').map(s=>s.trim()))} placeholder="Wire, Wise, Crypto" className="input-base" />
-          </div>
-        </div>
-      ))}
-
-      {panel('Markets & Instruments', (
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'16px'}}>
-          {(['markets_forex','markets_futures','markets_crypto','markets_indices','markets_metals','markets_commodities'] as (keyof Firm)[]).map(k => (
-            <div key={String(k)} style={{display:'flex',alignItems:'center',gap:'10px',cursor:'pointer'}} onClick={()=>set(k,!data[k])}>
-              <div style={{width:'18px',height:'18px',borderRadius:'5px',border:`2px solid ${data[k]?'var(--teal)':'var(--border2)'}`,background:data[k]?'var(--teal)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                {data[k] && <span style={{color:'#04120c',fontSize:'12px',fontWeight:800}}>✓</span>}
-              </div>
-              <span style={{fontSize:'14px',color:'var(--t2)',textTransform:'capitalize'}}>{String(k).replace('markets_','')}</span>
-            </div>
-          ))}
-        </div>
-      ))}
-
-      {panel('Description & Settings', (
-        <div>
-          <div style={{marginBottom:'16px'}}>
-            <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>Short description (shown on card)</label>
-            <textarea value={data.short_description||''} onChange={e=>set('short_description',e.target.value)} className="input-base" style={{minHeight:'80px',resize:'vertical',lineHeight:1.6}} placeholder="One-paragraph summary..." />
-          </div>
-          <div style={{marginBottom:'16px'}}>
-            <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>Internal notes (admin only)</label>
-            <textarea value={data.admin_notes||''} onChange={e=>set('admin_notes',e.target.value)} className="input-base" style={{minHeight:'60px',resize:'vertical',lineHeight:1.6}} placeholder="Private notes..." />
-          </div>
-          <div style={{borderTop:'1px solid var(--border)',paddingTop:'4px'}}>
-            {tog('Published (visible on site)','is_published')}
-            {tog('Featured on homepage','is_featured')}
-            {tog('Accepts EU / Romanian traders','accepts_eu')}
-          </div>
-        </div>
-      ))}
-
-      <div style={{display:'flex',gap:'10px',justifyContent:'flex-end',paddingTop:'4px'}}>
-        <button onClick={()=>router.back()} style={{padding:'10px 20px',borderRadius:'9px',fontSize:'14px',fontWeight:500,color:'var(--t1)',background:'transparent',border:'1px solid var(--border2)',cursor:'pointer',fontFamily:'Inter,sans-serif'}}>Cancel</button>
-        <button onClick={save} disabled={saving} className="btn-primary" style={{opacity:saving?0.7:1}}>
-          {saving ? 'Saving...' : (firm ? 'Save Changes' : 'Create Firm')}
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button onClick={() => router.push('/admin/firms')} style={{ padding: '11px 20px', borderRadius: '9px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border2)', color: 'var(--t2)', background: 'transparent', fontFamily: 'Inter, sans-serif' }}>
+          Cancel
+        </button>
+        <button onClick={handleSubmit} disabled={loading} style={{ flex: 1, padding: '11px 24px', borderRadius: '9px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', border: 'none', color: '#04120c', background: 'var(--teal)', boxShadow: '0 0 20px var(--teal-glow)', fontFamily: 'Inter, sans-serif', opacity: loading ? 0.7 : 1 }}>
+          {loading ? 'Saving...' : isEdit ? 'Update Firm →' : 'Create Firm →'}
         </button>
       </div>
     </div>
