@@ -16,19 +16,11 @@ export default function FirmLogo({ name, logoUrl, size = 44, radius = 11 }: Firm
   if (!logoUrl || imgError) {
     return (
       <div style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: `${radius}px`,
-        background: 'var(--bg2)',
-        border: '1px solid var(--border2)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        fontSize: `${fontSize}px`,
-        fontWeight: 800,
-        color: 'var(--t2)',
-        fontFamily: 'JetBrains Mono, monospace',
+        width: `${size}px`, height: `${size}px`, borderRadius: `${radius}px`,
+        background: 'var(--bg2)', border: '1px solid var(--border2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, fontSize: `${fontSize}px`, fontWeight: 800,
+        color: 'var(--t2)', fontFamily: 'JetBrains Mono, monospace',
       }}>
         {initials}
       </div>
@@ -37,26 +29,15 @@ export default function FirmLogo({ name, logoUrl, size = 44, radius = 11 }: Firm
 
   return (
     <div style={{
-      width: `${size}px`,
-      height: `${size}px`,
-      borderRadius: `${radius}px`,
-      overflow: 'hidden',
-      flexShrink: 0,
-      background: 'transparent',
-      border: 'none',
+      width: `${size}px`, height: `${size}px`, borderRadius: `${radius}px`,
+      overflow: 'hidden', flexShrink: 0, background: 'transparent',
     }}>
       <img
         src={logoUrl}
         alt={name}
         width={size}
         height={size}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
-          display: 'block',
-          background: 'transparent',
-        }}
+        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         onError={() => setImgError(true)}
       />
     </div>
