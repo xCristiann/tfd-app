@@ -1,8 +1,9 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
+import NewsletterPopup from '@/components/ui/NewsletterPopup'
 import FirmsTable from '@/components/firm/FirmsTable'
 import Link from 'next/link'
 import type { Firm } from '@/types'
@@ -42,15 +43,16 @@ export default function HomeClient() {
   return (
     <>
       <Navbar />
+      <NewsletterPopup />
       <main>
 
-        {/* ─── HERO ─── */}
+        {/* â”€â”€â”€ HERO â”€â”€â”€ */}
         <section style={{ padding: '80px 0 56px', textAlign: 'center' }}>
           <div style={{ maxWidth: '1300px', margin: '0 auto', padding: '0 40px' }}>
 
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px 6px 12px', borderRadius: '100px', background: 'rgba(0,229,160,0.07)', border: '1px solid rgba(0,229,160,0.2)', fontSize: '12.5px', color: 'var(--teal)', fontWeight: 500, marginBottom: '28px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--teal)', boxShadow: '0 0 8px var(--teal)', animation: 'pulse 2s infinite', flexShrink: 0 }} />
-              Independent · Verified · Transparent
+              Independent Â· Verified Â· Transparent
             </div>
 
             <h1 style={{ fontSize: '60px', fontWeight: 900, letterSpacing: '-.04em', lineHeight: 1.04, marginBottom: '20px' }}>
@@ -64,7 +66,7 @@ export default function HomeClient() {
               The only prop firm comparison platform where every rule is verified, every challenge is current, and every firm is ranked on merit.
             </p>
 
-            {/* MARKET PILLS — CENTRATE */}
+            {/* MARKET PILLS â€” CENTRATE */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
               {pills.map(p => {
                 const active = market === p.key
@@ -126,17 +128,17 @@ export default function HomeClient() {
                 Ranked by trust score, not commission
               </div>
               <div style={{ fontSize: '14px', color: 'var(--t2)' }}>
-                {loading ? 'Loading...' : `${filtered.length} firms shown · click any row for full details`}
+                {loading ? 'Loading...' : `${filtered.length} firms shown Â· click any row for full details`}
               </div>
             </div>
             <Link href="/firms" style={{ fontSize: '13px', color: 'var(--teal)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              Full comparison →
+              Full comparison â†’
             </Link>
           </div>
 
           {loading ? (
             <div style={{ textAlign: 'center', padding: '80px', color: 'var(--t2)' }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚡</div>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>âš¡</div>
               Loading firms...
             </div>
           ) : (
@@ -156,7 +158,7 @@ export default function HomeClient() {
               Enter your target capital, trading style, and budget. Our matching engine calculates real expected value per firm.
             </p>
             <Link href="/calculator" style={{ display: 'inline-block', padding: '15px 34px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, color: '#04120c', background: 'linear-gradient(135deg,var(--teal),#4fffcc)', textDecoration: 'none', boxShadow: '0 0 40px var(--teal-glow)', position: 'relative' }}>
-              Launch the Matching Calculator →
+              Launch the Matching Calculator â†’
             </Link>
             <div style={{ marginTop: '14px', fontSize: '13px', color: 'var(--t3)', position: 'relative' }}>
               No account required. Free forever.
