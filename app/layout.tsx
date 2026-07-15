@@ -1,8 +1,10 @@
-import type { Metadata } from 'next'
+﻿import type { Metadata } from 'next'
+import NewsletterPopup from '@/components/ui/NewsletterPopup'
 import './globals.css'
+import NewsletterPopup from '@/components/ui/NewsletterPopup'
 
 export const metadata: Metadata = {
-  title: 'TheFundedDiaries — Find Your Prop Firm',
+  title: 'TheFundedDiaries â€” Find Your Prop Firm',
   description: 'Independent prop firm comparison. Verified rules, real reviews, transparent data.',
   openGraph: {
     title: 'TheFundedDiaries',
@@ -21,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div style={{position:'relative',zIndex:1}}>
           {children}
         </div>
-      </body>
+      <NewsletterPopup /></body>
     </html>
   )
 }
