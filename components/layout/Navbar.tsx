@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -13,7 +13,6 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [coins, setCoins] = useState<number | null>(null)
   const [loaded, setLoaded] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -45,7 +44,7 @@ export default function Navbar() {
     router.refresh()
   }
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const isActive = (href: string) => pathname === href
   const linkStyle = (href: string): React.CSSProperties => ({
     fontSize: '13.5px',
     color: isActive(href) ? 'var(--t1)' : 'var(--t2)',
@@ -60,7 +59,7 @@ export default function Navbar() {
     { href: '/offers', label: 'Offers' },
     { href: '/best-sellers', label: 'Best Sellers' },
     { href: '/reviews', label: 'Reviews' },
-    { href: '/compare', label: '⚡ vs' },
+    { href: '/compare', label: 'vs Tool' },
     { href: '/prop-firm-rules', label: 'Rules' },
     { href: '/spreads', label: 'Spreads' },
     { href: '/payouts', label: 'Payouts' },
@@ -69,7 +68,6 @@ export default function Navbar() {
   return (
     <nav style={{ position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', background: 'rgba(7,9,15,0.9)', borderBottom: '1px solid var(--border)' }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px', gap: '16px' }}>
-
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', flexShrink: 0 }}>
           <TFDLogo size={52} />
           <span style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '-.03em', color: 'var(--t1)', whiteSpace: 'nowrap' }}>
@@ -77,7 +75,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <div style={{ display: 'flex', gap: '0px', flexWrap: 'nowrap', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: '0', flexWrap: 'nowrap', overflowX: 'auto' }}>
           {navLinks.map(l => (
             <Link key={l.href} href={l.href} style={linkStyle(l.href)}>{l.label}</Link>
           ))}
@@ -87,7 +85,10 @@ export default function Navbar() {
           {!loaded ? <div style={{ width: '120px' }} /> : user ? (
             <>
               <Link href="/coins" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '9px', border: '1px solid rgba(251,191,36,0.3)', background: 'rgba(251,191,36,0.06)', textDecoration: 'none', fontSize: '13px', fontWeight: 700, color: 'var(--amber)' }}>
-                🪙 {coins?.toLocaleString() ?? '0'}
+                <span style={{ fontSize: '14px' }}>&#9651;</span> {coins?.toLocaleString() ?? '0'} coins
+              </Link>
+              <Link href="/profile" style={{ padding: '6px 12px', borderRadius: '9px', border: '1px solid var(--border2)', color: 'var(--t2)', textDecoration: 'none', fontSize: '13px' }}>
+                Profile
               </Link>
               {isAdmin && (
                 <Link href="/admin" style={{ textDecoration: 'none', fontSize: '13px', padding: '7px 14px', borderRadius: '9px', border: '1px solid rgba(0,229,160,0.3)', color: 'var(--teal)', background: 'rgba(0,229,160,0.06)', fontWeight: 600 }}>
