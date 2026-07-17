@@ -1,6 +1,7 @@
-﻿import type { Metadata } from 'next'
+import type { Metadata } from 'next'
 import NewsletterPopup from '@/components/ui/NewsletterPopup'
 import './globals.css'
+import NewsletterPopup from '@/components/ui/NewsletterPopup'
 
 export const metadata: Metadata = {
   title: 'TheFundedDiaries â€” Find Your Prop Firm',
