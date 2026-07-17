@@ -48,7 +48,9 @@ export default function Navbar() {
   const linkStyle = (href: string): React.CSSProperties => ({
     fontSize: '13.5px',
     color: isActive(href) ? 'var(--t1)' : 'var(--t2)',
-    padding: '7px 12px', borderRadius: '8px', textDecoration: 'none',
+    padding: '7px 12px',
+    borderRadius: '8px',
+    textDecoration: 'none',
     background: isActive(href) ? 'rgba(255,255,255,0.05)' : 'transparent',
     fontWeight: isActive(href) ? 600 : 400,
     whiteSpace: 'nowrap' as const,
@@ -82,12 +84,15 @@ export default function Navbar() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          {!loaded ? <div style={{ width: '120px' }} /> : user ? (
+          {!loaded ? (
+            <div style={{ width: '120px' }} />
+          ) : user ? (
             <>
-              <Link href="/coins" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '9px', border: '1px solid rgba(251,191,36,0.3)', background: 'rgba(251,191,36,0.06)', textDecoration: 'none', fontSize: '13px', fontWeight: 700, color: 'var(--amber)' }}>
-                <span style={{ fontSize: '14px' }}>&#9651;</span> {coins?.toLocaleString() ?? '0'} coins
+              <Link href="/coins" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '9px', border: '1px solid rgba(251,191,36,0.3)', background: 'rgba(251,191,36,0.06)', textDecoration: 'none', fontSize: '13px', fontWeight: 700, color: 'var(--amber)' }}>
+                <span style={{ fontSize: '13px', fontWeight: 900 }}>TFD</span>
+                <span>{coins?.toLocaleString() ?? '0'}</span>
               </Link>
-              <Link href="/profile" style={{ padding: '6px 12px', borderRadius: '9px', border: '1px solid var(--border2)', color: 'var(--t2)', textDecoration: 'none', fontSize: '13px' }}>
+              <Link href="/profile" style={{ padding: '6px 12px', borderRadius: '9px', border: '1px solid var(--border2)', color: 'var(--t2)', textDecoration: 'none', fontSize: '13px', fontWeight: 500 }}>
                 Profile
               </Link>
               {isAdmin && (

@@ -27,6 +27,7 @@ export default function Footer() {
         { label: 'Matching Calculator', href: '/calculator' },
         { label: 'TFD Coins & Prizes', href: '/coins' },
         { label: 'My Profile', href: '/profile' },
+        { label: 'Affiliate Program', href: '/affiliate' },
       ]
     },
     {
