@@ -36,7 +36,7 @@ export default function ProfilePage() {
       if (!user) { router.push('/auth/login?redirect=/profile'); return }
       const [p, r, tx] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('reviews').select('*, firms(name, slug)').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('reviews').select('*, firms(name,slug)').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('coin_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
       ])
       setProfile({ ...p.data, email: user.email })
@@ -79,33 +79,28 @@ export default function ProfilePage() {
     <>
       <Navbar />
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 32px 80px' }}>
-
-        {/* Header */}
         <div style={{ background: 'linear-gradient(135deg,rgba(0,229,160,0.08),rgba(124,58,237,0.08))', border: '1px solid rgba(0,229,160,0.15)', borderRadius: '20px', padding: '32px', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
           <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg,var(--teal),var(--violet))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 900, color: '#04120c', flexShrink: 0 }}>
             {initials}
           </div>
-
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
               <h1 style={{ fontSize: '22px', fontWeight: 800 }}>{profile?.full_name || 'Anonymous Trader'}</h1>
             </div>
             {msg && <div style={{ fontSize: '13px', color: 'var(--teal)', marginBottom: '4px' }}>{msg}</div>}
             <div style={{ fontSize: '13px', color: 'var(--t3)', marginBottom: '12px' }}>{profile?.email}</div>
-
             {badges.length > 0 && (
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 {badges.map((b: string) => {
                   const cfg = BADGE_CONFIG[b] || { bg: 'linear-gradient(135deg,var(--teal),var(--violet))', label: 'TFD' }
                   return (
                     <span key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 12px', borderRadius: '100px', background: cfg.bg, color: '#fff', fontSize: '12px', fontWeight: 700 }}>
-                      <span style={{ fontSize: '10px', letterSpacing: '.05em' }}>{cfg.label}</span> {b}
+                      <span style={{ fontSize: '10px' }}>{cfg.label}</span> {b}
                     </span>
                   )
                 })}
               </div>
             )}
-
             <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
               <div><div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--teal)' }}>{coins.toLocaleString()}</div><div style={{ fontSize: '11px', color: 'var(--t3)' }}>Coins</div></div>
               <div><div style={{ fontSize: '20px', fontWeight: 900, color: tier.color }}>{tier.name}</div><div style={{ fontSize: '11px', color: 'var(--t3)' }}>Tier</div></div>
@@ -113,29 +108,26 @@ export default function ProfilePage() {
               <div><div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--amber)' }}>{badges.length}</div><div style={{ fontSize: '11px', color: 'var(--t3)' }}>Badges</div></div>
             </div>
           </div>
-
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <div style={{ width: '72px', height: '72px', borderRadius: '50%', border: `3px solid ${tier.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', marginBottom: '6px' }}>
+            <div style={{ width: '72px', height: '72px', borderRadius: '50%', border: '3px solid ' + tier.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', marginBottom: '6px' }}>
               <div style={{ fontSize: '11px', fontWeight: 900, color: tier.color }}>{tier.name.slice(0,3).toUpperCase()}</div>
               <div style={{ fontSize: '9px', color: 'var(--t3)' }}>{lifetime.toLocaleString()}</div>
             </div>
             <div style={{ height: '4px', background: 'var(--bg3)', borderRadius: '100px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${progress}%`, background: `linear-gradient(90deg,${tier.color},${nextTier?.color || tier.color})`, borderRadius: '100px' }} />
+              <div style={{ height: '100%', width: progress + '%', background: 'linear-gradient(90deg,' + tier.color + ',' + (nextTier?.color || tier.color) + ')', borderRadius: '100px' }} />
             </div>
             {nextTier && <div style={{ fontSize: '9px', color: 'var(--t3)', marginTop: '3px' }}>{(nextTier.min - lifetime).toLocaleString()} to {nextTier.name}</div>}
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', marginBottom: '24px' }}>
           {([['overview','Overview'],['reviews','My Reviews'],['coins','Coin History'],['settings','Settings']] as const).map(([k, l]) => (
-            <button key={k} onClick={() => setTab(k)} style={{ padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', border: 'none', background: 'transparent', color: tab === k ? 'var(--teal)' : 'var(--t2)', borderBottom: `2px solid ${tab === k ? 'var(--teal)' : 'transparent'}`, marginBottom: '-1px' }}>
+            <button key={k} onClick={() => setTab(k)} style={{ padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', border: 'none', background: 'transparent', color: tab === k ? 'var(--teal)' : 'var(--t2)', borderBottom: '2px solid ' + (tab === k ? 'var(--teal)' : 'transparent'), marginBottom: '-1px' }}>
               {l}
             </button>
           ))}
         </div>
 
-        {/* OVERVIEW */}
         {tab === 'overview' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px' }}>
@@ -144,23 +136,19 @@ export default function ProfilePage() {
               <div style={{ fontSize: '12px', color: 'var(--t3)', marginBottom: '16px' }}>{lifetime.toLocaleString()} total earned</div>
               <Link href="/coins" style={{ display: 'inline-block', padding: '8px 18px', borderRadius: '8px', background: 'var(--teal)', color: '#04120c', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>Go to Shop</Link>
             </div>
-
             <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px' }}>
               <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--t2)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '.06em' }}>Referral Code</div>
-              <div style={{ fontSize: '13.5px', color: 'var(--t2)', lineHeight: 1.6, marginBottom: '12px' }}>
-                Share your code and earn <b style={{ color: 'var(--teal)' }}>+100 coins</b> for each friend who signs up.
-              </div>
+              <div style={{ fontSize: '13.5px', color: 'var(--t2)', lineHeight: 1.6, marginBottom: '12px' }}>Share your code and earn <b style={{ color: 'var(--teal)' }}>+100 coins</b> for each friend who signs up.</div>
               {profile?.referral_code && (
                 <div style={{ background: 'rgba(0,229,160,0.07)', border: '1px solid rgba(0,229,160,0.15)', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: '16px', fontWeight: 700, color: 'var(--teal)' }}>{profile.referral_code}</span>
-                  <button onClick={() => { navigator.clipboard.writeText(`https://www.thefundeddiaries.com/auth/register?ref=${profile.referral_code}`); setMsg('Link copied!'); setTimeout(()=>setMsg(''),1500) }}
+                  <button onClick={() => { navigator.clipboard.writeText('https://www.thefundeddiaries.com/auth/register?ref=' + profile.referral_code); setMsg('Copied!'); setTimeout(()=>setMsg(''),1500) }}
                     style={{ padding: '5px 12px', borderRadius: '6px', background: 'var(--teal)', color: '#04120c', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
                     Copy
                   </button>
                 </div>
               )}
             </div>
-
             <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px', gridColumn: '1/-1' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Badges ({badges.length})</div>
@@ -189,36 +177,33 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* REVIEWS */}
         {tab === 'reviews' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ fontSize: '15px', fontWeight: 700 }}>{reviews.length} reviews written</div>
               <Link href="/reviews" style={{ padding: '8px 18px', borderRadius: '8px', background: 'var(--teal)', color: '#04120c', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>Write Review</Link>
             </div>
             {reviews.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px', color: 'var(--t2)', background: 'var(--bg1)', borderRadius: '14px', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '14px', marginBottom: '12px' }}>No reviews yet.</div>
-                <Link href="/reviews" style={{ color: 'var(--teal)', textDecoration: 'none', fontWeight: 600 }}>Write your first review (+75 coins)</Link>
+                <div style={{ marginBottom: '12px' }}>No reviews yet.</div>
+                <Link href="/reviews" style={{ color: 'var(--teal)', textDecoration: 'none', fontWeight: 600 }}>Write your first review and earn 75 coins</Link>
               </div>
-            ) : reviews.map(r => (
+            ) : reviews.map((r: any) => (
               <div key={r.id} style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px 20px', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Link href={`/firms/${r.firms?.slug}`} style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', textDecoration: 'none' }}>{r.firms?.name}</Link>
+                    <Link href={'/firms/' + r.firms?.slug} style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', textDecoration: 'none' }}>{r.firms?.name}</Link>
                     <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '11px', fontWeight: 600, background: r.status === 'approved' ? 'rgba(0,229,160,0.1)' : 'rgba(251,191,36,0.1)', color: r.status === 'approved' ? 'var(--teal)' : 'var(--amber)' }}>{r.status}</span>
                   </div>
-                  <div style={{ color: 'var(--amber)', fontSize: '14px', letterSpacing: '2px' }}>{'★'.repeat(r.rating || 0)}</div>
+                  <div style={{ color: 'var(--amber)' }}>{'★'.repeat(r.rating || 0)}</div>
                 </div>
                 {r.title && <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>{r.title}</div>}
                 <div style={{ fontSize: '13.5px', color: 'var(--t2)', lineHeight: 1.6 }}>{r.content}</div>
-                <div style={{ fontSize: '11.5px', color: 'var(--t3)', marginTop: '8px', fontFamily: 'JetBrains Mono,monospace' }}>{new Date(r.created_at).toLocaleDateString('en-GB')}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* COINS HISTORY */}
         {tab === 'coins' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -228,7 +213,7 @@ export default function ProfilePage() {
             <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
               {transactions.length === 0 ? (
                 <div style={{ padding: '40px', textAlign: 'center', color: 'var(--t2)' }}>No transactions yet.</div>
-              ) : transactions.map(tx => (
+              ) : transactions.map((tx: any) => (
                 <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
                   <div>
                     <div style={{ fontSize: '13.5px', fontWeight: 600 }}>{tx.description || tx.type}</div>
@@ -243,7 +228,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* SETTINGS */}
         {tab === 'settings' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' }}>
@@ -265,7 +249,6 @@ export default function ProfilePage() {
                 </button>
               </div>
             </div>
-
             <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' }}>
               <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px' }}>Password</h3>
               <p style={{ fontSize: '13.5px', color: 'var(--t2)', marginBottom: '14px' }}>Change your password via the forgot password flow.</p>
@@ -273,10 +256,9 @@ export default function ProfilePage() {
                 Change Password
               </Link>
             </div>
-
             <div style={{ background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.15)', borderRadius: '14px', padding: '24px' }}>
               <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px', color: 'var(--coral)' }}>Danger Zone</h3>
-              <p style={{ fontSize: '13.5px', color: 'var(--t2)', marginBottom: '14px' }}>Deleting your account is permanent. All your coins, badges, and reviews will be lost.</p>
+              <p style={{ fontSize: '13.5px', color: 'var(--t2)', marginBottom: '14px' }}>Deleting your account is permanent.</p>
               <button onClick={async () => { if (!confirm('Delete account? This cannot be undone.')) return; await supabase.auth.signOut(); router.push('/') }}
                 style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid rgba(248,113,113,0.3)', color: 'var(--coral)', background: 'rgba(248,113,113,0.08)', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
                 Delete Account

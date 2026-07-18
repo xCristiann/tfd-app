@@ -1,70 +1,69 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
-export default async function AdminDashboard() {
-  const supabase = await createClient()
-  const [{ count: firmsCount }, { count: reviewsCount }, { count: pendingCount }] = await Promise.all([
-    supabase.from('firms').select('*', { count: 'exact', head: true }),
-    supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-    supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-  ])
-  const { data: recentFirms } = await supabase.from('firms').select('*').order('created_at', { ascending: false }).limit(5)
+export const dynamic = 'force-dynamic'
 
-  const statCard = (num: string|number, label: string, color: string) => (
-    <div style={{background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px',padding:'20px'}}>
-      <div style={{fontSize:'28px',fontWeight:900,letterSpacing:'-.02em',marginBottom:'4px',color}}>{num}</div>
-      <div style={{fontSize:'12.5px',color:'var(--t2)',fontWeight:500}}>{label}</div>
-    </div>
-  )
+export default async function AdminDashboard() {
+  const admin = await createAdminClient()
+
+  const [firmsRes, usersRes, reviewsRes, redemptionsRes, changesRes] = await Promise.all([
+    admin.from('firms').select('id, is_published'),
+    admin.from('profiles').select('id', { count: 'exact', head: true }),
+    admin.from('reviews').select('id, status'),
+    admin.from('coin_redemptions').select('id, status'),
+    admin.from('scraper_changes').select('id').eq('applied', false),
+  ])
+
+  const totalFirms = firmsRes.data?.length || 0
+  const publishedFirms = (firmsRes.data || []).filter(f => f.is_published).length
+  const totalUsers = usersRes.count || 0
+  const pendingReviews = (reviewsRes.data || []).filter(r => r.status === 'pending').length
+  const pendingRedemptions = (redemptionsRes.data || []).filter(r => r.status === 'pending').length
+  const pendingChanges = changesRes.data?.length || 0
+
+  const stats = [
+    { label: 'Live Firms', value: publishedFirms, sub: totalFirms + ' total', href: '/admin/firms', color: 'var(--teal)' },
+    { label: 'Registered Users', value: totalUsers, sub: 'Total accounts', href: '/admin/firms', color: 'var(--violet)' },
+    { label: 'Pending Reviews', value: pendingReviews, sub: 'Need approval', href: '/admin/reviews', color: pendingReviews > 0 ? 'var(--amber)' : 'var(--teal)' },
+    { label: 'Pending Redemptions', value: pendingRedemptions, sub: 'Coins shop orders', href: '/admin/coins', color: pendingRedemptions > 0 ? 'var(--amber)' : 'var(--teal)' },
+    { label: 'Site Changes', value: pendingChanges, sub: 'From scraper', href: '/admin/scraper', color: pendingChanges > 0 ? 'var(--coral)' : 'var(--teal)' },
+  ]
+
+  const quickLinks = [
+    { label: 'Add New Firm', href: '/admin/firms/new', desc: 'Create a new prop firm listing' },
+    { label: 'Send Email Blast', href: '/admin/email', desc: 'Email all users or affiliate firms' },
+    { label: 'Approve Reviews', href: '/admin/reviews', desc: pendingReviews + ' review(s) waiting' },
+    { label: 'Grant Coins', href: '/admin/coins', desc: 'Manage user coins and prizes' },
+    { label: 'Check Scraper', href: '/admin/scraper', desc: pendingChanges + ' change(s) detected' },
+    { label: 'Manage Prizes', href: '/admin/coins', desc: 'Add or edit coin prizes' },
+  ]
 
   return (
     <div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'28px'}}>
-        <div>
-          <h1 style={{fontSize:'22px',fontWeight:800,marginBottom:'4px'}}>Dashboard</h1>
-          <p style={{fontSize:'13.5px',color:'var(--t2)'}}>Overview of TheFundedDiaries content.</p>
-        </div>
-        <Link href="/admin/firms/new" style={{padding:'10px 20px',borderRadius:'9px',fontSize:'14px',fontWeight:700,color:'#04120c',background:'var(--teal)',textDecoration:'none',boxShadow:'0 0 20px var(--teal-glow)'}}>+ Add Firm</Link>
+      <div style={{ marginBottom: '28px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '4px' }}>Admin Dashboard</h1>
+        <p style={{ fontSize: '13.5px', color: 'var(--t2)' }}>TheFundedDiaries CRM</p>
       </div>
-
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'14px',marginBottom:'32px'}}>
-        {statCard(firmsCount || 0, 'Active firms', 'var(--teal)')}
-        {statCard(reviewsCount || 0, 'Published reviews', 'var(--green)')}
-        {statCard(pendingCount || 0, 'Pending moderation', 'var(--amber)')}
-        {statCard(0, 'Rules to reverify', 'var(--violet)')}
-      </div>
-
-      <div style={{background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px',overflow:'hidden'}}>
-        <div style={{background:'var(--bg2)',padding:'14px 20px',display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 100px',fontSize:'11px',fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--t3)'}}>
-          <div>Firm</div><div>Trust Score</div><div>Status</div><div>Updated</div><div>Actions</div>
-        </div>
-        {(recentFirms || []).map((firm: any) => (
-          <div key={firm.id} style={{padding:'16px 20px',display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 100px',alignItems:'center',fontSize:'13.5px',borderTop:'1px solid var(--border)'}}>
-            <div style={{fontWeight:600,display:'flex',alignItems:'center',gap:'10px'}}>
-              <div style={{width:'28px',height:'28px',borderRadius:'7px',background:'var(--bg3)',border:'1px solid var(--border2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'9px',fontWeight:800,fontFamily:'JetBrains Mono,monospace',color:'var(--t2)'}}>
-                {firm.name.slice(0,2).toUpperCase()}
-              </div>
-              {firm.name}
-            </div>
-            <div style={{color:'var(--green)',fontWeight:700}}>{firm.trust_score}/100</div>
-            <div>
-              <span style={{fontSize:'11.5px',fontWeight:600,padding:'3px 10px',borderRadius:'100px',background:firm.is_published?'rgba(0,229,160,0.1)':'var(--bg2)',color:firm.is_published?'var(--teal)':'var(--t3)',border:`1px solid ${firm.is_published?'rgba(0,229,160,0.2)':'var(--border)'}`}}>
-                {firm.is_published ? 'Live' : 'Draft'}
-              </span>
-            </div>
-            <div style={{color:'var(--t2)',fontSize:'13px',fontFamily:'JetBrains Mono,monospace'}}>
-              {new Date(firm.updated_at).toLocaleDateString('en-GB')}
-            </div>
-            <div style={{display:'flex',gap:'6px'}}>
-              <Link href={`/admin/firms/${firm.id}`} style={{padding:'6px 12px',borderRadius:'7px',fontSize:'12px',fontWeight:600,background:'transparent',border:'1px solid var(--border2)',color:'var(--t1)',textDecoration:'none'}}>Edit</Link>
-            </div>
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px', marginBottom: '32px' }}>
+        {stats.map(s => (
+          <Link key={s.label} href={s.href} style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', textDecoration: 'none', display: 'block' }}>
+            <div style={{ fontSize: '28px', fontWeight: 900, color: s.color, marginBottom: '4px' }}>{s.value}</div>
+            <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{s.label}</div>
+            <div style={{ fontSize: '12px', color: 'var(--t3)' }}>{s.sub}</div>
+          </Link>
         ))}
-        {(!recentFirms || recentFirms.length === 0) && (
-          <div style={{padding:'40px',textAlign:'center',color:'var(--t2)',fontSize:'14px'}}>
-            No firms yet. <Link href="/admin/firms/new" style={{color:'var(--teal)',textDecoration:'none',fontWeight:600}}>Add your first firm →</Link>
-          </div>
-        )}
+      </div>
+      <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Quick Actions</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '10px' }}>
+        {quickLinks.map(l => (
+          <Link key={l.label} href={l.href} style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 18px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{l.label}</div>
+              <div style={{ fontSize: '12px', color: 'var(--t3)' }}>{l.desc}</div>
+            </div>
+            <span style={{ color: 'var(--teal)', fontSize: '18px' }}>&rarr;</span>
+          </Link>
+        ))}
       </div>
     </div>
   )

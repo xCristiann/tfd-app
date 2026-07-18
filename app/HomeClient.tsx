@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import NewsletterPopup from '@/components/ui/NewsletterPopup'
 import FirmsTable from '@/components/firm/FirmsTable'
 import Link from 'next/link'
 import type { Firm } from '@/types'
@@ -43,8 +42,7 @@ export default function HomeClient() {
   return (
     <>
       <Navbar />
-      <NewsletterPopup />
-      <main>
+            <main>
 
         {/* â”€â”€â”€ HERO â”€â”€â”€ */}
         <section style={{ padding: '80px 0 56px', textAlign: 'center' }}>
