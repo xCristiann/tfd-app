@@ -61,7 +61,7 @@ export default async function AdminDashboard() {
               <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{l.label}</div>
               <div style={{ fontSize: '12px', color: 'var(--t3)' }}>{l.desc}</div>
             </div>
-            <span style={{ color: 'var(--teal)', fontSize: '18px' }}>&rarr;</span>
+            <span style={{ color: 'var(--teal)', fontSize: '18px' }}>→</span>
           </Link>
         ))}
       </div>

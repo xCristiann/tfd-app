@@ -56,7 +56,7 @@ export default function Footer() {
               Independent prop firm comparison. Verified rules, transparent data, real trader reviews.
             </p>
             <div style={{ fontSize: '11px', color: 'var(--teal)', padding: '8px 12px', background: 'rgba(0,229,160,0.06)', border: '1px solid rgba(0,229,160,0.15)', borderRadius: '8px' }}>
-              100% Independent &middot; No paid rankings
+              100% Independent · No paid rankings
             </div>
           </div>
           {sections.map(section => (
@@ -76,7 +76,7 @@ export default function Footer() {
         </div>
         <div style={{ borderTop: '1px solid var(--border)', padding: '24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '12px', color: 'var(--t3)' }}>
-            &copy; 2026 TheFundedDiaries &middot; Independent &middot; Not financial advice
+            © 2026 TheFundedDiaries · Independent · Not financial advice
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
             <Link href="/privacy" style={{ fontSize: '12px', color: 'var(--t3)', textDecoration: 'none' }}>Privacy</Link>

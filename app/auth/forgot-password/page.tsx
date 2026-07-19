@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
             We sent a password reset link to <b style={{ color: 'var(--t1)' }}>{email}</b>.<br/>
             The link expires in 1 hour.
           </p>
-          <Link href="/auth/login" style={{ fontSize: '13px', color: 'var(--teal)', textDecoration: 'none' }}>&larr; Back to Sign In</Link>
+          <Link href="/auth/login" style={{ fontSize: '13px', color: 'var(--teal)', textDecoration: 'none' }}>← Back to Sign In</Link>
         </div>
       </div>
     )
@@ -63,11 +63,11 @@ export default function ForgotPasswordPage() {
         </div>
 
         <button onClick={handleReset} disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: '10px', fontSize: '15px', fontWeight: 800, color: '#04120c', background: 'var(--teal)', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 24px var(--teal-glow)', opacity: loading ? 0.7 : 1 }}>
-          {loading ? 'Sending...' : 'Send Reset Link &rarr;'}
+          {loading ? 'Sending...' : 'Send Reset Link →'}
         </button>
 
         <div style={{ marginTop: '20px', textAlign: 'center' }}>
-          <Link href="/auth/login" style={{ fontSize: '13px', color: 'var(--t3)', textDecoration: 'none' }}>&larr; Back to Sign In</Link>
+          <Link href="/auth/login" style={{ fontSize: '13px', color: 'var(--t3)', textDecoration: 'none' }}>← Back to Sign In</Link>
         </div>
       </div>
     </div>

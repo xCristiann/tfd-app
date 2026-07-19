@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     // Deduct coins
     const updates: any = { coins: profile.coins - prize.coins_required }
-    // If badge &mdash; add to profile immediately
+    // If badge — add to profile immediately
     if (prize.prize_type === 'badge') {
       const current = profile.badges || []
       if (!current.includes(prize.title)) updates.badges = [...current, prize.title]
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: prize.prize_type==='badge' ? `&#10003; Badge "${prize.title}" unlocked! Visible on your profile.` : `&#10003; "${prize.title}" redeemed! We will process it within 48h.`
+      message: prize.prize_type==='badge' ? `✓ Badge "${prize.title}" unlocked! Visible on your profile.` : `✓ "${prize.title}" redeemed! We will process it within 48h.`
     })
   }
 

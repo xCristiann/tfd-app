@@ -6,7 +6,7 @@ export default function UnlistedFirmsPage() {
   const firms = [
     { name: 'True Forex Funds', reason: 'Ceased operations 2024', status: 'Closed' },
     { name: 'My Forex Funds', reason: 'CFTC lawsuit, operations suspended', status: 'Suspended' },
-    { name: 'Funded Trading Plus', reason: 'Under review &mdash; payout delays reported', status: 'Review' },
+    { name: 'Funded Trading Plus', reason: 'Under review — payout delays reported', status: 'Review' },
     { name: 'Surge Trader', reason: 'Ceased operations 2024', status: 'Closed' },
     { name: 'E8 Funding', reason: 'Rebranded to E8 Markets', status: 'Rebranded' },
     { name: 'Lux Trading Firm', reason: 'Under review', status: 'Review' },

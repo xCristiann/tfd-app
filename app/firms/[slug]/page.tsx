@@ -56,7 +56,7 @@ export default async function FirmPage({ params }: Props) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', flexShrink: 0 }}>
             <a href={firm.affiliate_link || firm.website || '#'} target="_blank" rel="noopener noreferrer"
               style={{ padding: '13px 26px', borderRadius: '10px', fontSize: '14px', fontWeight: 800, color: '#04120c', background: 'var(--teal)', textDecoration: 'none', boxShadow: '0 0 24px var(--teal-glow)', whiteSpace: 'nowrap' }}>
-              Visit {firm.name} &rarr;
+              Visit {firm.name} →
             </a>
             {firm.discount_code && (
               <div style={{ fontSize: '12px', color: 'var(--t3)', textAlign: 'right' }}>

@@ -78,7 +78,7 @@ export default function FirmsClient() {
           <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '10px' }}>Compare</div>
           <h1 style={{ fontSize: '40px', fontWeight: 900, letterSpacing: '-.03em', marginBottom: '12px' }}>All Prop Firms</h1>
           <p style={{ fontSize: '16px', color: 'var(--t2)' }}>
-            {sorted.length} firms &middot; ranked by trust score &middot; click any row to see full details
+            {sorted.length} firms · ranked by trust score · click any row to see full details
           </p>
         </div>
 
@@ -130,7 +130,7 @@ export default function FirmsClient() {
 
                     <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--t3)', fontFamily: 'JetBrains Mono, monospace' }}>{i + 1}</div>
 
-                    {/* FIRM &mdash; uses FirmLogo component, NO inline white background */}
+                    {/* FIRM — uses FirmLogo component, NO inline white background */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <FirmLogo name={firm.name} logoUrl={firm.logo_url} size={36} radius={9} />
                       <div>
@@ -152,16 +152,16 @@ export default function FirmsClient() {
 
                     <div style={{ fontSize: '13px', color: 'var(--t2)' }}>{isPhase2 ? '2 Steps' : '1 Step'}</div>
                     <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', fontWeight: 700, color: 'var(--amber)' }}>
-                      {ch?.phase1_target ? `${ch.phase1_target}%` : '&mdash;'}
+                      {ch?.phase1_target ? `${ch.phase1_target}%` : '—'}
                       {isPhase2 && ch?.phase2_target ? <span style={{ color: 'var(--t3)', fontWeight: 400 }}> / {ch.phase2_target}%</span> : null}
                     </div>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', fontWeight: 700, color: 'var(--coral)' }}>{ch?.phase1_daily_dd ? `${ch.phase1_daily_dd}%` : '&mdash;'}</div>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', fontWeight: 700, color: 'var(--coral)' }}>{ch?.phase1_max_dd ? `${ch.phase1_max_dd}%` : '&mdash;'}</div>
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: splitColor(ch?.profit_split || '0') }}>{ch?.profit_split || '&mdash;'}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--t2)' }}>{ch?.payout_frequency || '&mdash;'}</div>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', fontWeight: 700, color: 'var(--coral)' }}>{ch?.phase1_daily_dd ? `${ch.phase1_daily_dd}%` : '—'}</div>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', fontWeight: 700, color: 'var(--coral)' }}>{ch?.phase1_max_dd ? `${ch.phase1_max_dd}%` : '—'}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: splitColor(ch?.profit_split || '0') }}>{ch?.profit_split || '—'}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--t2)' }}>{ch?.payout_frequency || '—'}</div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 900, marginBottom: '2px' }}>${ch?.price_usd || '&mdash;'}</div>
-                      <div style={{ display: 'inline-block', padding: '5px 14px', borderRadius: '100px', background: 'var(--teal)', color: '#04120c', fontSize: '11.5px', fontWeight: 800, boxShadow: '0 0 12px var(--teal-glow)' }}>View &rarr;</div>
+                      <div style={{ fontSize: '15px', fontWeight: 900, marginBottom: '2px' }}>${ch?.price_usd || '—'}</div>
+                      <div style={{ display: 'inline-block', padding: '5px 14px', borderRadius: '100px', background: 'var(--teal)', color: '#04120c', fontSize: '11.5px', fontWeight: 800, boxShadow: '0 0 12px var(--teal-glow)' }}>View →</div>
                     </div>
                   </div>
                 </Link>

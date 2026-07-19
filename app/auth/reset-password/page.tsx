@@ -30,10 +30,10 @@ export default function ResetPasswordPage() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
         <div style={{ maxWidth: '420px', width: '100%', textAlign: 'center' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'linear-gradient(135deg,var(--teal),var(--violet))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>&#10003;</div>
+          <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'linear-gradient(135deg,var(--teal),var(--violet))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>✓</div>
           <h1 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px' }}>Password updated!</h1>
           <p style={{ fontSize: '14px', color: 'var(--t2)', marginBottom: '20px' }}>Redirecting you to sign in...</p>
-          <Link href="/auth/login" style={{ fontSize: '13px', color: 'var(--teal)', textDecoration: 'none' }}>Sign in now &rarr;</Link>
+          <Link href="/auth/login" style={{ fontSize: '13px', color: 'var(--teal)', textDecoration: 'none' }}>Sign in now →</Link>
         </div>
       </div>
     )
@@ -68,7 +68,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <button onClick={handleReset} disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: '10px', fontSize: '15px', fontWeight: 800, color: '#04120c', background: 'var(--teal)', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 24px var(--teal-glow)', opacity: loading ? 0.7 : 1 }}>
-          {loading ? 'Updating...' : 'Update Password &rarr;'}
+          {loading ? 'Updating...' : 'Update Password →'}
         </button>
       </div>
     </div>

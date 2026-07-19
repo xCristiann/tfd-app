@@ -98,19 +98,19 @@ export default function BestSellersPage() {
 
                     {/* Rating */}
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--amber)' }}>{(firm.rating||0) > 0 ? `${firm.rating.toFixed(1)} &#9733;` : 'New'}</div>
+                      <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--amber)' }}>{(firm.rating||0) > 0 ? `${firm.rating.toFixed(1)} ★` : 'New'}</div>
                       <div style={{ fontSize: '10.5px', color: 'var(--t3)' }}>{(firm.review_count||0) > 0 ? `${firm.review_count} reviews` : 'No reviews'}</div>
                     </div>
 
                     {/* Profit Split */}
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--green)' }}>{ch?.profit_split || '&mdash;'}</div>
+                      <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--green)' }}>{ch?.profit_split || '—'}</div>
                       <div style={{ fontSize: '10.5px', color: 'var(--t3)' }}>Profit Split</div>
                     </div>
 
                     {/* Price */}
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '17px', fontWeight: 700 }}>{ch ? `$${ch.price_usd}` : '&mdash;'}</div>
+                      <div style={{ fontSize: '17px', fontWeight: 700 }}>{ch ? `$${ch.price_usd}` : '—'}</div>
                       <div style={{ fontSize: '10.5px', color: 'var(--t3)' }}>From</div>
                     </div>
 
@@ -122,7 +122,7 @@ export default function BestSellersPage() {
                         </div>
                       )}
                       <div style={{ display: 'inline-block', padding: '8px 18px', borderRadius: '8px', background: isTop3 ? 'var(--teal)' : 'var(--bg2)', color: isTop3 ? '#04120c' : 'var(--t1)', fontSize: '13px', fontWeight: 700, border: isTop3 ? 'none' : '1px solid var(--border)', whiteSpace: 'nowrap' }}>
-                        View &rarr;
+                        View →
                       </div>
                     </div>
                   </div>

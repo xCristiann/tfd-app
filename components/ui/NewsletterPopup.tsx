@@ -40,7 +40,7 @@ export default function NewsletterPopup() {
       <div onClick={dismiss} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }} />
       <div style={{ position: 'relative', maxWidth: '460px', width: '100%', background: 'linear-gradient(160deg,#0c0f1a,#080b12)', border: '1px solid rgba(0,229,160,0.25)', borderRadius: '24px', padding: '40px 36px', textAlign: 'center', boxShadow: '0 0 80px rgba(0,229,160,0.12)' }}>
         <button onClick={dismiss} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.06)', border: 'none', color: 'var(--t2)', fontSize: '18px', cursor: 'pointer', width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter,sans-serif' }}>
-          &times;
+          ×
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '24px' }}>
@@ -92,7 +92,7 @@ export default function NewsletterPopup() {
         ) : (
           <>
             <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--teal)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '32px', color: '#04120c', fontWeight: 900 }}>
-              &#10003;
+              ✓
             </div>
             <h2 style={{ fontSize: '22px', fontWeight: 900, marginBottom: '10px', color: 'var(--teal)' }}>
               You are entered!

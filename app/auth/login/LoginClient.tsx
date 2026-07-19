@@ -82,7 +82,7 @@ function LoginForm() {
                 {resendLoading ? 'Sending...' : 'Resend confirmation email'}
               </button>
             ) : (
-              <span style={{ color: 'var(--teal)', fontWeight: 600 }}>&#10003; Email sent! Check your inbox.</span>
+              <span style={{ color: 'var(--teal)', fontWeight: 600 }}>✓ Email sent! Check your inbox.</span>
             )}
           </div>
         </div>
@@ -109,7 +109,7 @@ function LoginForm() {
       </div>
 
       <button onClick={handleLogin} disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: '10px', fontSize: '15px', fontWeight: 800, color: '#04120c', background: 'var(--teal)', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 24px var(--teal-glow)', opacity: loading ? 0.7 : 1 }}>
-        {loading ? 'Signing in...' : 'Sign In &rarr;'}
+        {loading ? 'Signing in...' : 'Sign In →'}
       </button>
 
       <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '13px', color: 'var(--t3)' }}>
@@ -117,7 +117,7 @@ function LoginForm() {
         <Link href="/auth/register" style={{ color: 'var(--teal)', textDecoration: 'none', fontWeight: 600 }}>Create one free</Link>
       </div>
       <div style={{ marginTop: '12px', textAlign: 'center' }}>
-        <Link href="/" style={{ fontSize: '13px', color: 'var(--t3)', textDecoration: 'none' }}>&larr; Back to TheFundedDiaries</Link>
+        <Link href="/" style={{ fontSize: '13px', color: 'var(--t3)', textDecoration: 'none' }}>← Back to TheFundedDiaries</Link>
       </div>
     </div>
   )

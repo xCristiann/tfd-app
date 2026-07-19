@@ -47,26 +47,26 @@ export default function FirmTabs({ firm, challenges, rules, reviews }: {
                 <div style={{display:'flex',gap:'8px',marginBottom:'20px',flexWrap:'wrap'}}>
                   {challenges.map((c, i) => (
                     <button key={c.id} onClick={()=>setActiveChallenge(i)} style={{padding:'7px 16px',borderRadius:'8px',fontSize:'13px',fontWeight:600,cursor:'pointer',border:`1px solid ${activeChallenge===i?'rgba(0,229,160,0.3)':'var(--border2)'}`,color:activeChallenge===i?'var(--teal)':'var(--t2)',background:activeChallenge===i?'rgba(0,229,160,0.06)':'transparent',fontFamily:'Inter,sans-serif'}}>
-                      {c.name} &mdash; ${c.account_size.toLocaleString()}
+                      {c.name} — ${c.account_size.toLocaleString()}
                     </button>
                   ))}
                 </div>
                 {ch && (
                   <div style={{background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px',overflow:'hidden'}}>
                     <div style={{background:'var(--bg2)',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <div style={{fontSize:'14px',fontWeight:700}}>{ch.name} &mdash; ${ch.account_size.toLocaleString()} Account</div>
+                      <div style={{fontSize:'14px',fontWeight:700}}>{ch.name} — ${ch.account_size.toLocaleString()} Account</div>
                       <div style={{fontSize:'18px',fontWeight:900,color:'var(--teal)'}}>${ch.price_usd}</div>
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',padding:'20px',gap:'16px'}}>
                       {[
-                        ['Phase 1 Target', ch.phase1_target ? `${ch.phase1_target}%` : '&mdash;', 'amber'],
-                        ['Phase 2 Target', ch.phase2_target ? `${ch.phase2_target}%` : '&mdash;', 'amber'],
-                        ['Daily Drawdown', ch.phase1_daily_dd ? `${ch.phase1_daily_dd}%` : '&mdash;', 'red'],
-                        ['Max Drawdown', ch.phase1_max_dd ? `${ch.phase1_max_dd}%` : '&mdash;', 'red'],
-                        ['Profit Split', ch.profit_split || '&mdash;', 'green'],
+                        ['Phase 1 Target', ch.phase1_target ? `${ch.phase1_target}%` : '—', 'amber'],
+                        ['Phase 2 Target', ch.phase2_target ? `${ch.phase2_target}%` : '—', 'amber'],
+                        ['Daily Drawdown', ch.phase1_daily_dd ? `${ch.phase1_daily_dd}%` : '—', 'red'],
+                        ['Max Drawdown', ch.phase1_max_dd ? `${ch.phase1_max_dd}%` : '—', 'red'],
+                        ['Profit Split', ch.profit_split || '—', 'green'],
                         ['Min Trading Days', ch.phase1_min_days === 0 ? 'None' : `${ch.phase1_min_days}d`, 'neutral'],
                         ['Time Limit', ch.phase1_time_limit === 0 ? 'None' : `${ch.phase1_time_limit}d`, 'green'],
-                        ['Payout Frequency', ch.payout_frequency || '&mdash;', 'neutral'],
+                        ['Payout Frequency', ch.payout_frequency || '—', 'neutral'],
                       ].map(([lbl, val, type]) => (
                         <div key={String(lbl)} style={{background:'var(--bg2)',borderRadius:'9px',padding:'12px'}}>
                           <div style={{fontSize:'10.5px',color:'var(--t3)',textTransform:'uppercase',letterSpacing:'.04em',fontWeight:600,marginBottom:'4px'}}>{lbl}</div>
@@ -77,7 +77,7 @@ export default function FirmTabs({ firm, challenges, rules, reviews }: {
                     <div style={{padding:'0 20px 20px',display:'flex',gap:'8px',flexWrap:'wrap'}}>
                       {[['Weekend Holding', ch.allows_weekend_holding],['News Trading', ch.allows_news_trading],['EA / Bots', ch.allows_ea],['Hedging', ch.allows_hedging]].map(([lbl, val]) => (
                         <span key={String(lbl)} style={{fontSize:'11.5px',padding:'4px 11px',borderRadius:'100px',fontWeight:600,background:val?'rgba(0,229,160,0.1)':'rgba(248,113,113,0.1)',color:val?'var(--teal)':'var(--coral)',border:`1px solid ${val?'rgba(0,229,160,0.2)':'rgba(248,113,113,0.2)'}`}}>
-                          {val ? '&#10003;' : '&times;'} {lbl}
+                          {val ? '✓' : '×'} {lbl}
                         </span>
                       ))}
                     </div>
@@ -133,11 +133,11 @@ function Sidebar({ firm }: { firm: Firm }) {
         <div className="trust-bar" style={{marginBottom:'18px'}}><div className="trust-fill" style={{width:`${firm.trust_score}%`}} /></div>
         <div>
           {[
-            ['Payout reliability', firm.payout_reliability || '&mdash;', firm.payout_reliability === 'Confirmed'],
-            ['Support quality', firm.support_quality || '&mdash;', firm.support_quality === 'Fast'],
+            ['Payout reliability', firm.payout_reliability || '—', firm.payout_reliability === 'Confirmed'],
+            ['Support quality', firm.support_quality || '—', firm.support_quality === 'Fast'],
             ['Delayed payouts', `${firm.delayed_payout_reports || 0} reported`, firm.delayed_payout_reports === 0],
-            ['Rules clarity', firm.rules_clarity || '&mdash;', firm.rules_clarity === 'Clear'],
-            ['Years active', firm.years_active ? `${firm.years_active} yrs` : '&mdash;', true],
+            ['Rules clarity', firm.rules_clarity || '—', firm.rules_clarity === 'Clear'],
+            ['Years active', firm.years_active ? `${firm.years_active} yrs` : '—', true],
           ].map(([lbl, val, ok]) => (
             <div key={String(lbl)} style={{display:'flex',justifyContent:'space-between',fontSize:'12.5px',padding:'7px 0',borderTop:'1px solid var(--border)'}}>
               <span style={{color:'var(--t2)'}}>{lbl}</span>

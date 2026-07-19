@@ -71,7 +71,7 @@ export default function RegisterClient() {
             <div>• Check your spam/junk folder</div>
             <div>• The link expires in 24 hours</div>
           </div>
-          <Link href="/auth/login" style={{ fontSize: '13px', color: 'var(--teal)', textDecoration: 'none' }}>&larr; Back to Sign In</Link>
+          <Link href="/auth/login" style={{ fontSize: '13px', color: 'var(--teal)', textDecoration: 'none' }}>← Back to Sign In</Link>
         </div>
       </div>
     )
@@ -94,7 +94,7 @@ export default function RegisterClient() {
               <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--t1)', letterSpacing: '-.03em' }}>TheFunded<span style={{ color: 'var(--teal)' }}>Diaries</span></span>
             </Link>
             <h1 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '6px', marginTop: '8px' }}>Create your account</h1>
-            <p style={{ fontSize: '13.5px', color: 'var(--t2)' }}>Free forever &middot; No credit card needed</p>
+            <p style={{ fontSize: '13.5px', color: 'var(--t2)' }}>Free forever · No credit card needed</p>
           </div>
 
           {error && (
@@ -129,7 +129,7 @@ export default function RegisterClient() {
           </div>
 
           <button onClick={handleRegister} disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: '10px', fontSize: '15px', fontWeight: 800, color: '#04120c', background: 'var(--teal)', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 24px var(--teal-glow)', opacity: loading ? 0.7 : 1 }}>
-            {loading ? 'Creating account...' : 'Create Account &rarr;'}
+            {loading ? 'Creating account...' : 'Create Account →'}
           </button>
 
           <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--t3)', textAlign: 'center', lineHeight: 1.6 }}>

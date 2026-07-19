@@ -5,11 +5,11 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY!
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.thefundeddiaries.com'
 
 const ALLOWED_SENDERS = [
-  { label: 'hello@ &mdash; Main', value: 'hello@thefundeddiaries.com' },
-  { label: 'cristian@ &mdash; Personal', value: 'cristian@thefundeddiaries.com' },
-  { label: 'support@ &mdash; Support', value: 'support@thefundeddiaries.com' },
-  { label: 'partners@ &mdash; Partnerships', value: 'partners@thefundeddiaries.com' },
-  { label: 'noreply@ &mdash; No Reply', value: 'noreply@thefundeddiaries.com' },
+  { label: 'hello@ — Main', value: 'hello@thefundeddiaries.com' },
+  { label: 'cristian@ — Personal', value: 'cristian@thefundeddiaries.com' },
+  { label: 'support@ — Support', value: 'support@thefundeddiaries.com' },
+  { label: 'partners@ — Partnerships', value: 'partners@thefundeddiaries.com' },
+  { label: 'noreply@ — No Reply', value: 'noreply@thefundeddiaries.com' },
 ]
 
 function buildHtml(data: { heading: string; body: string; cta_text?: string; cta_url?: string; name?: string }): string {
@@ -30,11 +30,11 @@ function buildHtml(data: { heading: string; body: string; cta_text?: string; cta
   <div style="height:2px;background:linear-gradient(90deg,#00e5a0,#7c3aed);border-radius:2px;margin:20px 0;"></div>
   <p style="margin:0 0 16px;font-size:15px;color:#8b92a8;line-height:1.6;">${greeting}</p>
   <div style="font-size:15px;color:#8b92a8;line-height:1.7;margin:0 0 28px;">${data.body.replace(/\n/g, '<br>')}</div>
-  ${data.cta_text && data.cta_url ? `<table cellpadding="0" cellspacing="0" style="margin:0 0 28px;"><tr><td style="background:#00e5a0;border-radius:10px;padding:13px 28px;"><a href="${data.cta_url}" style="color:#04120c;font-size:14px;font-weight:800;text-decoration:none;">${data.cta_text} &rarr;</a></td></tr></table>` : ''}
+  ${data.cta_text && data.cta_url ? `<table cellpadding="0" cellspacing="0" style="margin:0 0 28px;"><tr><td style="background:#00e5a0;border-radius:10px;padding:13px 28px;"><a href="${data.cta_url}" style="color:#04120c;font-size:14px;font-weight:800;text-decoration:none;">${data.cta_text} →</a></td></tr></table>` : ''}
   <div style="height:1px;background:rgba(255,255,255,0.07);margin:28px 0;"></div>
   <table cellpadding="0" cellspacing="0" width="100%"><tr>
     <td style="vertical-align:middle;padding-right:10px;"><img src="${SITE_URL}/logo.png" alt="TFD" width="24" height="24" style="display:block;border-radius:5px;opacity:0.7;"/></td>
-    <td style="vertical-align:middle;font-size:12px;color:#4e5568;">&copy; 2026 TheFundedDiaries &middot; Independent prop firm comparison &middot; Not financial advice</td>
+    <td style="vertical-align:middle;font-size:12px;color:#4e5568;">© 2026 TheFundedDiaries · Independent prop firm comparison · Not financial advice</td>
   </tr></table>
 </td></tr>
 </table></td></tr>

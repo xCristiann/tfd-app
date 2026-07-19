@@ -114,7 +114,7 @@ async function sendAlertEmail(firmSlug: string, firmName: string, changes: any, 
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#07090f;padding:40px 20px;">
 <tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 <tr><td style="padding:0 0 28px;text-align:center;font-size:17px;font-weight:800;color:#eef0f6;">
-  TheFunded<span style="color:#00e5a0;">Diaries</span> &mdash; Scraper Alert
+  TheFunded<span style="color:#00e5a0;">Diaries</span> — Scraper Alert
 </td></tr>
 <tr><td style="background:#0c0f1a;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:36px;">
   <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#eef0f6;">⚠️ Website Change Detected</h1>
@@ -126,7 +126,7 @@ async function sendAlertEmail(firmSlug: string, firmName: string, changes: any, 
   <table cellpadding="0" cellspacing="0" style="margin:20px 0;">
     <tr><td style="background:#00e5a0;border-radius:9px;padding:12px 24px;">
       <a href="https://www.thefundeddiaries.com/admin/firms" style="color:#04120c;font-size:14px;font-weight:800;text-decoration:none;">
-        Update ${firmName} in Admin CRM &rarr;
+        Update ${firmName} in Admin CRM →
       </a>
     </td></tr>
   </table>
@@ -135,7 +135,7 @@ async function sendAlertEmail(firmSlug: string, firmName: string, changes: any, 
   </p>
   ${aiSection}
   <div style="height:1px;background:rgba(255,255,255,0.07);margin:24px 0;"></div>
-  <p style="margin:0;font-size:12px;color:#4e5568;">TheFundedDiaries Scraper &middot; Automated alert</p>
+  <p style="margin:0;font-size:12px;color:#4e5568;">TheFundedDiaries Scraper · Automated alert</p>
 </td></tr>
 </table></td></tr>
 </table>
@@ -150,7 +150,7 @@ async function sendAlertEmail(firmSlug: string, firmName: string, changes: any, 
     body: JSON.stringify({
       from: 'TheFundedDiaries Scraper <noreply@thefundeddiaries.com>',
       to: ['cristian@thefundeddiaries.com'],
-      subject: `⚠️ ${firmName} website changed &mdash; review needed`,
+      subject: `⚠️ ${firmName} website changed — review needed`,
       html,
     }),
   })

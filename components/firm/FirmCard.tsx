@@ -31,7 +31,7 @@ export default function FirmCard({ firm, featured }: { firm: Firm & { logo_url?:
     <div style={{ background: 'var(--bg1)', border: `1px solid ${featured ? 'rgba(0,229,160,0.3)' : 'var(--border)'}`, borderRadius: '16px', padding: '24px', position: 'relative', transition: 'all .2s', boxShadow: featured ? '0 0 40px rgba(0,229,160,0.07)' : undefined }} className="card-hover">
       {featured && (
         <div style={{ position: 'absolute', top: '-11px', left: '20px', background: 'var(--teal)', color: '#04120c', fontSize: '10px', fontWeight: 800, padding: '4px 12px', borderRadius: '100px', letterSpacing: '.05em', textTransform: 'uppercase', boxShadow: '0 0 16px var(--teal-glow)' }}>
-          &#9733; Top Rated
+          ★ Top Rated
         </div>
       )}
 
@@ -40,7 +40,7 @@ export default function FirmCard({ firm, featured }: { firm: Firm & { logo_url?:
         <div>
           <div style={{ fontSize: '15.5px', fontWeight: 700, marginBottom: '3px' }}>{firm.name}</div>
           <div style={{ fontSize: '12px', color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ color: 'var(--amber)' }}>{'&#9733;'.repeat(Math.round((firm.trust_score / 100) * 5))}</span>
+            <span style={{ color: 'var(--amber)' }}>{'★'.repeat(Math.round((firm.trust_score / 100) * 5))}</span>
             <span>Verified</span>
           </div>
         </div>
@@ -55,15 +55,15 @@ export default function FirmCard({ firm, featured }: { firm: Firm & { logo_url?:
         </div>
         <div style={{ background: 'var(--bg2)', borderRadius: '9px', padding: '10px 13px' }}>
           <div style={{ fontSize: '10px', color: 'var(--t3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '3px' }}>From</div>
-          <div style={{ fontSize: '13.5px', fontWeight: 700 }}>${lowestChallenge?.price_usd || '&mdash;'}</div>
+          <div style={{ fontSize: '13.5px', fontWeight: 700 }}>${lowestChallenge?.price_usd || '—'}</div>
         </div>
         <div style={{ background: 'var(--bg2)', borderRadius: '9px', padding: '10px 13px' }}>
           <div style={{ fontSize: '10px', color: 'var(--t3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '3px' }}>Max Drawdown</div>
-          <div style={{ fontSize: '13.5px', fontWeight: 700 }}>{lowestChallenge?.phase1_max_dd ? `${lowestChallenge.phase1_max_dd}%` : '&mdash;'}</div>
+          <div style={{ fontSize: '13.5px', fontWeight: 700 }}>{lowestChallenge?.phase1_max_dd ? `${lowestChallenge.phase1_max_dd}%` : '—'}</div>
         </div>
         <div style={{ background: 'var(--bg2)', borderRadius: '9px', padding: '10px 13px' }}>
           <div style={{ fontSize: '10px', color: 'var(--t3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '3px' }}>Markets</div>
-          <div style={{ fontSize: '13.5px', fontWeight: 700 }}>{markets || '&mdash;'}</div>
+          <div style={{ fontSize: '13.5px', fontWeight: 700 }}>{markets || '—'}</div>
         </div>
       </div>
 
@@ -77,7 +77,7 @@ export default function FirmCard({ firm, featured }: { firm: Firm & { logo_url?:
           )}
         </div>
         <Link href={`/firms/${firm.slug}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700, color: '#04120c', background: 'var(--teal)', textDecoration: 'none', boxShadow: '0 0 12px var(--teal-glow)' }}>
-          View &rarr;
+          View →
         </Link>
       </div>
     </div>

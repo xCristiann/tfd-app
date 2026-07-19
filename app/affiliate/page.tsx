@@ -53,7 +53,7 @@ export default function AffiliatePage() {
           <h2 style={{ fontSize: '22px', fontWeight: 900, marginBottom: '10px' }}>Ready to Partner?</h2>
           <p style={{ fontSize: '15px', color: 'var(--t2)', marginBottom: '24px' }}>Send us an email and we will get back to you within 24 hours.</p>
           <a href="mailto:partners@thefundeddiaries.com" style={{ display: 'inline-block', padding: '13px 32px', borderRadius: '10px', background: 'var(--teal)', color: '#04120c', fontSize: '15px', fontWeight: 800, textDecoration: 'none', boxShadow: '0 0 24px var(--teal-glow)' }}>
-            Apply Now &rarr;
+            Apply Now →
           </a>
           <div style={{ marginTop: '16px', fontSize: '13px', color: 'var(--t3)' }}>partners@thefundeddiaries.com</div>
         </div>

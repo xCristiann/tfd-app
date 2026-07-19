@@ -50,7 +50,7 @@ export default function HomeClient() {
 
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px 6px 12px', borderRadius: '100px', background: 'rgba(0,229,160,0.07)', border: '1px solid rgba(0,229,160,0.2)', fontSize: '12.5px', color: 'var(--teal)', fontWeight: 500, marginBottom: '28px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--teal)', boxShadow: '0 0 8px var(--teal)', animation: 'pulse 2s infinite', flexShrink: 0 }} />
-              Independent &middot; Verified &middot; Transparent
+              Independent · Verified · Transparent
             </div>
 
             <h1 style={{ fontSize: '60px', fontWeight: 900, letterSpacing: '-.04em', lineHeight: 1.04, marginBottom: '20px' }}>
@@ -126,11 +126,11 @@ export default function HomeClient() {
                 Ranked by trust score, not commission
               </div>
               <div style={{ fontSize: '14px', color: 'var(--t2)' }}>
-                {loading ? 'Loading...' : `${filtered.length} firms shown &middot; click any row for full details`}
+                {loading ? 'Loading...' : `${filtered.length} firms shown · click any row for full details`}
               </div>
             </div>
             <Link href="/firms" style={{ fontSize: '13px', color: 'var(--teal)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              Full comparison &larr;’
+              Full comparison ←’
             </Link>
           </div>
 
@@ -156,7 +156,7 @@ export default function HomeClient() {
               Enter your target capital, trading style, and budget. Our matching engine calculates real expected value per firm.
             </p>
             <Link href="/calculator" style={{ display: 'inline-block', padding: '15px 34px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, color: '#04120c', background: 'linear-gradient(135deg,var(--teal),#4fffcc)', textDecoration: 'none', boxShadow: '0 0 40px var(--teal-glow)', position: 'relative' }}>
-              Launch the Matching Calculator &larr;’
+              Launch the Matching Calculator ←’
             </Link>
             <div style={{ marginTop: '14px', fontSize: '13px', color: 'var(--t3)', position: 'relative' }}>
               No account required. Free forever.

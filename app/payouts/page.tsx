@@ -42,7 +42,7 @@ export default function PayoutsPage() {
         <div style={{ marginBottom: '32px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '10px' }}>Transparency</div>
           <h1 style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-.03em', marginBottom: '12px' }}>Payout Tracker</h1>
-          <p style={{ fontSize: '15px', color: 'var(--t2)' }}>Verified payout data &mdash; speed, reliability, methods, and profit splits for all listed firms.</p>
+          <p style={{ fontSize: '15px', color: 'var(--t2)' }}>Verified payout data — speed, reliability, methods, and profit splits for all listed firms.</p>
         </div>
 
         {/* Sort */}
@@ -97,7 +97,7 @@ export default function PayoutsPage() {
                       <div>
                         <div style={{ fontSize: '14px', fontWeight: 700 }}>{firm.name}</div>
                         <div style={{ fontSize: '11px', color: 'var(--t3)' }}>
-                          {firm.delayed_payout_reports > 0 ? `⚠️ ${firm.delayed_payout_reports} delayed reports` : '&#10003; No delays reported'}
+                          {firm.delayed_payout_reports > 0 ? `⚠️ ${firm.delayed_payout_reports} delayed reports` : '✓ No delays reported'}
                         </div>
                       </div>
                     </div>
@@ -107,22 +107,22 @@ export default function PayoutsPage() {
                     </span>
 
                     <div style={{ fontSize: '16px', fontWeight: 700, color: speedColor(firm.avg_payout_days) }}>
-                      {firm.avg_payout_days ? `${firm.avg_payout_days}d` : '&mdash;'}
+                      {firm.avg_payout_days ? `${firm.avg_payout_days}d` : '—'}
                     </div>
 
                     <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--green)' }}>
-                      {ch?.profit_split || '&mdash;'}
+                      {ch?.profit_split || '—'}
                     </div>
 
                     <div style={{ fontSize: '12.5px', color: 'var(--t2)' }}>
-                      {ch?.payout_frequency || '&mdash;'}
+                      {ch?.payout_frequency || '—'}
                     </div>
 
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                       {(ch?.payout_methods || []).map((m: string) => (
                         <span key={m} style={{ fontSize: '10.5px', padding: '2px 7px', borderRadius: '4px', background: 'var(--bg2)', color: 'var(--t3)', border: '1px solid var(--border)' }}>{m}</span>
                       ))}
-                      {(!ch?.payout_methods || ch.payout_methods.length === 0) && <span style={{ fontSize: '12px', color: 'var(--t3)' }}>&mdash;</span>}
+                      {(!ch?.payout_methods || ch.payout_methods.length === 0) && <span style={{ fontSize: '12px', color: 'var(--t3)' }}>—</span>}
                     </div>
                   </div>
                 </Link>

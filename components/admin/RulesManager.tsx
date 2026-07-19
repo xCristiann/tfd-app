@@ -66,7 +66,7 @@ export default function RulesManager({ firms, rules }: { firms:{id:string;name:s
         <>
           {firmRules.length===0 ? (
             <div style={{textAlign:'center',padding:'60px',background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px',color:'var(--t2)'}}>
-              No rules yet. <button onClick={()=>openEdit()} style={{color:'var(--teal)',background:'none',border:'none',cursor:'pointer',fontWeight:600,fontSize:'14px',fontFamily:'Inter,sans-serif'}}>Add first rule &rarr;</button>
+              No rules yet. <button onClick={()=>openEdit()} style={{color:'var(--teal)',background:'none',border:'none',cursor:'pointer',fontWeight:600,fontSize:'14px',fontFamily:'Inter,sans-serif'}}>Add first rule →</button>
             </div>
           ) : (
             <>
@@ -102,7 +102,7 @@ export default function RulesManager({ firms, rules }: { firms:{id:string;name:s
         <div style={{background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px',padding:'28px'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'24px',paddingBottom:'16px',borderBottom:'1px solid var(--border)'}}>
             <h3 style={{fontSize:'16px',fontWeight:700}}>{editing.id ? 'Edit Rule' : 'Add Rule'}</h3>
-            <button onClick={()=>setMode('list')} style={{padding:'7px 14px',borderRadius:'8px',fontSize:'13px',border:'1px solid var(--border2)',color:'var(--t2)',background:'transparent',cursor:'pointer',fontFamily:'Inter,sans-serif'}}>&larr; Back</button>
+            <button onClick={()=>setMode('list')} style={{padding:'7px 14px',borderRadius:'8px',fontSize:'13px',border:'1px solid var(--border2)',color:'var(--t2)',background:'transparent',cursor:'pointer',fontFamily:'Inter,sans-serif'}}>← Back</button>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'16px',marginBottom:'16px'}}>
             <div>
@@ -116,7 +116,7 @@ export default function RulesManager({ firms, rules }: { firms:{id:string;name:s
             <div>
               <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>Value Type (color)</label>
               <select value={editing.value_type||'neutral'} onChange={e=>set('value_type',e.target.value)} className="input-base">
-                {VALUE_TYPES.map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}{t==='green'?' &#10003; (Allowed)':t==='red'?' &times; (Not allowed)':t==='amber'?' ⚠ (Limited)':' &mdash; (Neutral)'}</option>)}
+                {VALUE_TYPES.map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}{t==='green'?' ✓ (Allowed)':t==='red'?' × (Not allowed)':t==='amber'?' ⚠ (Limited)':' — (Neutral)'}</option>)}
               </select>
             </div>
           </div>

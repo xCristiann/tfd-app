@@ -195,7 +195,7 @@ export default function ProfilePage() {
                     <Link href={'/firms/' + r.firms?.slug} style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', textDecoration: 'none' }}>{r.firms?.name}</Link>
                     <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '11px', fontWeight: 600, background: r.status === 'approved' ? 'rgba(0,229,160,0.1)' : 'rgba(251,191,36,0.1)', color: r.status === 'approved' ? 'var(--teal)' : 'var(--amber)' }}>{r.status}</span>
                   </div>
-                  <div style={{ color: 'var(--amber)' }}>{'&#9733;'.repeat(r.rating || 0)}</div>
+                  <div style={{ color: 'var(--amber)' }}>{'★'.repeat(r.rating || 0)}</div>
                 </div>
                 {r.title && <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>{r.title}</div>}
                 <div style={{ fontSize: '13.5px', color: 'var(--t2)', lineHeight: 1.6 }}>{r.content}</div>

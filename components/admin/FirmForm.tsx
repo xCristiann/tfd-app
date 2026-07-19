@@ -101,7 +101,7 @@ export default function FirmForm({ firm, isEdit = false }: FirmFormProps) {
       return
     }
 
-    setMsg(isEdit ? '&#10003; Firm updated successfully' : '&#10003; Firm created successfully')
+    setMsg(isEdit ? '✓ Firm updated successfully' : '✓ Firm created successfully')
     setLoading(false)
     setTimeout(() => router.push('/admin/firms'), 1000)
   }
@@ -142,12 +142,12 @@ export default function FirmForm({ firm, isEdit = false }: FirmFormProps) {
   return (
     <div style={{ maxWidth: '800px' }}>
       {msg && (
-        <div style={{ background: msg.startsWith('&#10003;') ? 'rgba(0,229,160,0.1)' : 'rgba(248,113,113,0.1)', border: `1px solid ${msg.startsWith('&#10003;') ? 'rgba(0,229,160,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: '9px', padding: '12px 16px', marginBottom: '16px', fontSize: '13.5px', color: msg.startsWith('&#10003;') ? 'var(--teal)' : 'var(--coral)', fontWeight: 600 }}>
+        <div style={{ background: msg.startsWith('✓') ? 'rgba(0,229,160,0.1)' : 'rgba(248,113,113,0.1)', border: `1px solid ${msg.startsWith('✓') ? 'rgba(0,229,160,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: '9px', padding: '12px 16px', marginBottom: '16px', fontSize: '13.5px', color: msg.startsWith('✓') ? 'var(--teal)' : 'var(--coral)', fontWeight: 600 }}>
           {msg}
         </div>
       )}
 
-      {/* TRUST SCORE &mdash; read only from DB */}
+      {/* TRUST SCORE — read only from DB */}
       {isEdit && (
         <div style={{ background: 'rgba(0,229,160,0.06)', border: '1px solid rgba(0,229,160,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -227,7 +227,7 @@ export default function FirmForm({ firm, isEdit = false }: FirmFormProps) {
           Cancel
         </button>
         <button onClick={handleSubmit} disabled={loading} style={{ flex: 1, padding: '11px 24px', borderRadius: '9px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', border: 'none', color: '#04120c', background: 'var(--teal)', boxShadow: '0 0 20px var(--teal-glow)', fontFamily: 'Inter, sans-serif', opacity: loading ? 0.7 : 1 }}>
-          {loading ? 'Saving...' : isEdit ? 'Update Firm &rarr;' : 'Create Firm &rarr;'}
+          {loading ? 'Saving...' : isEdit ? 'Update Firm →' : 'Create Firm →'}
         </button>
       </div>
     </div>

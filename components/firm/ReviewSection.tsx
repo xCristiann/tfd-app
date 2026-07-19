@@ -38,7 +38,7 @@ export default function ReviewSection({ firmId, reviews: initialReviews }: { fir
     }
   }
 
-  const avgRating = reviews.length > 0 ? (reviews.reduce((s,r) => s + r.rating, 0) / reviews.length).toFixed(1) : '&mdash;'
+  const avgRating = reviews.length > 0 ? (reviews.reduce((s,r) => s + r.rating, 0) / reviews.length).toFixed(1) : '—'
 
   return (
     <div>
@@ -46,7 +46,7 @@ export default function ReviewSection({ firmId, reviews: initialReviews }: { fir
       <div style={{display:'flex',alignItems:'center',gap:'20px',marginBottom:'28px',padding:'20px',background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px'}}>
         <div style={{textAlign:'center'}}>
           <div style={{fontSize:'48px',fontWeight:900,color:'var(--teal)',lineHeight:1}}>{avgRating}</div>
-          <div style={{color:'var(--amber)',fontSize:'18px',margin:'4px 0'}}>{'&#9733;'.repeat(Math.round(Number(avgRating)||0))}</div>
+          <div style={{color:'var(--amber)',fontSize:'18px',margin:'4px 0'}}>{'★'.repeat(Math.round(Number(avgRating)||0))}</div>
           <div style={{fontSize:'12px',color:'var(--t3)'}}>{reviews.length} reviews</div>
         </div>
         <div style={{flex:1}}>
@@ -56,7 +56,7 @@ export default function ReviewSection({ firmId, reviews: initialReviews }: { fir
             return (
               <div key={s} style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px',fontSize:'12px'}}>
                 <span style={{color:'var(--t2)',width:'12px'}}>{s}</span>
-                <span style={{color:'var(--amber)',fontSize:'10px'}}>&#9733;</span>
+                <span style={{color:'var(--amber)',fontSize:'10px'}}>★</span>
                 <div style={{flex:1,height:'5px',background:'var(--bg3)',borderRadius:'100px',overflow:'hidden'}}>
                   <div style={{height:'100%',width:`${pct}%`,background:'var(--amber)',borderRadius:'100px'}} />
                 </div>
@@ -71,18 +71,18 @@ export default function ReviewSection({ firmId, reviews: initialReviews }: { fir
       {!user ? (
         <div style={{background:'rgba(167,139,250,0.08)',border:'1px solid rgba(167,139,250,0.2)',borderRadius:'10px',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'28px'}}>
           <div style={{fontSize:'13.5px',color:'var(--t2)'}}>To leave a review or comment, <b style={{color:'var(--t1)'}}>sign in or create a free account.</b></div>
-          <a href="/auth/login" style={{padding:'9px 18px',borderRadius:'9px',fontSize:'13.5px',border:'1px solid var(--border2)',color:'var(--t1)',background:'transparent',textDecoration:'none',whiteSpace:'nowrap'}}>Sign In &rarr;</a>
+          <a href="/auth/login" style={{padding:'9px 18px',borderRadius:'9px',fontSize:'13.5px',border:'1px solid var(--border2)',color:'var(--t1)',background:'transparent',textDecoration:'none',whiteSpace:'nowrap'}}>Sign In →</a>
         </div>
       ) : success ? (
         <div style={{background:'rgba(0,229,160,0.08)',border:'1px solid rgba(0,229,160,0.2)',borderRadius:'10px',padding:'16px 20px',marginBottom:'28px',color:'var(--teal)',fontWeight:600}}>
-          &#10003; Review submitted &mdash; it will appear after moderation. Thank you!
+          ✓ Review submitted — it will appear after moderation. Thank you!
         </div>
       ) : (
         <div style={{background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px',padding:'24px',marginBottom:'28px'}}>
           <h3 style={{fontSize:'15px',fontWeight:700,marginBottom:'16px'}}>Write a Review</h3>
           <div style={{display:'flex',gap:'6px',marginBottom:'16px'}}>
             {[1,2,3,4,5].map(s => (
-              <span key={s} onClick={()=>setRating(s)} onMouseEnter={()=>setHoverRating(s)} onMouseLeave={()=>setHoverRating(0)} style={{fontSize:'24px',cursor:'pointer',color:(hoverRating||rating)>=s?'var(--amber)':'var(--t3)',transition:'color .1s'}}>&#9733;</span>
+              <span key={s} onClick={()=>setRating(s)} onMouseEnter={()=>setHoverRating(s)} onMouseLeave={()=>setHoverRating(0)} style={{fontSize:'24px',cursor:'pointer',color:(hoverRating||rating)>=s?'var(--amber)':'var(--t3)',transition:'color .1s'}}>★</span>
             ))}
           </div>
           <div style={{marginBottom:'12px'}}>
@@ -91,7 +91,7 @@ export default function ReviewSection({ firmId, reviews: initialReviews }: { fir
           </div>
           <div style={{marginBottom:'16px'}}>
             <label style={{fontSize:'12px',fontWeight:600,color:'var(--t2)',display:'block',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'.04em'}}>Your Review</label>
-            <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Share your honest experience &mdash; challenge process, payout speed, support quality..." className="input-base" style={{minHeight:'90px',resize:'vertical',lineHeight:1.6}} />
+            <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Share your honest experience — challenge process, payout speed, support quality..." className="input-base" style={{minHeight:'90px',resize:'vertical',lineHeight:1.6}} />
           </div>
           <button onClick={submitReview} disabled={submitting||!body.trim()} className="btn-primary" style={{opacity:!body.trim()?0.5:1}}>
             {submitting ? 'Submitting...' : 'Submit Review'}
@@ -111,10 +111,10 @@ export default function ReviewSection({ firmId, reviews: initialReviews }: { fir
                 </div>
                 <div>
                   <div style={{fontSize:'13.5px',fontWeight:600}}>{review.profiles?.username || review.profiles?.full_name || 'User'}</div>
-                  <div style={{fontSize:'11.5px',color:'var(--t3)'}}>{new Date(review.created_at).toLocaleDateString('en-GB')} &middot; Verified account</div>
+                  <div style={{fontSize:'11.5px',color:'var(--t3)'}}>{new Date(review.created_at).toLocaleDateString('en-GB')} · Verified account</div>
                 </div>
               </div>
-              <div style={{color:'var(--amber)',fontSize:'13px'}}>{'&#9733;'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</div>
+              <div style={{color:'var(--amber)',fontSize:'13px'}}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</div>
             </div>
             {review.title && <div style={{fontWeight:600,marginBottom:'6px'}}>{review.title}</div>}
             <div style={{fontSize:'14px',color:'var(--t2)',lineHeight:1.65,marginBottom:'14px'}}>{review.body}</div>

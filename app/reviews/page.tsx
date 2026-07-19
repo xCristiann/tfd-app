@@ -70,7 +70,7 @@ export default function ReviewsPage() {
   }
 
   const stars = (n: number) => Array.from({ length: 5 }, (_, i) => (
-    <span key={i} style={{ color: i < n ? 'var(--amber)' : 'var(--border2)', fontSize: '15px' }}>&#9733;</span>
+    <span key={i} style={{ color: i < n ? 'var(--amber)' : 'var(--border2)', fontSize: '15px' }}>★</span>
   ))
 
   return (
@@ -108,7 +108,7 @@ export default function ReviewsPage() {
                 <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t2)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.04em' }}>Rating</label>
                 <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                   {[1,2,3,4,5].map(n => (
-                    <button key={n} onClick={() => setRating(n)} style={{ fontSize: '28px', background: 'none', border: 'none', cursor: 'pointer', color: n <= rating ? 'var(--amber)' : 'var(--border2)', padding: '0', lineHeight: 1 }}>&#9733;</button>
+                    <button key={n} onClick={() => setRating(n)} style={{ fontSize: '28px', background: 'none', border: 'none', cursor: 'pointer', color: n <= rating ? 'var(--amber)' : 'var(--border2)', padding: '0', lineHeight: 1 }}>★</button>
                   ))}
                 </div>
               </div>

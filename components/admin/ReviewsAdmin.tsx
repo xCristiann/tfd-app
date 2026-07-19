@@ -61,11 +61,11 @@ export default function ReviewsAdmin({ reviews }: { reviews: any[] }) {
                   </div>
                   <div>
                     <div style={{fontWeight:600,fontSize:'14px'}}>{review.profiles?.username||review.profiles?.full_name||'Anonymous'}</div>
-                    <div style={{fontSize:'12px',color:'var(--t3)'}}>{review.firms?.name} &middot; {new Date(review.created_at).toLocaleDateString('en-GB')}</div>
+                    <div style={{fontSize:'12px',color:'var(--t3)'}}>{review.firms?.name} · {new Date(review.created_at).toLocaleDateString('en-GB')}</div>
                   </div>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                  <span style={{color:'var(--amber)',fontSize:'13px'}}>{'&#9733;'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</span>
+                  <span style={{color:'var(--amber)',fontSize:'13px'}}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</span>
                   <span style={{fontSize:'11.5px',fontWeight:600,padding:'3px 10px',borderRadius:'100px',background:review.status==='approved'?'rgba(52,211,153,0.1)':review.status==='pending'?'rgba(251,191,36,0.1)':'rgba(248,113,113,0.1)',color:review.status==='approved'?'var(--green)':review.status==='pending'?'var(--amber)':'var(--coral)',border:`1px solid ${review.status==='approved'?'rgba(52,211,153,0.2)':review.status==='pending'?'rgba(251,191,36,0.2)':'rgba(248,113,113,0.2)'}`}}>
                     {review.status}
                   </span>
@@ -78,12 +78,12 @@ export default function ReviewsAdmin({ reviews }: { reviews: any[] }) {
               <div style={{display:'flex',gap:'8px',paddingTop:'14px',borderTop:'1px solid var(--border)'}}>
                 {review.status !== 'approved' && (
                   <button onClick={()=>updateStatus(review.id,'approved')} disabled={loading===review.id} style={{padding:'7px 16px',borderRadius:'8px',fontSize:'13px',fontWeight:600,background:'rgba(52,211,153,0.1)',border:'1px solid rgba(52,211,153,0.2)',color:'var(--green)',cursor:'pointer',fontFamily:'Inter,sans-serif',opacity:loading===review.id?0.6:1}}>
-                    &#10003; Approve
+                    ✓ Approve
                   </button>
                 )}
                 {review.status !== 'rejected' && (
                   <button onClick={()=>updateStatus(review.id,'rejected')} disabled={loading===review.id} style={{padding:'7px 16px',borderRadius:'8px',fontSize:'13px',fontWeight:600,background:'rgba(248,113,113,0.1)',border:'1px solid rgba(248,113,113,0.2)',color:'var(--coral)',cursor:'pointer',fontFamily:'Inter,sans-serif',opacity:loading===review.id?0.6:1}}>
-                    &times; Reject
+                    × Reject
                   </button>
                 )}
                 {review.status !== 'pending' && (
