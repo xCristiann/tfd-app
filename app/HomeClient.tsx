@@ -44,7 +44,7 @@ export default function HomeClient() {
       <Navbar />
             <main>
 
-        {/* â”€â”€â”€ HERO â”€â”€â”€ */}
+        {/* â"€â"€â"€ HERO â"€â"€â"€ */}
         <section style={{ padding: '80px 0 56px', textAlign: 'center' }}>
           <div style={{ maxWidth: '1300px', margin: '0 auto', padding: '0 40px' }}>
 
@@ -64,7 +64,7 @@ export default function HomeClient() {
               The only prop firm comparison platform where every rule is verified, every challenge is current, and every firm is ranked on merit.
             </p>
 
-            {/* MARKET PILLS â€” CENTRATE */}
+            {/* MARKET PILLS "" CENTRATE */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
               {pills.map(p => {
                 const active = market === p.key
@@ -130,7 +130,7 @@ export default function HomeClient() {
               </div>
             </div>
             <Link href="/firms" style={{ fontSize: '13px', color: 'var(--teal)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              Full comparison â†’
+              Full comparison &larr;’
             </Link>
           </div>
 
@@ -156,7 +156,7 @@ export default function HomeClient() {
               Enter your target capital, trading style, and budget. Our matching engine calculates real expected value per firm.
             </p>
             <Link href="/calculator" style={{ display: 'inline-block', padding: '15px 34px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, color: '#04120c', background: 'linear-gradient(135deg,var(--teal),#4fffcc)', textDecoration: 'none', boxShadow: '0 0 40px var(--teal-glow)', position: 'relative' }}>
-              Launch the Matching Calculator â†’
+              Launch the Matching Calculator &larr;’
             </Link>
             <div style={{ marginTop: '14px', fontSize: '13px', color: 'var(--t3)', position: 'relative' }}>
               No account required. Free forever.

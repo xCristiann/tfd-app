@@ -49,7 +49,7 @@ export default function AdminSidebar() {
       ))}
       <div style={{ borderTop: '1px solid var(--border)', marginTop: '16px', paddingTop: '16px' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 20px', fontSize: '13.5px', color: 'var(--t2)', textDecoration: 'none' }}>
-          ← Back to Site
+          &larr; Back to Site
         </Link>
       </div>
     </div>

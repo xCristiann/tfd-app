@@ -32,8 +32,8 @@ export default async function AdminEmailPage() {
     { firm: 'DNA Funded', type: 'Affiliate Email', contact: 'affiliate@dnafunded.com', note: 'AU-based' },
     { firm: 'My Funded Futures', type: 'Support Email', contact: 'support@myfutures.com', note: 'Ask about partnerships' },
     // Unlisted / inactive
-    { firm: 'True Forex Funds', type: 'N/A', contact: '—', note: 'Ceased operations' },
-    { firm: 'My Forex Funds', type: 'N/A', contact: '—', note: 'CFTC lawsuit' },
+    { firm: 'True Forex Funds', type: 'N/A', contact: '&mdash;', note: 'Ceased operations' },
+    { firm: 'My Forex Funds', type: 'N/A', contact: '&mdash;', note: 'CFTC lawsuit' },
   ]
 
   const typeColor = (type: string) => {
@@ -72,7 +72,7 @@ export default async function AdminEmailPage() {
       <div style={{ marginTop: '40px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 800 }}>Firm Affiliate Contacts</h2>
-          <div style={{ fontSize: '12px', color: 'var(--t3)' }}>{FIRM_CONTACTS.length} firms · click email to copy</div>
+          <div style={{ fontSize: '12px', color: 'var(--t3)' }}>{FIRM_CONTACTS.length} firms &middot; click email to copy</div>
         </div>
 
         <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
@@ -103,7 +103,7 @@ export default async function AdminEmailPage() {
                     </a>
                   ) : isUrl ? (
                     <a href={c.contact} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--violet)', textDecoration: 'none', fontSize: '12.5px' }}>
-                      Open portal →
+                      Open portal &rarr;
                     </a>
                   ) : (
                     <span style={{ color: 'var(--t3)', fontSize: '12.5px' }}>{c.contact}</span>
@@ -117,13 +117,13 @@ export default async function AdminEmailPage() {
 
         <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--t3)', display: 'flex', gap: '16px' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--teal)' }} /> Affiliate Email — direct partnership
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--teal)' }} /> Affiliate Email &mdash; direct partnership
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--violet)' }} /> Partnerships — business contact
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--violet)' }} /> Partnerships &mdash; business contact
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--amber)' }} /> Portal — apply online
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--amber)' }} /> Portal &mdash; apply online
           </span>
         </div>
       </div>

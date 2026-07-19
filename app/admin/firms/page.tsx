@@ -25,7 +25,7 @@ export default function AdminFirmsPage() {
   const togglePublish = async (id: string, current: boolean) => {
     await supabase.from('firms').update({ is_published: !current }).eq('id', id)
     setFirms(f => f.map(x => x.id === id ? { ...x, is_published: !current } : x))
-    setMsg(`✓ ${!current ? 'Published' : 'Unpublished'}`)
+    setMsg(`&#10003; ${!current ? 'Published' : 'Unpublished'}`)
     setTimeout(() => setMsg(''), 2000)
   }
 
@@ -33,7 +33,7 @@ export default function AdminFirmsPage() {
     if (!confirm(`Delete ${name}? Cannot be undone.`)) return
     await supabase.from('firms').delete().eq('id', id)
     setFirms(f => f.filter(x => x.id !== id))
-    setMsg(`✓ ${name} deleted`)
+    setMsg(`&#10003; ${name} deleted`)
   }
 
   const filtered = firms.filter(f => {
@@ -48,7 +48,7 @@ export default function AdminFirmsPage() {
         <div>
           <h1 style={{ fontSize:'22px',fontWeight:800,marginBottom:'4px' }}>Manage Firms</h1>
           <p style={{ fontSize:'13.5px',color:'var(--t2)' }}>
-            <span style={{ color:'var(--teal)' }}>{firms.filter(f=>f.is_published).length} live</span> · <span style={{ color:'var(--t3)' }}>{firms.filter(f=>!f.is_published).length} draft</span> · {firms.length} total
+            <span style={{ color:'var(--teal)' }}>{firms.filter(f=>f.is_published).length} live</span> &middot; <span style={{ color:'var(--t3)' }}>{firms.filter(f=>!f.is_published).length} draft</span> &middot; {firms.length} total
           </p>
         </div>
         <Link href="/admin/firms/new" style={{ padding:'10px 20px',borderRadius:'9px',background:'var(--teal)',color:'#04120c',fontSize:'13.5px',fontWeight:700,textDecoration:'none' }}>+ Add Firm</Link>
@@ -77,18 +77,18 @@ export default function AdminFirmsPage() {
             <FirmLogo name={firm.name} logoUrl={firm.logo_url} size={32} radius={7} />
             <div>
               <div style={{ fontSize:'14px',fontWeight:700 }}>{firm.name}</div>
-              <div style={{ fontSize:'11px',color:'var(--t3)',fontFamily:'JetBrains Mono,monospace' }}>{firm.slug}{firm.discount_code?` · ${firm.discount_code}`:''}</div>
+              <div style={{ fontSize:'11px',color:'var(--t3)',fontFamily:'JetBrains Mono,monospace' }}>{firm.slug}{firm.discount_code?` &middot; ${firm.discount_code}`:''}</div>
             </div>
             <button onClick={()=>togglePublish(firm.id,firm.is_published)} style={{ fontSize:'11px',fontWeight:600,padding:'3px 10px',borderRadius:'100px',border:'none',cursor:'pointer',background:firm.is_published?'rgba(0,229,160,0.1)':'rgba(139,146,168,0.1)',color:firm.is_published?'var(--teal)':'var(--t3)',fontFamily:'Inter,sans-serif' }}>
               {firm.is_published?'● Live':'○ Draft'}
             </button>
             <div style={{ fontSize:'14px',fontWeight:800,color:(firm.trust_score||0)>=70?'var(--teal)':(firm.trust_score||0)>=50?'var(--amber)':'var(--t3)' }}>{firm.trust_score||0}</div>
-            <div style={{ fontSize:'13px',color:'var(--amber)' }}>{(firm.rating||0)>0?`${firm.rating.toFixed(1)}★`:'—'}</div>
-            <div style={{ fontSize:'12px',color:firm.promo_discount?'var(--amber)':'var(--t3)',fontWeight:firm.promo_discount?700:400 }}>{firm.promo_discount||'—'}</div>
+            <div style={{ fontSize:'13px',color:'var(--amber)' }}>{(firm.rating||0)>0?`${firm.rating.toFixed(1)}&#9733;`:'&mdash;'}</div>
+            <div style={{ fontSize:'12px',color:firm.promo_discount?'var(--amber)':'var(--t3)',fontWeight:firm.promo_discount?700:400 }}>{firm.promo_discount||'&mdash;'}</div>
             <div style={{ display:'flex',gap:'5px',justifyContent:'flex-end' }}>
               <Link href={`/admin/firms/${firm.id}`} style={{ padding:'5px 12px',borderRadius:'6px',fontSize:'12px',fontWeight:600,textDecoration:'none',border:'1px solid var(--border2)',color:'var(--t1)',background:'var(--bg2)' }}>Edit</Link>
               <Link href={`/firms/${firm.slug}`} target="_blank" style={{ padding:'5px 12px',borderRadius:'6px',fontSize:'12px',fontWeight:600,textDecoration:'none',border:'1px solid rgba(0,229,160,0.2)',color:'var(--teal)',background:'rgba(0,229,160,0.06)' }}>View</Link>
-              <button onClick={()=>deleteFirm(firm.id,firm.name)} style={{ padding:'5px 10px',borderRadius:'6px',fontSize:'12px',cursor:'pointer',border:'1px solid rgba(248,113,113,0.2)',color:'var(--coral)',background:'rgba(248,113,113,0.06)',fontFamily:'Inter,sans-serif' }}>✕</button>
+              <button onClick={()=>deleteFirm(firm.id,firm.name)} style={{ padding:'5px 10px',borderRadius:'6px',fontSize:'12px',cursor:'pointer',border:'1px solid rgba(248,113,113,0.2)',color:'var(--coral)',background:'rgba(248,113,113,0.06)',fontFamily:'Inter,sans-serif' }}>&times;</button>
             </div>
           </div>
         ))}

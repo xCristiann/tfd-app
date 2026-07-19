@@ -29,8 +29,8 @@ export default function SpreadsPage() {
 
   const Cell = ({ v }: { v: boolean }) => (
     <div style={{ textAlign: 'center' as const }}>
-      {v ? <span style={{ color: 'var(--teal)', fontSize: '18px', fontWeight: 700 }}>✓</span>
-         : <span style={{ color: 'var(--border2)', fontSize: '14px' }}>—</span>}
+      {v ? <span style={{ color: 'var(--teal)', fontSize: '18px', fontWeight: 700 }}>&#10003;</span>
+         : <span style={{ color: 'var(--border2)', fontSize: '14px' }}>&mdash;</span>}
     </div>
   )
 
@@ -87,7 +87,7 @@ export default function SpreadsPage() {
                     {(firm.platforms || []).map((p: string) => (
                       <span key={p} style={{ fontSize: '11px', padding: '2px 7px', borderRadius: '4px', background: 'var(--bg2)', color: 'var(--t3)', border: '1px solid var(--border)' }}>{p}</span>
                     ))}
-                    {(!firm.platforms || firm.platforms.length === 0) && <span style={{ fontSize: '12px', color: 'var(--t3)' }}>—</span>}
+                    {(!firm.platforms || firm.platforms.length === 0) && <span style={{ fontSize: '12px', color: 'var(--t3)' }}>&mdash;</span>}
                   </div>
                 </div>
               </Link>

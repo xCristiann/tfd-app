@@ -21,7 +21,7 @@ const countryFlags: Record<string, string> = {
 }
 
 function formatAllocation(n?: number) {
-  if (!n) return '—'
+  if (!n) return '&mdash;'
   if (n >= 1000000) return `$${(n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1)}M`
   return `$${Math.round(n / 1000)}K`
 }
@@ -75,7 +75,7 @@ export default function FirmsTable({ firms }: { firms: FirmWithExtras[]; market?
 
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 9px', borderRadius: '100px', border: '1px solid rgba(167,139,250,0.3)', fontSize: '12px', fontWeight: 700, color: 'var(--violet)', marginBottom: '4px' }}>
-                {(firm.rating || 0) > 0 ? (firm.rating!).toFixed(1) : 'New'} <span style={{ color: 'var(--amber)' }}>★</span>
+                {(firm.rating || 0) > 0 ? (firm.rating!).toFixed(1) : 'New'} <span style={{ color: 'var(--amber)' }}>&#9733;</span>
               </div>
               <div style={{ fontSize: '11px', color: 'var(--t3)' }}>{(firm.review_count || 0) > 0 ? `${firm.review_count} reviews` : 'No reviews yet'}</div>
             </div>
@@ -84,7 +84,7 @@ export default function FirmsTable({ firms }: { firms: FirmWithExtras[]; market?
 
             <div>
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: 'var(--violet)' }}>
-                {firm.years_active && firm.years_active >= 10 ? '10+' : (firm.years_active || '—')}
+                {firm.years_active && firm.years_active >= 10 ? '10+' : (firm.years_active || '&mdash;')}
               </div>
             </div>
 
@@ -116,7 +116,7 @@ export default function FirmsTable({ firms }: { firms: FirmWithExtras[]; market?
                     {(firm as any).discount_code || 'DIARIES'}
                   </div>
                 </div>
-              ) : <span style={{ fontSize: '11px', color: 'var(--t3)' }}>—</span>}
+              ) : <span style={{ fontSize: '11px', color: 'var(--t3)' }}>&mdash;</span>}
             </div>
 
             <div style={{ textAlign: 'right' }}>

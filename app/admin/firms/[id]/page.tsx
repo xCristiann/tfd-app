@@ -32,7 +32,7 @@ export default function AdminFirmEditPage() {
   const set = (k: string, v: any) => setFirm((f: any) => ({ ...f, [k]: v }))
 
   const save = async () => {
-    if (!firm.name || !firm.slug) { setMsg('✗ Name and slug required'); return }
+    if (!firm.name || !firm.slug) { setMsg('&times; Name and slug required'); return }
     setSaving(true); setMsg('')
     const payload = {
       name: firm.name, slug: firm.slug,
@@ -66,7 +66,7 @@ export default function AdminFirmEditPage() {
       if (!error && res.data) { router.push(`/admin/firms/${res.data.id}`); return }
     }
 
-    setMsg(error ? `✗ ${error.message}` : '✓ Saved!')
+    setMsg(error ? `&times; ${error.message}` : '&#10003; Saved!')
     setSaving(false)
   }
 
@@ -107,10 +107,10 @@ export default function AdminFirmEditPage() {
             <div style={{ fontSize:'12px',color:'var(--teal)' }}>Trust Score: {firm?.trust_score||0}/100 (auto-calculated)</div>
           </div>
         </div>
-        <Link href="/admin/firms" style={{ fontSize:'13px',color:'var(--t3)',textDecoration:'none' }}>← Back</Link>
+        <Link href="/admin/firms" style={{ fontSize:'13px',color:'var(--t3)',textDecoration:'none' }}>&larr; Back</Link>
       </div>
 
-      {msg && <div style={{ background:msg.startsWith('✓')?'rgba(0,229,160,0.1)':'rgba(248,113,113,0.1)',border:`1px solid ${msg.startsWith('✓')?'rgba(0,229,160,0.2)':'rgba(248,113,113,0.2)'}`,borderRadius:'9px',padding:'10px 16px',marginBottom:'16px',fontSize:'13.5px',color:msg.startsWith('✓')?'var(--teal)':'var(--coral)',fontWeight:600 }}>{msg}</div>}
+      {msg && <div style={{ background:msg.startsWith('&#10003;')?'rgba(0,229,160,0.1)':'rgba(248,113,113,0.1)',border:`1px solid ${msg.startsWith('&#10003;')?'rgba(0,229,160,0.2)':'rgba(248,113,113,0.2)'}`,borderRadius:'9px',padding:'10px 16px',marginBottom:'16px',fontSize:'13.5px',color:msg.startsWith('&#10003;')?'var(--teal)':'var(--coral)',fontWeight:600 }}>{msg}</div>}
 
       <div style={{ display:'flex',gap:'4px',borderBottom:'1px solid var(--border)',marginBottom:'20px' }}>
         {[['basic','Basic'],['trust','Trust Factors'],['markets','Markets'],['challenges','Challenges']].map(([k,l])=>(
@@ -190,7 +190,7 @@ export default function AdminFirmEditPage() {
               <div key={ch.id} style={{ background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'10px',padding:'14px 18px',display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px' }}>
                 <div>
                   <div style={{ fontWeight:600,marginBottom:'3px' }}>{ch.name||`$${ch.account_size?.toLocaleString()}`}</div>
-                  <div style={{ fontSize:'12px',color:'var(--t3)' }}>${ch.price_usd} · {ch.profit_split} split · {ch.phase1_target}% Ph1 target</div>
+                  <div style={{ fontSize:'12px',color:'var(--t3)' }}>${ch.price_usd} &middot; {ch.profit_split} split &middot; {ch.phase1_target}% Ph1 target</div>
                 </div>
                 <Link href={`/admin/challenges/${ch.id}`} style={{ padding:'6px 14px',borderRadius:'7px',fontSize:'12.5px',fontWeight:600,textDecoration:'none',border:'1px solid var(--border2)',color:'var(--t1)',background:'var(--bg1)' }}>Edit</Link>
               </div>
@@ -203,7 +203,7 @@ export default function AdminFirmEditPage() {
         <div style={{ display:'flex',gap:'10px' }}>
           <Link href="/admin/firms" style={{ padding:'11px 20px',borderRadius:'9px',fontSize:'14px',fontWeight:600,textDecoration:'none',border:'1px solid var(--border2)',color:'var(--t2)',background:'transparent' }}>Cancel</Link>
           <button onClick={save} disabled={saving} style={{ flex:1,padding:'11px 24px',borderRadius:'9px',fontSize:'14px',fontWeight:800,cursor:'pointer',border:'none',color:'#04120c',background:'var(--teal)',fontFamily:'Inter,sans-serif',opacity:saving?0.7:1 }}>
-            {saving?'Saving...':'Save Firm →'}
+            {saving?'Saving...':'Save Firm &rarr;'}
           </button>
         </div>
       )}

@@ -20,8 +20,8 @@ export default function CompareClient() {
 
   const getLowest = (f: any) => f?.challenges?.sort((a: any, b: any) => a.price_usd - b.price_usd)[0]
 
-  const val = (v: any, suffix = '') => v !== null && v !== undefined ? `${v}${suffix}` : '—'
-  const bool = (v: boolean) => v ? { text: '✓ Yes', color: 'var(--green)' } : { text: '✗ No', color: 'var(--coral)' }
+  const val = (v: any, suffix = '') => v !== null && v !== undefined ? `${v}${suffix}` : '&mdash;'
+  const bool = (v: boolean) => v ? { text: '&#10003; Yes', color: 'var(--green)' } : { text: '&times; No', color: 'var(--coral)' }
 
   const Row = ({ label, a, b, colorA, colorB }: { label: string; a: string; b: string; colorA?: string; colorB?: string }) => (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '1px solid var(--border)', alignItems: 'center' }}>
@@ -117,13 +117,13 @@ export default function CompareClient() {
               colorB={firmB.trust_score > firmA.trust_score ? 'var(--green)' : 'var(--t1)'} />
             <Row label="Founded" a={val(firmA.founded_year)} b={val(firmB.founded_year)} />
             <Row label="Headquarters" a={val(firmA.headquarters)} b={val(firmB.headquarters)} />
-            <Row label="Max Allocation" a={firmA.max_allocation ? `$${Math.round(firmA.max_allocation/1000)}K` : '—'} b={firmB.max_allocation ? `$${Math.round(firmB.max_allocation/1000)}K` : '—'} />
+            <Row label="Max Allocation" a={firmA.max_allocation ? `$${Math.round(firmA.max_allocation/1000)}K` : '&mdash;'} b={firmB.max_allocation ? `$${Math.round(firmB.max_allocation/1000)}K` : '&mdash;'} />
             <Row label="Accepts EU" a={bool(firmA.accepts_eu).text} b={bool(firmB.accepts_eu).text}
               colorA={firmA.accepts_eu ? 'var(--green)' : 'var(--coral)'}
               colorB={firmB.accepts_eu ? 'var(--green)' : 'var(--coral)'} />
 
             <Section title="Lowest Challenge" />
-            <Row label="Price" a={chA ? `$${chA.price_usd}` : '—'} b={chB ? `$${chB.price_usd}` : '—'}
+            <Row label="Price" a={chA ? `$${chA.price_usd}` : '&mdash;'} b={chB ? `$${chB.price_usd}` : '&mdash;'}
               colorA={chA && chB && chA.price_usd <= chB.price_usd ? 'var(--green)' : 'var(--t1)'}
               colorB={chA && chB && chB.price_usd < chA.price_usd ? 'var(--green)' : 'var(--t1)'} />
             <Row label="Profit Split" a={val(chA?.profit_split)} b={val(chB?.profit_split)} colorA="var(--green)" colorB="var(--green)" />
@@ -169,18 +169,18 @@ export default function CompareClient() {
 
             <Section title="Payout & Trust" />
             <Row label="Payout Reliability" a={val(firmA.payout_reliability)} b={val(firmB.payout_reliability)} />
-            <Row label="Avg Payout Speed" a={firmA.avg_payout_days ? `${firmA.avg_payout_days} days` : '—'} b={firmB.avg_payout_days ? `${firmB.avg_payout_days} days` : '—'}
+            <Row label="Avg Payout Speed" a={firmA.avg_payout_days ? `${firmA.avg_payout_days} days` : '&mdash;'} b={firmB.avg_payout_days ? `${firmB.avg_payout_days} days` : '&mdash;'}
               colorA={firmA.avg_payout_days <= firmB.avg_payout_days ? 'var(--green)' : 'var(--t1)'}
               colorB={firmB.avg_payout_days < firmA.avg_payout_days ? 'var(--green)' : 'var(--t1)'} />
             <Row label="Delayed Reports" a={val(firmA.delayed_payout_reports)} b={val(firmB.delayed_payout_reports)}
               colorA={firmA.delayed_payout_reports === 0 ? 'var(--green)' : 'var(--amber)'}
               colorB={firmB.delayed_payout_reports === 0 ? 'var(--green)' : 'var(--amber)'} />
             <Row label="Support Quality" a={val(firmA.support_quality)} b={val(firmB.support_quality)} />
-            <Row label="Platforms" a={(firmA.platforms || []).join(', ') || '—'} b={(firmB.platforms || []).join(', ') || '—'} />
+            <Row label="Platforms" a={(firmA.platforms || []).join(', ') || '&mdash;'} b={(firmB.platforms || []).join(', ') || '&mdash;'} />
 
             <Section title="Discount" />
-            <Row label="Promo Code" a={firmA.discount_code || '—'} b={firmB.discount_code || '—'} colorA="var(--teal)" colorB="var(--teal)" />
-            <Row label="Discount" a={firmA.promo_discount || '—'} b={firmB.promo_discount || '—'} />
+            <Row label="Promo Code" a={firmA.discount_code || '&mdash;'} b={firmB.discount_code || '&mdash;'} colorA="var(--teal)" colorB="var(--teal)" />
+            <Row label="Discount" a={firmA.promo_discount || '&mdash;'} b={firmB.promo_discount || '&mdash;'} />
 
             {/* CTA ROW */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '2px solid var(--border)', background: 'var(--bg2)' }}>
@@ -188,13 +188,13 @@ export default function CompareClient() {
               <div style={{ padding: '16px', textAlign: 'center', borderLeft: '1px solid var(--border)' }}>
                 <a href={firmA.affiliate_link || firmA.website || '#'} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-block', padding: '10px 24px', borderRadius: '100px', background: 'var(--teal)', color: '#04120c', fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>
-                  Get {firmA.name} →
+                  Get {firmA.name} &rarr;
                 </a>
               </div>
               <div style={{ padding: '16px', textAlign: 'center', borderLeft: '1px solid var(--border)' }}>
                 <a href={firmB.affiliate_link || firmB.website || '#'} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-block', padding: '10px 24px', borderRadius: '100px', background: 'var(--violet)', color: '#fff', fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>
-                  Get {firmB.name} →
+                  Get {firmB.name} &rarr;
                 </a>
               </div>
             </div>
@@ -208,7 +208,7 @@ export default function CompareClient() {
         )}
 
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--t3)' }}>
-          Green highlights indicate the better value for each metric · <Link href="/trust-score" style={{ color: 'var(--teal)', textDecoration: 'none' }}>How Trust Score works</Link>
+          Green highlights indicate the better value for each metric &middot; <Link href="/trust-score" style={{ color: 'var(--teal)', textDecoration: 'none' }}>How Trust Score works</Link>
         </div>
       </main>
       <Footer />

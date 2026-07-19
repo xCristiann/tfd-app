@@ -5,11 +5,11 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY!
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.thefundeddiaries.com'
 
 const ALLOWED_SENDERS = [
-  { label: 'hello@ — Main', value: 'hello@thefundeddiaries.com' },
-  { label: 'cristian@ — Personal', value: 'cristian@thefundeddiaries.com' },
-  { label: 'support@ — Support', value: 'support@thefundeddiaries.com' },
-  { label: 'partners@ — Partnerships', value: 'partners@thefundeddiaries.com' },
-  { label: 'noreply@ — No Reply', value: 'noreply@thefundeddiaries.com' },
+  { label: 'hello@ &mdash; Main', value: 'hello@thefundeddiaries.com' },
+  { label: 'cristian@ &mdash; Personal', value: 'cristian@thefundeddiaries.com' },
+  { label: 'support@ &mdash; Support', value: 'support@thefundeddiaries.com' },
+  { label: 'partners@ &mdash; Partnerships', value: 'partners@thefundeddiaries.com' },
+  { label: 'noreply@ &mdash; No Reply', value: 'noreply@thefundeddiaries.com' },
 ]
 
 function buildHtml(data: { heading: string; body: string; cta_text?: string; cta_url?: string; name?: string }): string {

@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     },
     {
       title: '3. Affiliate Links & Commissions',
-      content: `TheFundedDiaries uses affiliate links when directing users to prop firms. We may earn a commission when you purchase a challenge through our links. This does not affect our rankings or reviews, which are based solely on trust score criteria. We are transparent about commissions — see our Trust Score page for details.`
+      content: `TheFundedDiaries uses affiliate links when directing users to prop firms. We may earn a commission when you purchase a challenge through our links. This does not affect our rankings or reviews, which are based solely on trust score criteria. We are transparent about commissions &mdash; see our Trust Score page for details.`
     },
     {
       title: '4. Cookies',
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
     },
     {
       title: '6. Third-Party Services',
-      content: `We use Supabase for database and authentication, Vercel for hosting, and Resend for email delivery. These providers are GDPR-compliant. We may link to third-party prop firm websites — their privacy policies govern their data practices.`
+      content: `We use Supabase for database and authentication, Vercel for hosting, and Resend for email delivery. These providers are GDPR-compliant. We may link to third-party prop firm websites &mdash; their privacy policies govern their data practices.`
     },
     {
       title: '7. Your Rights (GDPR)',
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
       <main style={{ maxWidth: '760px', margin: '0 auto', padding: '56px 40px 80px' }}>
         <div style={{ marginBottom: '40px' }}>
           <h1 style={{ fontSize: '36px', fontWeight: 900, letterSpacing: '-.03em', marginBottom: '12px' }}>Privacy Policy</h1>
-          <p style={{ fontSize: '14px', color: 'var(--t3)' }}>Last updated: July 2026 · TheFundedDiaries.com</p>
+          <p style={{ fontSize: '14px', color: 'var(--t3)' }}>Last updated: July 2026 &middot; TheFundedDiaries.com</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
           {sections.map(s => (

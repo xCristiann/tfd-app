@@ -40,7 +40,7 @@ export default function AdminScraperPage() {
       } else {
         const changed = (data.results || []).filter((r: any) => r.status === 'CHANGED').length
         const errors = (data.results || []).filter((r: any) => r.status === 'error').length
-        setMsg({ text: `✓ Checked ${data.processed} firms — ${changed} changed, ${errors} errors`, ok: true })
+        setMsg({ text: `&#10003; Checked ${data.processed} firms &mdash; ${changed} changed, ${errors} errors`, ok: true })
       }
       await load()
     } catch (e: any) {
@@ -148,7 +148,7 @@ export default function AdminScraperPage() {
       {/* Pending changes alert */}
       {changes.length > 0 && (
         <div style={{ background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px' }}>
-          <div style={{ fontWeight: 700, color: 'var(--amber)', marginBottom: '10px' }}>⚠️ {changes.length} website change{changes.length > 1 ? 's' : ''} detected — verify manually in Manage Firms</div>
+          <div style={{ fontWeight: 700, color: 'var(--amber)', marginBottom: '10px' }}>⚠️ {changes.length} website change{changes.length > 1 ? 's' : ''} detected &mdash; verify manually in Manage Firms</div>
           {changes.map(c => (
             <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid rgba(251,191,36,0.1)' }}>
               <div style={{ fontSize: '13px' }}>
@@ -157,7 +157,7 @@ export default function AdminScraperPage() {
               </div>
               <button onClick={() => markApplied(c.id)}
                 style={{ fontSize: '11.5px', fontWeight: 600, padding: '4px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: 'rgba(0,229,160,0.1)', color: 'var(--teal)', fontFamily: 'Inter, sans-serif' }}>
-                Mark reviewed ✓
+                Mark reviewed &#10003;
               </button>
             </div>
           ))}
@@ -188,7 +188,7 @@ export default function AdminScraperPage() {
                   : 'Never'}
               </div>
               <div style={{ fontSize: '11.5px', color: job.last_changed_at ? 'var(--amber)' : 'var(--t3)', fontFamily: 'JetBrains Mono, monospace' }}>
-                {job.last_changed_at ? new Date(job.last_changed_at).toLocaleDateString('en-GB') : '—'}
+                {job.last_changed_at ? new Date(job.last_changed_at).toLocaleDateString('en-GB') : '&mdash;'}
               </div>
             </div>
           )

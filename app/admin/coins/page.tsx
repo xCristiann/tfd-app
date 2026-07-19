@@ -47,7 +47,7 @@ export default function AdminCoinsPage() {
       body: JSON.stringify({ user_id: selectedUser, amount, note: coinNote || (deduct ? 'Admin deduction' : 'Admin grant') })
     })
     const data = await res.json()
-    setMsg(data.success ? `✓ ${deduct ? 'Deducted' : 'Granted'} ${Math.abs(amount)} coins` : `✗ ${data.error}`)
+    setMsg(data.success ? `&#10003; ${deduct ? 'Deducted' : 'Granted'} ${Math.abs(amount)} coins` : `&times; ${data.error}`)
     if (data.success) { setCoinAmount(''); setCoinNote(''); load() }
     setGrantLoading(false)
   }
@@ -64,7 +64,7 @@ export default function AdminCoinsPage() {
       stock: parseInt(newPrize.stock),
       is_active: true,
     })
-    setMsg(error ? `✗ ${error.message}` : '✓ Prize added!')
+    setMsg(error ? `&times; ${error.message}` : '&#10003; Prize added!')
     if (!error) { setNewPrize({ title: '', description: '', coins_required: '', prize_type: 'discount', prize_value: '', stock: '-1' }); load() }
     setPrizeLoading(false)
   }
@@ -96,7 +96,7 @@ export default function AdminCoinsPage() {
       </div>
 
       {msg && (
-        <div style={{ background: msg.startsWith('✓') ? 'rgba(0,229,160,0.1)' : 'rgba(248,113,113,0.1)', border: `1px solid ${msg.startsWith('✓') ? 'rgba(0,229,160,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: '9px', padding: '10px 16px', marginBottom: '16px', fontSize: '13.5px', color: msg.startsWith('✓') ? 'var(--teal)' : 'var(--coral)', fontWeight: 600 }}>
+        <div style={{ background: msg.startsWith('&#10003;') ? 'rgba(0,229,160,0.1)' : 'rgba(248,113,113,0.1)', border: `1px solid ${msg.startsWith('&#10003;') ? 'rgba(0,229,160,0.2)' : 'rgba(248,113,113,0.2)'}`, borderRadius: '9px', padding: '10px 16px', marginBottom: '16px', fontSize: '13.5px', color: msg.startsWith('&#10003;') ? 'var(--teal)' : 'var(--coral)', fontWeight: 600 }}>
           {msg}
         </div>
       )}
@@ -121,7 +121,7 @@ export default function AdminCoinsPage() {
                 <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
                   style={{ width: '100%', padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: '8px', color: 'var(--t1)', fontSize: '13.5px', fontFamily: 'Inter, sans-serif', outline: 'none' }}>
                   <option value="">Select user...</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.full_name || 'Anonymous'} ({u.email}) — 🪙 {u.coins}</option>)}
+                  {users.map(u => <option key={u.id} value={u.id}>{u.full_name || 'Anonymous'} ({u.email}) &mdash; 🪙 {u.coins}</option>)}
                 </select>
               </div>
               {inp('Amount', coinAmount, setCoinAmount, 'number', '100')}
@@ -221,7 +221,7 @@ export default function AdminCoinsPage() {
       {/* RATES TAB */}
       {tab === 'rates' && (
         <div>
-          <p style={{ fontSize: '13.5px', color: 'var(--t2)', marginBottom: '16px' }}>Coin earn rates. Edit directly in Supabase → coin_rewards table, or update via SQL.</p>
+          <p style={{ fontSize: '13.5px', color: 'var(--t2)', marginBottom: '16px' }}>Coin earn rates. Edit directly in Supabase &rarr; coin_rewards table, or update via SQL.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {rewards.map(r => (
               <div key={r.id} style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

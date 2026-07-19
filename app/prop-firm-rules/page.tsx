@@ -34,8 +34,8 @@ export default function PropFirmRulesPage() {
 
   const Check = ({ v }: { v: boolean | null }) => (
     <div style={{ textAlign: 'center' as const }}>
-      {v === true ? <span style={{ color: 'var(--teal)', fontSize: '18px', fontWeight: 700 }}>✓</span>
-       : v === false ? <span style={{ color: 'var(--coral)', fontSize: '14px' }}>✗</span>
+      {v === true ? <span style={{ color: 'var(--teal)', fontSize: '18px', fontWeight: 700 }}>&#10003;</span>
+       : v === false ? <span style={{ color: 'var(--coral)', fontSize: '14px' }}>&times;</span>
        : <span style={{ color: 'var(--t3)', fontSize: '12px' }}>?</span>}
     </div>
   )
@@ -100,13 +100,13 @@ export default function PropFirmRulesPage() {
                     <Check v={ch?.allows_ea ?? null} />
                     <Check v={ch?.allows_hedging ?? null} />
                     <div style={{ textAlign: 'center', fontSize: '13px', color: 'var(--t2)', fontFamily: 'JetBrains Mono, monospace' }}>
-                      {ch?.phase1_min_days ? `${ch.phase1_min_days}d` : '—'}
+                      {ch?.phase1_min_days ? `${ch.phase1_min_days}d` : '&mdash;'}
                     </div>
                     <div style={{ textAlign: 'center', fontSize: '13px', fontWeight: 700, color: 'var(--coral)' }}>
-                      {ch?.phase1_daily_dd ? `${ch.phase1_daily_dd}%` : '—'}
+                      {ch?.phase1_daily_dd ? `${ch.phase1_daily_dd}%` : '&mdash;'}
                     </div>
                     <div style={{ textAlign: 'center', fontSize: '13px', fontWeight: 700, color: 'var(--coral)' }}>
-                      {ch?.phase1_max_dd ? `${ch.phase1_max_dd}%` : '—'}
+                      {ch?.phase1_max_dd ? `${ch.phase1_max_dd}%` : '&mdash;'}
                     </div>
                   </div>
                 </Link>
@@ -116,7 +116,7 @@ export default function PropFirmRulesPage() {
         )}
 
         <div style={{ marginTop: '16px', fontSize: '12px', color: 'var(--t3)', textAlign: 'center' }}>
-          Based on lowest-priced challenge per firm · <Link href="/trust-score" style={{ color: 'var(--teal)', textDecoration: 'none' }}>How we verify →</Link>
+          Based on lowest-priced challenge per firm &middot; <Link href="/trust-score" style={{ color: 'var(--teal)', textDecoration: 'none' }}>How we verify &rarr;</Link>
         </div>
       </main>
       <Footer />

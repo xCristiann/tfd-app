@@ -5,11 +5,11 @@ const TEMPLATES = [
   {
     id: 'affiliate_outreach',
     name: '🤝 Affiliate Outreach',
-    subject: 'Partnership Opportunity — TheFundedDiaries.com',
+    subject: 'Partnership Opportunity &mdash; TheFundedDiaries.com',
     heading: 'Partnership & Affiliate Program Invitation',
     body: `Dear Team,
 
-My name is Cristian, founder of TheFundedDiaries.com — an independent prop firm comparison and review platform helping traders find the right firm based on verified data, real reviews, and transparent rankings.
+My name is Cristian, founder of TheFundedDiaries.com &mdash; an independent prop firm comparison and review platform helping traders find the right firm based on verified data, real reviews, and transparent rankings.
 
 We are building our affiliate partnership network and would love to include your firm as a featured partner on our platform.
 
@@ -23,7 +23,7 @@ What we ask:
 • An affiliate commission for every challenge purchased via our referral link
 • A discount code for our community (even 10-15% significantly increases conversion)
 
-Our platform ranks firms purely by trust score — based on verified payout data, years active, and real trader reviews. No firm can pay for better rankings.
+Our platform ranks firms purely by trust score &mdash; based on verified payout data, years active, and real trader reviews. No firm can pay for better rankings.
 
 To get started, please reply with:
 1. Your affiliate program details (commission rate, cookie duration, tracking platform)
@@ -48,7 +48,7 @@ https://www.thefundeddiaries.com`,
     heading: 'Welcome to TheFundedDiaries',
     body: `Hi there,
 
-Welcome to TheFundedDiaries — the most transparent prop firm comparison platform!
+Welcome to TheFundedDiaries &mdash; the most transparent prop firm comparison platform!
 
 Here is what you can do:
 • Compare all major prop firms side by side with verified data
@@ -68,7 +68,7 @@ The TheFundedDiaries Team`,
   {
     id: 'offer',
     name: '🎁 Special Offer',
-    subject: 'Exclusive discount — limited time',
+    subject: 'Exclusive discount &mdash; limited time',
     heading: 'Exclusive offer for TheFundedDiaries members',
     body: `Hi there,
 
@@ -84,7 +84,7 @@ Use the code at checkout to get your discount.`,
   {
     id: 'newsletter',
     name: '📰 Newsletter',
-    subject: 'TheFundedDiaries — Latest Updates',
+    subject: 'TheFundedDiaries &mdash; Latest Updates',
     heading: 'What is new this week',
     body: `Hi there,
 
@@ -113,11 +113,11 @@ Stay informed and trade smart.`,
 ]
 
 const SENDERS = [
-  { label: 'hello@ — Main', value: 'hello@thefundeddiaries.com' },
-  { label: 'cristian@ — Personal', value: 'cristian@thefundeddiaries.com' },
-  { label: 'support@ — Support', value: 'support@thefundeddiaries.com' },
-  { label: 'partners@ — Partnerships', value: 'partners@thefundeddiaries.com' },
-  { label: 'noreply@ — No Reply', value: 'noreply@thefundeddiaries.com' },
+  { label: 'hello@ &mdash; Main', value: 'hello@thefundeddiaries.com' },
+  { label: 'cristian@ &mdash; Personal', value: 'cristian@thefundeddiaries.com' },
+  { label: 'support@ &mdash; Support', value: 'support@thefundeddiaries.com' },
+  { label: 'partners@ &mdash; Partnerships', value: 'partners@thefundeddiaries.com' },
+  { label: 'noreply@ &mdash; No Reply', value: 'noreply@thefundeddiaries.com' },
 ]
 
 const FIRM_CONTACTS = [
@@ -215,7 +215,7 @@ export default function EmailComposer({ userCount }: { userCount: number }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             {SENDERS.map(s => (
               <button key={s.value} onClick={() => setFromEmail(s.value)} style={{ padding: '9px 14px', borderRadius: '9px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', border: `1px solid ${fromEmail === s.value ? 'rgba(0,229,160,0.4)' : 'var(--border2)'}`, background: fromEmail === s.value ? 'rgba(0,229,160,0.08)' : 'var(--bg2)', color: fromEmail === s.value ? 'var(--teal)' : 'var(--t2)', textAlign: 'left' }}>
-                <div style={{ fontSize: '10px', marginBottom: '2px', color: fromEmail === s.value ? 'var(--teal)' : 'var(--t3)' }}>{s.label.split('—')[1]?.trim()}</div>
+                <div style={{ fontSize: '10px', marginBottom: '2px', color: fromEmail === s.value ? 'var(--teal)' : 'var(--t3)' }}>{s.label.split('&mdash;')[1]?.trim()}</div>
                 <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px' }}>{s.value}</div>
               </button>
             ))}
@@ -251,14 +251,14 @@ export default function EmailComposer({ userCount }: { userCount: number }) {
               </button>
             ))}
           </div>
-          <label style={labelStyle}>Email addresses — one per line</label>
+          <label style={labelStyle}>Email addresses &mdash; one per line</label>
           <textarea value={customEmails} onChange={e => setCustomEmails(e.target.value)} rows={8}
             style={{ ...inputStyle, resize: 'vertical', fontFamily: 'JetBrains Mono, monospace', fontSize: '12px' }} />
         </div>
 
         {result && (
           <div style={{ background: result.error ? 'rgba(248,113,113,0.1)' : 'rgba(0,229,160,0.1)', border: `1px solid ${result.error ? 'rgba(248,113,113,0.2)' : 'rgba(0,229,160,0.2)'}`, borderRadius: '10px', padding: '14px 18px', marginBottom: '16px', fontSize: '14px', color: result.error ? 'var(--coral)' : 'var(--teal)', fontWeight: 600 }}>
-            {result.error ? `❌ ${result.error}` : `✓ Sent to ${result.sent}/${result.total} recipients${result.failed ? ` (${result.failed} failed)` : ''}`}
+            {result.error ? `❌ ${result.error}` : `&#10003; Sent to ${result.sent}/${result.total} recipients${result.failed ? ` (${result.failed} failed)` : ''}`}
           </div>
         )}
 
@@ -268,7 +268,7 @@ export default function EmailComposer({ userCount }: { userCount: number }) {
           </button>
           <button onClick={send} disabled={sending || !subject || !heading || !body}
             style={{ padding: '11px 24px', borderRadius: '9px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', fontFamily: 'Inter, sans-serif', border: 'none', color: '#04120c', background: 'var(--teal)', boxShadow: '0 0 20px var(--teal-glow)', flex: 2, opacity: (!subject || !heading || !body || sending) ? 0.6 : 1 }}>
-            {sending ? `Sending to ${validCount} firms...` : `Send to ${recipients === 'all' ? userCount + ' users' : validCount + ' addresses'} →`}
+            {sending ? `Sending to ${validCount} firms...` : `Send to ${recipients === 'all' ? userCount + ' users' : validCount + ' addresses'} &rarr;`}
           </button>
         </div>
       </div>
@@ -276,7 +276,7 @@ export default function EmailComposer({ userCount }: { userCount: number }) {
       <div style={{ position: 'sticky', top: '80px' }}>
         {preview && (
           <div style={{ ...panelStyle, marginBottom: '16px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>Preview — From: {fromEmail}</div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>Preview &mdash; From: {fromEmail}</div>
             <div style={{ background: '#07090f', borderRadius: '10px', padding: '20px' }}>
               <div style={{ fontSize: '13px', fontWeight: 800, color: '#eef0f6', marginBottom: '16px' }}>TheFunded<span style={{ color: '#00e5a0' }}>Diaries</span></div>
               <div style={{ background: '#0c0f1a', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', padding: '20px' }}>
@@ -284,7 +284,7 @@ export default function EmailComposer({ userCount }: { userCount: number }) {
                 <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#eef0f6', margin: '0 0 4px' }}>{heading}</h3>
                 <div style={{ height: '2px', background: 'linear-gradient(90deg,#00e5a0,#a78bfa)', borderRadius: '2px', margin: '12px 0' }} />
                 <div style={{ fontSize: '12.5px', color: '#8b92a8', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{body}</div>
-                {ctaText && <div style={{ display: 'inline-block', background: '#00e5a0', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, color: '#04120c', marginTop: '12px' }}>{ctaText} →</div>}
+                {ctaText && <div style={{ display: 'inline-block', background: '#00e5a0', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, color: '#04120c', marginTop: '12px' }}>{ctaText} &rarr;</div>}
               </div>
             </div>
           </div>

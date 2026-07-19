@@ -40,7 +40,7 @@ export default function OffersClient() {
           <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '10px' }}>Discount Codes</div>
           <h1 style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-.03em', marginBottom: '12px' }}>Active Offers</h1>
           <p style={{ fontSize: '15px', color: 'var(--t2)' }}>
-            {firms.length} verified discount codes · sorted by best offer first · apply directly at checkout
+            {firms.length} verified discount codes &middot; sorted by best offer first &middot; apply directly at checkout
           </p>
         </div>
 
@@ -76,12 +76,12 @@ export default function OffersClient() {
                     <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>{firm.name}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 8px', borderRadius: '100px', border: '1px solid rgba(167,139,250,0.3)', fontSize: '11.5px', fontWeight: 700, color: 'var(--violet)' }}>
-                        {(firm.rating || 0) > 0 ? (firm.rating).toFixed(1) : 'New'} <span style={{ color: 'var(--amber)' }}>★</span>
+                        {(firm.rating || 0) > 0 ? (firm.rating).toFixed(1) : 'New'} <span style={{ color: 'var(--amber)' }}>&#9733;</span>
                       </span>
                       {(firm.review_count || 0) > 0 && <span style={{ fontSize: '11.5px', color: 'var(--t3)' }}>{firm.review_count.toLocaleString()} reviews</span>}
                     </div>
                     <div style={{ fontSize: '13px', color: 'var(--t2)', lineHeight: 1.5 }}>
-                      {firm.short_description || `${firm.promo_discount} off — use code at checkout`}
+                      {firm.short_description || `${firm.promo_discount} off &mdash; use code at checkout`}
                     </div>
                   </div>
                 </div>
@@ -91,11 +91,11 @@ export default function OffersClient() {
                   <button onClick={() => copyCode(firm.discount_code || 'DIARIES')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '100px', border: '1px solid rgba(167,139,250,0.3)', background: 'rgba(167,139,250,0.08)', cursor: 'pointer', fontFamily: 'Inter, sans-serif', width: '100%', justifyContent: 'center' }}>
                     <span style={{ fontSize: '11px', color: 'var(--t3)', fontWeight: 600 }}>Copy code</span>
                     <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--violet)', fontFamily: 'JetBrains Mono, monospace' }}>
-                      {copiedCode === (firm.discount_code || 'DIARIES') ? '✓ Copied!' : (firm.discount_code || 'DIARIES')}
+                      {copiedCode === (firm.discount_code || 'DIARIES') ? '&#10003; Copied!' : (firm.discount_code || 'DIARIES')}
                     </span>
                   </button>
                   <a href={firm.affiliate_link || firm.website || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textAlign: 'center', width: '100%', padding: '10px 24px', borderRadius: '100px', background: 'linear-gradient(135deg,#ec4899,var(--violet))', color: '#fff', fontSize: '13.5px', fontWeight: 800, textDecoration: 'none' }}>
-                    Apply →
+                    Apply &rarr;
                   </a>
                   <Link href={`/firms/${firm.slug}`} style={{ fontSize: '11.5px', color: 'var(--t3)', textDecoration: 'none', textAlign: 'center', width: '100%' }}>
                     View firm details

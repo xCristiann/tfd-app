@@ -59,7 +59,7 @@ export default function ChallengesBuilder({ firms, challenges }: { firms: {id:st
   const tog = (label: string, key: keyof Challenge) => (
     <div style={{display:'flex',alignItems:'center',gap:'10px',cursor:'pointer'}} onClick={()=>set(key,!editing[key])}>
       <div style={{width:'18px',height:'18px',borderRadius:'5px',border:`2px solid ${editing[key]?'var(--teal)':'var(--border2)'}`,background:editing[key]?'var(--teal)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-        {editing[key] && <span style={{color:'#04120c',fontSize:'11px',fontWeight:800}}>✓</span>}
+        {editing[key] && <span style={{color:'#04120c',fontSize:'11px',fontWeight:800}}>&#10003;</span>}
       </div>
       <span style={{fontSize:'13px',color:'var(--t2)'}}>{label}</span>
     </div>
@@ -89,12 +89,12 @@ export default function ChallengesBuilder({ firms, challenges }: { firms: {id:st
         <>
           {firmChallenges.length === 0 ? (
             <div style={{textAlign:'center',padding:'60px',background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px',color:'var(--t2)'}}>
-              No challenges yet for this firm. <button onClick={openNew} style={{color:'var(--teal)',background:'none',border:'none',cursor:'pointer',fontWeight:600,fontSize:'14px'}}>Add first tier →</button>
+              No challenges yet for this firm. <button onClick={openNew} style={{color:'var(--teal)',background:'none',border:'none',cursor:'pointer',fontWeight:600,fontSize:'14px'}}>Add first tier &rarr;</button>
             </div>
           ) : firmChallenges.map(c => (
             <div key={c.id} style={{background:'var(--bg1)',border:'1px solid var(--border)',borderRadius:'12px',overflow:'hidden',marginBottom:'12px'}}>
               <div style={{background:'var(--bg2)',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <div style={{fontWeight:700,fontSize:'14px'}}>{c.name} — ${c.account_size.toLocaleString()}</div>
+                <div style={{fontWeight:700,fontSize:'14px'}}>{c.name} &mdash; ${c.account_size.toLocaleString()}</div>
                 <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
                   <span style={{fontSize:'18px',fontWeight:900,color:'var(--teal)'}}>${c.price_usd}</span>
                   <button onClick={()=>openEdit(c)} style={{padding:'6px 14px',borderRadius:'7px',fontSize:'12px',fontWeight:600,background:'transparent',border:'1px solid var(--border2)',color:'var(--t1)',cursor:'pointer',fontFamily:'Inter,sans-serif'}}>Edit</button>
@@ -102,7 +102,7 @@ export default function ChallengesBuilder({ firms, challenges }: { firms: {id:st
                 </div>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',padding:'16px 20px',gap:'12px',fontSize:'12px'}}>
-                {[['Ph1 Target',`${c.phase1_target}%`,'amber'],['Max DD',`${c.phase1_max_dd}%`,'red'],['Profit Split',c.profit_split||'—','green'],['Min Payout',`$${c.min_payout}`,'neutral']].map(([l,v,t])=>(
+                {[['Ph1 Target',`${c.phase1_target}%`,'amber'],['Max DD',`${c.phase1_max_dd}%`,'red'],['Profit Split',c.profit_split||'&mdash;','green'],['Min Payout',`$${c.min_payout}`,'neutral']].map(([l,v,t])=>(
                   <div key={String(l)}>
                     <div style={{color:'var(--t3)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:'3px',fontSize:'10px',fontWeight:600}}>{l}</div>
                     <div style={{fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:t==='green'?'var(--green)':t==='red'?'var(--coral)':t==='amber'?'var(--amber)':'var(--t1)'}}>{v}</div>
@@ -118,7 +118,7 @@ export default function ChallengesBuilder({ firms, challenges }: { firms: {id:st
         <div>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px'}}>
             <h2 style={{fontSize:'16px',fontWeight:700}}>{editing.id ? 'Edit Challenge' : 'New Challenge Tier'}</h2>
-            <button onClick={()=>setMode('list')} style={{padding:'7px 14px',borderRadius:'8px',fontSize:'13px',border:'1px solid var(--border2)',color:'var(--t2)',background:'transparent',cursor:'pointer',fontFamily:'Inter,sans-serif'}}>← Back to list</button>
+            <button onClick={()=>setMode('list')} style={{padding:'7px 14px',borderRadius:'8px',fontSize:'13px',border:'1px solid var(--border2)',color:'var(--t2)',background:'transparent',cursor:'pointer',fontFamily:'Inter,sans-serif'}}>&larr; Back to list</button>
           </div>
 
           {panel('Challenge Identity', (
@@ -126,7 +126,7 @@ export default function ChallengesBuilder({ firms, challenges }: { firms: {id:st
               {inp('Challenge Name','name','text','e.g. Standard')}
               {inp('Account Size (USD)','account_size','number','25000')}
               {inp('Price (USD)','price_usd','number','99')}
-              {inp('Profit Split','profit_split','text','80% or 80→100%')}
+              {inp('Profit Split','profit_split','text','80% or 80&rarr;100%')}
               {inp('Sort Order','sort_order','number','0')}
             </div>
           ))}
