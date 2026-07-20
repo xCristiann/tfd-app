@@ -1,4 +1,16 @@
-'use client'
+const fs = require('fs')
+const path = require('path')
+const root = process.cwd()
+
+function write(filePath, content) {
+  const full = path.join(root, filePath)
+  const dir = path.dirname(full)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(full, content, 'utf8')
+  console.log('  [OK]', filePath)
+}
+
+write('app/firms/FirmsClient.tsx', `'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -234,11 +246,15 @@ export default function FirmsClient() {
         )}
       </main>
       <Footer />
-      <style>{`
+      <style>{\`
         @media (max-width: 700px) {
           .mobile-cards { display: flex !important; }
         }
-      `}</style>
+      \`}</style>
     </>
   )
 }
+`)
+
+console.log('\nDone! Run:')
+console.log('git add . && git commit -m "Fix FirmsClient parse error + mobile cards" && git push')
