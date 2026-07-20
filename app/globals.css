@@ -78,3 +78,39 @@ body {
 .ambient-blob { position: fixed; border-radius: 50%; filter: blur(130px); opacity: 0.5; pointer-events: none; z-index: 0; }
 
 select { -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234e5568' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+
+
+/* ═══════════════════════════════
+   MOBILE RESPONSIVE
+═══════════════════════════════ */
+
+* { box-sizing: border-box; }
+
+@media (max-width: 768px) {
+  body { font-size: 15px; }
+
+  /* Navbar mobile */
+  .nav-links { display: none !important; }
+  .nav-mobile-menu { display: flex !important; }
+
+  /* Grid → single column */
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tables → scroll */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Page padding */
+  .page-main {
+    padding: 32px 16px 60px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 28px !important; }
+  h2 { font-size: 22px !important; }
+}

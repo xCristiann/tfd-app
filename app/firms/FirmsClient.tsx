@@ -105,6 +105,7 @@ export default function FirmsClient() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--t2)' }}>Loading firms...</div>
         ) : (
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '40px 2fr 100px 80px 90px 80px 80px 100px 110px 120px', padding: '13px 20px', background: 'var(--bg2)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--t3)', gap: '8px', alignItems: 'center' }}>
               <div>#</div>
