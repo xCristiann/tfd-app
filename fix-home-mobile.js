@@ -1,4 +1,21 @@
-'use client'
+const fs = require('fs')
+const path = require('path')
+const root = process.cwd()
+
+function write(filePath, content) {
+  const full = path.join(root, filePath)
+  const dir = path.dirname(full)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(full, content, 'utf8')
+  console.log('  [OK]', filePath)
+}
+
+// Read current HomeClient to preserve hero section
+const homeClientPath = path.join(root, 'app/HomeClient.tsx')
+const existing = fs.existsSync(homeClientPath) ? fs.readFileSync(homeClientPath, 'utf8') : ''
+console.log('Existing HomeClient lines:', existing.split('\n').length)
+
+write('app/HomeClient.tsx', `'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/layout/Navbar'
@@ -299,7 +316,7 @@ export default function HomeClient() {
       </main>
       <Footer />
 
-      <style>{`
+      <style>{\`
         @media (max-width: 700px) {
           .desktop-table { display: none !important; }
           .mobile-cards { display: flex !important; }
@@ -308,7 +325,12 @@ export default function HomeClient() {
           .mobile-cards { display: none !important; }
           .desktop-table { display: block !important; }
         }
-      `}</style>
+      \`}</style>
     </>
   )
 }
+`)
+
+console.log('\nDone! Run:')
+console.log('node fix-jsx-entities.js')
+console.log('git add . && git commit -m "Mobile homepage: firm cards with stats row + CTA" && git push')
